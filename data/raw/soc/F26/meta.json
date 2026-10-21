@@ -1,0 +1,313 @@
+{
+  "term": "F26",
+  "label": "Fall 2026",
+  "fetchedAt": "2026-10-21T23:26:50.250Z",
+  "detailsMode": "ambiguous",
+  "departments": [
+    {
+      "code": "ARC",
+      "name": "Architecture",
+      "prefix": "48"
+    },
+    {
+      "code": "ART",
+      "name": "Art",
+      "prefix": "60"
+    },
+    {
+      "code": "AEM",
+      "name": "Arts & Entertainment Management",
+      "prefix": "93"
+    },
+    {
+      "code": "BXA",
+      "name": "BXA Intercollege Degree Programs",
+      "prefix": "52"
+    },
+    {
+      "code": "BSC",
+      "name": "Biological Sciences",
+      "prefix": "03"
+    },
+    {
+      "code": "BMD",
+      "name": "Biomedical Engineering",
+      "prefix": "42"
+    },
+    {
+      "code": "BUS",
+      "name": "Business Administration",
+      "prefix": "70"
+    },
+    {
+      "code": "CFA",
+      "name": "CFA Interdisciplinary",
+      "prefix": "62"
+    },
+    {
+      "code": "CIT",
+      "name": "CIT Interdisciplinary",
+      "prefix": "39"
+    },
+    {
+      "code": "CST",
+      "name": "CM Institute for Strategy and Tech",
+      "prefix": "84"
+    },
+    {
+      "code": "CMQ",
+      "name": "CMUQ-Wide Studies",
+      "prefix": "97"
+    },
+    {
+      "code": "CMU",
+      "name": "Carnegie Mellon University-Wide Studies",
+      "prefix": "99"
+    },
+    {
+      "code": "CHE",
+      "name": "Chemical Engineering",
+      "prefix": "06"
+    },
+    {
+      "code": "CMY",
+      "name": "Chemistry",
+      "prefix": "09"
+    },
+    {
+      "code": "CEE",
+      "name": "Civil & Environmental Engineering",
+      "prefix": "12"
+    },
+    {
+      "code": "CB",
+      "name": "Computational Biology",
+      "prefix": "02"
+    },
+    {
+      "code": "CS",
+      "name": "Computer Science",
+      "prefix": "15"
+    },
+    {
+      "code": "BCA",
+      "name": "Computer Science and Arts",
+      "prefix": "62"
+    },
+    {
+      "code": "DES",
+      "name": "Design",
+      "prefix": "51"
+    },
+    {
+      "code": "HSS",
+      "name": "Dietrich College Interdisciplinary",
+      "prefix": "66"
+    },
+    {
+      "code": "DRA",
+      "name": "Drama",
+      "prefix": "54"
+    },
+    {
+      "code": "ECO",
+      "name": "Economics",
+      "prefix": "73"
+    },
+    {
+      "code": "ECE",
+      "name": "Electrical & Computer Engineering",
+      "prefix": "18"
+    },
+    {
+      "code": "EPP",
+      "name": "Engineering & Public Policy",
+      "prefix": "19"
+    },
+    {
+      "code": "BEA",
+      "name": "Engineering Studies and Arts",
+      "prefix": "62"
+    },
+    {
+      "code": "ENG",
+      "name": "English",
+      "prefix": "76"
+    },
+    {
+      "code": "ETC",
+      "name": "Entertainment Technology",
+      "prefix": "53"
+    },
+    {
+      "code": "H00",
+      "name": "General Dietrich College",
+      "prefix": "65"
+    },
+    {
+      "code": "HC",
+      "name": "Heinz College Wide Courses",
+      "prefix": "94"
+    },
+    {
+      "code": "HIS",
+      "name": "History",
+      "prefix": "79"
+    },
+    {
+      "code": "HCI",
+      "name": "Human-Computer Interaction",
+      "prefix": "05"
+    },
+    {
+      "code": "BHA",
+      "name": "Humanities and Arts",
+      "prefix": "62"
+    },
+    {
+      "code": "ICT",
+      "name": "Information & Communication Technology",
+      "prefix": "04"
+    },
+    {
+      "code": "INI",
+      "name": "Information Networking Institute",
+      "prefix": "14"
+    },
+    {
+      "code": "ISP",
+      "name": "Information Systems Program",
+      "prefix": "67"
+    },
+    {
+      "code": "ISM",
+      "name": "Information Systems:Sch of IS & Mgt",
+      "prefix": "95"
+    },
+    {
+      "code": "III",
+      "name": "Integrated Innovation Institute",
+      "prefix": "49"
+    },
+    {
+      "code": "LTI",
+      "name": "Language Technologies Institute",
+      "prefix": "11"
+    },
+    {
+      "code": "LCL",
+      "name": "Languages Cultures & Appl Linguistics",
+      "prefix": "82"
+    },
+    {
+      "code": "MCS",
+      "name": "MCS Interdisciplinary",
+      "prefix": "38"
+    },
+    {
+      "code": "MLG",
+      "name": "Machine Learning",
+      "prefix": "10"
+    },
+    {
+      "code": "MSE",
+      "name": "Materials Science & Engineering",
+      "prefix": "27"
+    },
+    {
+      "code": "MSC",
+      "name": "Mathematical Sciences",
+      "prefix": "21"
+    },
+    {
+      "code": "MEG",
+      "name": "Mechanical Engineering",
+      "prefix": "24"
+    },
+    {
+      "code": "MED",
+      "name": "Medical Management:Sch of Pub Pol & Mgt",
+      "prefix": "92"
+    },
+    {
+      "code": "MUS",
+      "name": "Music",
+      "prefix": "57"
+    },
+    {
+      "code": "NVS",
+      "name": "Naval Science - ROTC",
+      "prefix": "32"
+    },
+    {
+      "code": "NSI",
+      "name": "Neuroscience Institute",
+      "prefix": "86"
+    },
+    {
+      "code": "PHI",
+      "name": "Philosophy",
+      "prefix": "80"
+    },
+    {
+      "code": "PE",
+      "name": "Physical Education",
+      "prefix": "69"
+    },
+    {
+      "code": "PHY",
+      "name": "Physics",
+      "prefix": "33"
+    },
+    {
+      "code": "PSY",
+      "name": "Psychology",
+      "prefix": "85"
+    },
+    {
+      "code": "PMP",
+      "name": "Public Management:Sch of Pub Pol & Mgt",
+      "prefix": "91"
+    },
+    {
+      "code": "PPP",
+      "name": "Public Policy & Mgt:Sch of Pub Pol & Mgt",
+      "prefix": "90"
+    },
+    {
+      "code": "ROB",
+      "name": "Robotics",
+      "prefix": "16"
+    },
+    {
+      "code": "SCS",
+      "name": "SCS Interdisciplinary",
+      "prefix": "07"
+    },
+    {
+      "code": "BSA",
+      "name": "Science and Arts",
+      "prefix": "62"
+    },
+    {
+      "code": "SDS",
+      "name": "Social & Decision Sciences",
+      "prefix": "88"
+    },
+    {
+      "code": "S3D",
+      "name": "Software & Societal Systems",
+      "prefix": "17"
+    },
+    {
+      "code": "STA",
+      "name": "Statistics and Data Science",
+      "prefix": "36"
+    },
+    {
+      "code": "STU",
+      "name": "StuCo (Student Led Courses)",
+      "prefix": "98"
+    }
+  ]
+}

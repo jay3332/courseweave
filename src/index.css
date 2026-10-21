@@ -1,0 +1,231 @@
+@import 'tailwindcss';
+
+/*
+  Courseweave design tokens.
+  - Neutrals are cool slate, never cream.
+  - Carnegie Red is the one accent: primary actions, focus, the active tab.
+  - Course colors are CMU "thread" hues; each course gets one via --course.
+*/
+
+:root {
+  --paper: #f3f4f2;
+  --surface: #ffffff;
+  --surface-2: #f8f9f8;
+  --ink: #1b1f27;
+  --ink-2: #3a404b;
+  --muted: #626977;
+  --line: #dcdfe3;
+  --line-strong: #c3c8cf;
+  --accent: #c41230;
+  --accent-ink: #ffffff;
+  --accent-soft: #fbe9ec;
+  --danger: #c41230;
+  --ok: #1e7f4a;
+  --warn: #a8660b;
+
+  --c0: #d63a52; /* Scots rose */
+  --c1: #c98a00; /* Gold thread */
+  --c2: #1e8f50; /* Green thread */
+  --c3: #00818a; /* Teal thread */
+  --c4: #2350a0; /* Blue thread */
+  --c5: #2683c6; /* Sky */
+  --c6: #7a4fb0; /* Heather */
+  --c7: #6a8424; /* Moss */
+  --c8: #b45a22; /* Copper */
+  --c9: #546679; /* Slate */
+
+  --block-tint: 16%;
+  --block-text-mix: 62%;
+
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --paper: #14171c;
+    --surface: #1b1f26;
+    --surface-2: #20252d;
+    --ink: #e8eaee;
+    --ink-2: #c5cad3;
+    --muted: #949bab;
+    --line: #2d333d;
+    --line-strong: #3d4450;
+    --accent: #ef4058;
+    --accent-ink: #ffffff;
+    --accent-soft: #3a1c23;
+    --danger: #ff5a6e;
+    --ok: #4cc287;
+    --warn: #e0a640;
+
+    --c0: #f0647a;
+    --c1: #e8b23a;
+    --c2: #4cc27f;
+    --c3: #35b8bf;
+    --c4: #7a9ef0;
+    --c5: #5ab4f0;
+    --c6: #b08ae6;
+    --c7: #a6c25a;
+    --c8: #e89260;
+    --c9: #97a8bb;
+
+    --block-tint: 22%;
+    --block-text-mix: 78%;
+
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme='dark'] {
+  --paper: #14171c;
+  --surface: #1b1f26;
+  --surface-2: #20252d;
+  --ink: #e8eaee;
+  --ink-2: #c5cad3;
+  --muted: #949bab;
+  --line: #2d333d;
+  --line-strong: #3d4450;
+  --accent: #ef4058;
+  --accent-ink: #ffffff;
+  --accent-soft: #3a1c23;
+  --danger: #ff5a6e;
+  --ok: #4cc287;
+  --warn: #e0a640;
+
+  --c0: #f0647a;
+  --c1: #e8b23a;
+  --c2: #4cc27f;
+  --c3: #35b8bf;
+  --c4: #7a9ef0;
+  --c5: #5ab4f0;
+  --c6: #b08ae6;
+  --c7: #a6c25a;
+  --c8: #e89260;
+  --c9: #97a8bb;
+
+  --block-tint: 22%;
+  --block-text-mix: 78%;
+
+  color-scheme: dark;
+}
+
+@theme inline {
+  --font-sans: 'Archivo', ui-sans-serif, system-ui, sans-serif;
+
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+  --color-danger: var(--danger);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+}
+
+/* `dark:` follows the explicit theme, falling back to the OS setting. */
+@custom-variant dark {
+  :root[data-theme='dark'] & {
+    @slot;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) & {
+      @slot;
+    }
+  }
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    font-variant-numeric: tabular-nums;
+  }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.45;
+  }
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  ::selection {
+    background: color-mix(in oklab, var(--accent) 25%, transparent);
+  }
+}
+
+/* Condensed heavy course number, e.g. 15-122. The typographic signature of the app. */
+@utility course-code {
+  font-stretch: 72%;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Display headings use the condensed cut too. */
+@utility display {
+  font-stretch: 78%;
+  font-weight: 750;
+  letter-spacing: -0.005em;
+  line-height: 1.05;
+}
+
+/* Tartan band: a woven Carnegie Red sett. Fixed colors, so it reads the same in both themes. */
+@utility tartan {
+  background-color: #c41230;
+  background-image:
+    repeating-linear-gradient(
+      90deg,
+      transparent 0 18px,
+      rgb(20 22 28 / 0.55) 18px 30px,
+      transparent 30px 34px,
+      rgb(20 22 28 / 0.55) 34px 38px,
+      transparent 38px 46px,
+      rgb(242 193 78 / 0.9) 46px 48px,
+      transparent 48px 64px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      transparent 0 3px,
+      rgb(20 22 28 / 0.4) 3px 7px,
+      transparent 7px 10px
+    );
+}
+
+/* A course-colored surface. Set --course on the element (see lib/colors.ts). */
+@utility course-tint {
+  background: color-mix(in oklab, var(--course) var(--block-tint), var(--surface));
+  color: color-mix(in oklab, var(--course) var(--block-text-mix), var(--ink));
+}
+@utility course-swatch {
+  background: var(--course);
+}
+
+/* Hatching used for previewed (not yet added) sections on the calendar. */
+@utility hatch {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    color-mix(in oklab, var(--course, var(--muted)) 22%, transparent) 0 6px,
+    transparent 6px 12px
+  );
+}
+
+@utility scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

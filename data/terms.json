@@ -1,0 +1,272 @@
+[
+  {
+    "id": "S27",
+    "name": "Spring 2027",
+    "season": "spring",
+    "year": 2027,
+    "minis": [
+      {
+        "number": 3,
+        "name": "Mini 3",
+        "start": "2027-01-19",
+        "end": "2027-03-05"
+      },
+      {
+        "number": 4,
+        "name": "Mini 4",
+        "start": "2027-03-15",
+        "end": "2027-04-30"
+      }
+    ],
+    "classesBegin": "2027-01-19",
+    "classesEnd": "2027-04-30",
+    "noClasses": [
+      {
+        "start": "2027-03-08",
+        "end": "2027-03-12",
+        "name": "Spring break"
+      },
+      {
+        "start": "2027-04-15",
+        "end": "2027-04-17",
+        "name": "Spring Carnival"
+      }
+    ],
+    "sources": [
+      {
+        "type": "csv",
+        "path": "raw/S27.csv"
+      },
+      {
+        "type": "stellic",
+        "role": "supplement",
+        "root": "data",
+        "dir": "raw/stellic/S27",
+        "optional": true
+      }
+    ],
+    "notes": [
+      "Recitation and lab sections aren't published in this term's data yet; only lectures and standalone sections are listed."
+    ]
+  },
+  {
+    "id": "F26",
+    "name": "Fall 2026",
+    "season": "fall",
+    "year": 2026,
+    "minis": [
+      {
+        "number": 1,
+        "name": "Mini 1",
+        "start": "2026-08-24",
+        "end": "2026-10-09"
+      },
+      {
+        "number": 2,
+        "name": "Mini 2",
+        "start": "2026-10-19",
+        "end": "2026-12-04"
+      }
+    ],
+    "classesBegin": "2026-08-24",
+    "classesEnd": "2026-12-04",
+    "noClasses": [
+      {
+        "start": "2026-09-07",
+        "end": "2026-09-07",
+        "name": "Labor Day"
+      },
+      {
+        "start": "2026-10-12",
+        "end": "2026-10-16",
+        "name": "Fall break"
+      },
+      {
+        "start": "2026-11-03",
+        "end": "2026-11-03",
+        "name": "Democracy Day (classes after 5 pm still meet)"
+      },
+      {
+        "start": "2026-11-25",
+        "end": "2026-11-27",
+        "name": "Thanksgiving break"
+      }
+    ],
+    "sources": [
+      {
+        "type": "soc",
+        "term": "F26"
+      },
+      {
+        "type": "stellic",
+        "role": "supplement",
+        "dir": "exported/jgtsao/courses_history",
+        "lyear": 1,
+        "sem": 1,
+        "optional": true,
+        "addMissingSections": false
+      }
+    ]
+  },
+  {
+    "id": "M26",
+    "name": "Summer 2026",
+    "season": "summer",
+    "year": 2026,
+    "minis": [
+      {
+        "number": 5,
+        "name": "Summer One",
+        "start": "2026-05-11",
+        "end": "2026-06-17"
+      },
+      {
+        "number": 6,
+        "name": "Summer Two",
+        "start": "2026-06-22",
+        "end": "2026-07-30"
+      }
+    ],
+    "classesBegin": "2026-05-11",
+    "classesEnd": "2026-07-30",
+    "noClasses": [
+      {
+        "start": "2026-05-25",
+        "end": "2026-05-25",
+        "name": "Memorial Day"
+      },
+      {
+        "start": "2026-06-19",
+        "end": "2026-06-19",
+        "name": "Juneteenth"
+      },
+      {
+        "start": "2026-07-03",
+        "end": "2026-07-03",
+        "name": "Independence Day (observed)"
+      }
+    ],
+    "sources": [
+      {
+        "type": "soc",
+        "term": "M26"
+      }
+    ],
+    "notes": [
+      "The public Schedule of Classes doesn't list instructors or rooms for this term."
+    ]
+  },
+  {
+    "id": "S26",
+    "name": "Spring 2026",
+    "season": "spring",
+    "year": 2026,
+    "minis": [
+      {
+        "number": 3,
+        "name": "Mini 3",
+        "start": "2026-01-12",
+        "end": "2026-02-27"
+      },
+      {
+        "number": 4,
+        "name": "Mini 4",
+        "start": "2026-03-09",
+        "end": "2026-04-24"
+      }
+    ],
+    "classesBegin": "2026-01-12",
+    "classesEnd": "2026-04-24",
+    "noClasses": [
+      {
+        "start": "2026-01-19",
+        "end": "2026-01-19",
+        "name": "Martin Luther King Jr. Day"
+      },
+      {
+        "start": "2026-03-02",
+        "end": "2026-03-06",
+        "name": "Spring break"
+      },
+      {
+        "start": "2026-04-09",
+        "end": "2026-04-11",
+        "name": "Spring Carnival"
+      }
+    ],
+    "sources": [
+      {
+        "type": "soc",
+        "term": "S26"
+      },
+      {
+        "type": "stellic",
+        "role": "supplement",
+        "dir": "exported/jgtsao/courses_history",
+        "lyear": 0,
+        "sem": 2,
+        "optional": true,
+        "addMissingSections": false
+      }
+    ]
+  },
+  {
+    "id": "F25",
+    "name": "Fall 2025",
+    "season": "fall",
+    "year": 2025,
+    "minis": [
+      {
+        "number": 1,
+        "name": "Mini 1",
+        "start": "2025-08-25",
+        "end": "2025-10-10"
+      },
+      {
+        "number": 2,
+        "name": "Mini 2",
+        "start": "2025-10-20",
+        "end": "2025-12-05"
+      }
+    ],
+    "classesBegin": "2025-08-25",
+    "classesEnd": "2025-12-05",
+    "noClasses": [
+      {
+        "start": "2025-09-01",
+        "end": "2025-09-01",
+        "name": "Labor Day"
+      },
+      {
+        "start": "2025-10-13",
+        "end": "2025-10-17",
+        "name": "Fall break"
+      },
+      {
+        "start": "2025-11-04",
+        "end": "2025-11-04",
+        "name": "Democracy Day (classes after 5 pm still meet)"
+      },
+      {
+        "start": "2025-11-26",
+        "end": "2025-11-28",
+        "name": "Thanksgiving break"
+      }
+    ],
+    "sources": [
+      {
+        "type": "soc",
+        "term": "F25"
+      },
+      {
+        "type": "stellic",
+        "role": "supplement",
+        "dir": "exported/jgtsao/courses_history",
+        "lyear": 0,
+        "sem": 1,
+        "optional": true,
+        "addMissingSections": false
+      }
+    ]
+  }
+]
