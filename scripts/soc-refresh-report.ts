@@ -6,7 +6,7 @@
 // - A cached page whose only difference is the SOC's "last updated" stamp is restored, as is a meta.json (fetch
 //   time) when nothing else in its term changed, so a quiet week leaves the tree clean.
 // - Each remaining term is parsed before and after (with the same adapter the build uses) to list added, removed
-//   and changed courses.
+//   and changed courses. A term whose pages changed without changing any course is restored too.
 // - Terms the SOC now lists that data/terms.json doesn't build from it are called out (e.g. a new semester).
 // Prints `changed=true|false` to $GITHUB_OUTPUT when set.
 import { execFileSync } from 'node:child_process'
@@ -136,6 +136,11 @@ for (const term of changedTerms) {
   const changed = [...after.keys()]
     .filter((id) => before.has(id) && JSON.stringify(before.get(id)) !== JSON.stringify(after.get(id)))
     .sort()
+  if (!added.length && !removed.length && !changed.length) {
+    // The pages differ, but not in anything the site shows: keep the committed copy.
+    git('checkout', '--', `${SOC_DIR}/${term}`)
+    continue
+  }
   lines.push(`### ${name}`, '', `${after.size} courses (${added.length} added, ${removed.length} removed, ${changed.length} changed).`, '')
   if (added.length) lines.push('**Added**', '', ...list(added.map((id) => `- ${code(id)} ${after.get(id)!.title}`)), '')
   if (removed.length) lines.push('**Removed**', '', ...list(removed.map((id) => `- ${code(id)} ${before.get(id)!.title}`)), '')

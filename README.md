@@ -51,6 +51,15 @@ Mini sections are detected from the section name's last digit when it matches on
 2. Add the term to `data/terms.json` with dates from the [official academic calendar](https://www.cmu.edu/hub/calendar/) and its sources.
 3. Run `npm run data`.
 
+### Keeping data fresh
+
+The **Refresh course data** workflow (`.github/workflows/refresh-data.yml`) runs every Monday, or any time from the Actions tab:
+
+- It re-downloads the public Schedule of Classes. When sections really changed (not just the SOC's daily "last updated" stamp), it builds and tests the new data and opens a pull request on `data/schedule-of-classes` listing the added, removed and changed courses.
+- It keeps one **Data refresh checklist** issue for what CI can't do: newer FCE data from ScottyLabs, Stellic sections more than two weeks old for a term that hasn't ended (Stellic needs your CMU login), merged data the live site doesn't have yet, and semesters newly on the Schedule of Classes. The issue closes itself once everything is current.
+
+Deploys stay on your machine, because a deploy also needs the Stellic and FCE data that live there. After merging a refresh pull request (or refreshing Stellic or FCE data), run `npm run data`, commit `data/derived/refreshed.json` if it changed, and `npm run deploy`. Pull requests from the workflow need **Settings → Actions → General → Allow GitHub Actions to create and approve pull requests**.
+
 ## Deploying to Cloudflare
 
 Courseweave runs as a Cloudflare Worker that serves the built site as static assets (Cloudflare's successor to Pages). `wrangler.jsonc` configures it. `worker/` handles sign-in with a CMU account, keeps each user's schedules, record and degree plans in a D1 database, serves FCE data only to signed-in CMU users, and 404s missing data files.
