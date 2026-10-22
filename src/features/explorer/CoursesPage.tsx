@@ -1,6 +1,6 @@
 import { ChartScatter, List, SearchX, SlidersHorizontal } from 'lucide-react'
 import { useDeferredValue, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
-import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router'
+import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router'
 import { Button, Dialog, SearchInput } from '../../components/ui'
 import { parseCourseCode } from '../../lib/data'
 import { useCatalogIndex } from '../../lib/catalog'
@@ -14,6 +14,7 @@ import { usePlans } from '../../state/plan'
 import { useBookmarks } from '../../state/store'
 import { useTerm } from '../../state/term'
 import { CourseDetail } from './CourseDetail'
+import { NotOfferedHere, OtherTermResults } from './OtherTerms'
 import { HoursScatter } from '../fce/HoursScatter'
 import { FilterPanel } from './FilterPanel'
 import { RequirementChip } from './RequirementFilter'
@@ -310,9 +311,16 @@ export function CoursesPage() {
                 scrollRoot={scrollRef}
                 fce={fce}
               />
+              <OtherTermResults query={deferredQuery} filters={filters} search={location.search} empty={false} fallback={null} />
             </>
           ) : (
-            <EmptyResults query={deferredQuery} filterCount={filterCount} onClearFilters={() => setFilters(EMPTY_FILTERS)} onClearAll={clearAll} />
+            <OtherTermResults
+              query={deferredQuery}
+              filters={filters}
+              search={location.search}
+              empty
+              fallback={<EmptyResults query={deferredQuery} filterCount={filterCount} onClearFilters={() => setFilters(EMPTY_FILTERS)} onClearAll={clearAll} />}
+            />
           )}
         </div>
       </section>
@@ -326,15 +334,7 @@ export function CoursesPage() {
           {selected ? (
             <CourseDetail course={selected} closeHref={closeHref} search={location.search} />
           ) : (
-            <div className="grid flex-1 place-items-center p-8 text-center">
-              <div>
-                <h2 className="display mb-2 text-2xl">No course {courseCode}</h2>
-                <p className="mb-4 text-ink-2">It isn’t offered in {term.meta.name}, or the number is mistyped.</p>
-                <Link to={closeHref} className="font-medium text-accent underline underline-offset-2">
-                  Back to all courses
-                </Link>
-              </div>
-            </div>
+            <NotOfferedHere courseId={selectedId ?? ''} search={location.search} backHref={closeHref} />
           )}
         </aside>
       ) : null}

@@ -19,13 +19,15 @@ import { useRequisiteContext } from '../record/context'
 import { RequisiteStatus } from '../record/RequisiteStatus'
 import { CountsToward } from './CountsToward'
 import { CourseFacts, CourseSections, ScheduleActions, ScheduleCalendar, useCourseSchedule } from './CourseDetail'
+import { NotOfferedHere } from './OtherTerms'
 
 export function CourseFullPage() {
   const term = useTerm()
   const termId = term.meta.id
   const { courseCode = '' } = useParams()
   const { search } = useLocation()
-  const course = term.courseById.get(parseCourseCode(courseCode) ?? '') ?? null
+  const courseId = parseCourseCode(courseCode) ?? ''
+  const course = term.courseById.get(courseId) ?? null
 
   useEffect(() => {
     document.title = course ? `${course.code} ${course.title} · Courseweave` : 'Course not found · Courseweave'
@@ -36,14 +38,8 @@ export function CourseFullPage() {
       {course ? (
         <CourseFull key={course.id} course={course} search={search} />
       ) : (
-        <div className="grid min-h-60 place-items-center p-8 text-center">
-          <div>
-            <h1 className="display mb-2 text-2xl">No course {courseCode}</h1>
-            <p className="mb-4 text-ink-2">It isn’t offered in {term.meta.name}, or the number is mistyped.</p>
-            <Link to={`/${termId}/courses${search}`} className="font-medium text-accent underline underline-offset-2">
-              Back to all courses
-            </Link>
-          </div>
+        <div className="flex min-h-full flex-col">
+          <NotOfferedHere courseId={courseId} search={search} backHref={`/${termId}/courses${search}`} />
         </div>
       )}
     </div>

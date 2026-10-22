@@ -16,6 +16,13 @@ export interface DateRange {
   name: string
 }
 
+/** public/data/offerings.json: which built terms offer each course, so search can point at another semester. */
+export interface OfferingsData {
+  /** Every built term, newest first. */
+  terms: string[]
+  courses: Record<string, { title: string; dept: string; level: string; terms: string[] }>
+}
+
 export interface TermMeta {
   /** SIO-style code, e.g. "S27". Used in URLs. */
   id: string

@@ -5,7 +5,7 @@
 import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import type { Course, Section, TermData, TermIndexEntry, TermMeta } from '../src/lib/types.ts'
+import type { Course, OfferingsData, Section, TermData, TermIndexEntry, TermMeta } from '../src/lib/types.ts'
 import { DATA_INPUT_PATHS, dataDir, derivedDir, finalizeCourse, meetingKey, publicDataDir, root, scottylabsDir } from './lib/common.ts'
 import { mergeSupplement } from './lib/merge.ts'
 import { csvSource } from './sources/csv.ts'
@@ -108,6 +108,8 @@ async function buildTerm(config: TermConfig, passFail: Set<string>): Promise<Ter
 
 const only = process.argv.slice(2)
 const configs: TermConfig[] = JSON.parse(readFileSync(join(dataDir, 'terms.json'), 'utf8'))
+/** Course id → the terms offering it (with that term's title), for public/data/offerings.json. */
+const offered = new Map<string, { dept: string; level: string; titles: Map<string, string> }>()
 mkdirSync(publicDataDir, { recursive: true })
 const passFail = readPassFail()
 
@@ -121,6 +123,10 @@ for (const config of configs) {
     data = await buildTerm(config, passFail)
     writeFileSync(outPath, JSON.stringify(data))
   }
+  for (const c of data.courses) {
+    const o = offered.get(c.id) ?? offered.set(c.id, { dept: c.dept, level: c.level, titles: new Map() }).get(c.id)!
+    o.titles.set(data.term.id, c.title)
+  }
   const sectionCount = data.courses.reduce((n, c) => n + c.sections.length, 0)
   index.push({ ...data.term, courseCount: data.courses.length, sectionCount })
   console.log(`${data.term.id}: ${data.courses.length} courses, ${sectionCount} sections`)
@@ -130,6 +136,16 @@ for (const config of configs) {
 const seasonOrder = { spring: 0, summer: 1, fall: 2 }
 index.sort((a, b) => b.year - a.year || seasonOrder[b.season] - seasonOrder[a.season])
 writeFileSync(join(publicDataDir, 'terms.json'), JSON.stringify(index, null, 2))
+
+// Which terms offer each course (newest first, titled from the newest), so search can point at another semester.
+const termOrder = index.map((t) => t.id)
+const offerings: OfferingsData = { terms: termOrder, courses: {} }
+for (const [id, o] of [...offered].sort(([a], [b]) => a.localeCompare(b))) {
+  const terms = termOrder.filter((t) => o.titles.has(t))
+  offerings.courses[id] = { title: o.titles.get(terms[0])!, dept: o.dept, level: o.level, terms }
+}
+writeFileSync(join(publicDataDir, 'offerings.json'), JSON.stringify(offerings))
+console.log(`offerings: ${Object.keys(offerings.courses).length} courses across ${termOrder.length} terms`)
 
 // Which commit of the data inputs this build reflects, so the weekly data check can tell when merged updates aren't
 // deployed yet. `dirty` marks builds with uncommitted input changes.

@@ -36,6 +36,9 @@ export function buildSearchDocs(courses: Course[]): SearchDoc[] {
   }))
 }
 
+/** What scoring reads: a term's search docs, or lighter docs for courses from other terms (see lib/offerings). */
+export type ScoredDoc = Pick<SearchDoc, 'title' | 'instructors' | 'sectionTitles'> & { course: Pick<Course, 'id' | 'dept'> }
+
 /** Whether `token` occurs at the start of a word in `haystack`. */
 export function wordStarts(haystack: string, token: string): boolean {
   let i = haystack.indexOf(token)
@@ -50,7 +53,7 @@ export function wordStarts(haystack: string, token: string): boolean {
  * Score a course against a free-text query. 0 = no match; higher is better.
  * Matches course numbers ("15-122", "15122", "15-1"), title words, topic titles and instructor names.
  */
-export function scoreCourse(doc: SearchDoc, query: string): number {
+export function scoreCourse(doc: ScoredDoc, query: string): number {
   const q = normalize(query).trim()
   if (!q) return 1
 
