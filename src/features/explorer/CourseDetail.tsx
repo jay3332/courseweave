@@ -300,9 +300,10 @@ function SectionsList(props: SectionsListProps) {
 
   return (
     <div className="@container">
-      <div aria-hidden className="hidden border-b border-line-strong pb-1.5 text-[12px] text-muted @md:grid @md:grid-cols-[3.75rem_minmax(0,1fr)_5.75rem] @md:gap-x-2">
+      {/* Column headings only once there's room for the Days / Time / Room columns (the meeting lines switch at @lg too). */}
+      <div aria-hidden className="hidden border-b border-line-strong pb-1.5 text-[12px] text-muted @lg:grid @lg:grid-cols-[3.75rem_minmax(0,1fr)_5.75rem] @lg:gap-x-2">
         <span>Section</span>
-        <span className="grid grid-cols-[3rem_9.5rem_minmax(0,1fr)] gap-x-2">
+        <span className="grid grid-cols-[3rem_8.5rem_minmax(0,1fr)] gap-x-2">
           <span>Days</span>
           <span>Time</span>
           <span>Room</span>
@@ -382,10 +383,13 @@ function SectionRow({ course, entry, canEdit, conflictsFor, onHover, onAct, onRe
       <div className="min-w-0 text-[13px]">
         <ul className="space-y-0.5">
           {s.meetings.map((m, i) => (
-            <li key={i} className="flex flex-wrap gap-x-2 @md:grid @md:grid-cols-[3rem_9.5rem_minmax(0,1fr)]">
+            <li key={i} className="flex flex-wrap gap-x-2 @lg:grid @lg:grid-cols-[3rem_8.5rem_minmax(0,1fr)]">
               <span className="font-medium text-ink">{formatDays(m.days)}</span>
               <span className="whitespace-nowrap text-ink-2">{formatTimeRange(m.start, m.end)}</span>
-              <span className="text-ink-2">{formatLocation(m)}</span>
+              {/* A room never breaks across lines ("WEH 5310"): it moves to its own line, and is cut off (in full on hover) only past that. */}
+              <span title={formatLocation(m)} className="truncate whitespace-nowrap text-ink-2">
+                {formatLocation(m)}
+              </span>
             </li>
           ))}
         </ul>

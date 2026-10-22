@@ -8,6 +8,7 @@ import { join } from 'node:path'
 import type { AttachedProgram, ConcentrationInfo, CountRule, DoubleCountRule, GroupRule, PoolSet, ProgramVersion, ReqNode } from '../src/lib/degree-types.ts'
 import type { ProgramInfo, ProgramKind, ProgramsIndex, ProgramVersionInfo } from '../src/lib/plan-types.ts'
 import { publicDataDir, scottylabsDir } from './lib/common.ts'
+import { rankConcentrationPrograms } from './lib/concentrations.ts'
 
 // ---------------------------------------------------------------------------
 // Raw Stellic shapes (only the parts we read)
@@ -33,7 +34,7 @@ interface RawProgram {
   catalog_id: number
   program_name: string
   program_type: number
-  program_reqs?: { concentrations?: { id: number; name: string }[] } | null
+  program_reqs?: { concentrations?: { id: number; name: string }[]; department?: string | null } | null
   tree: RawNode
 }
 
@@ -463,36 +464,21 @@ function main() {
     return pool[0]
   }
 
-  const requirementBundles = [...infos.values()].filter((i) => i.kind === 'requirements')
-  const tokens = (s: string) =>
-    new Set(
-      s
-        .toLowerCase()
-        .split(/[^a-z0-9]+/)
-        .filter((t) => t.length > 2 && !['and', 'the', 'for', 'concentration', 'requirements', 'track'].includes(t)),
-    )
+  const departments = new Map<number, string | null>()
+  for (const raw of raws) if (!departments.get(raw.catalog_id)) departments.set(raw.catalog_id, raw.program_reqs?.department ?? null)
+  const requirementBundles = [...infos.values()]
+    .filter((i) => i.kind === 'requirements')
+    .map((b) => ({ ...b, campuses: b.versions.map((v) => v.campus), department: departments.get(b.catalogId) ?? null }))
 
   const concentrationsFor = (raw: RawProgram, entryYear: number | null, campus: string | null): ConcentrationInfo[] => {
-    const parentTokens = tokens(raw.program_name)
+    const parent = { name: raw.program_name, campus, department: raw.program_reqs?.department ?? null }
     return (raw.program_reqs?.concentrations ?? []).map((c) => {
-      const want = c.name.toLowerCase()
-      const scored = requirementBundles
-        .filter((b) => b.name.toLowerCase().includes(want))
-        .map((b) => {
-          const name = b.name.toLowerCase()
-          let score = 0
-          if (/concentration|track/.test(name)) score += 3
-          for (const t of tokens(b.name)) if (parentTokens.has(t)) score += 1
-          if (/^ey\d{4}/.test(name) && entryYear) score += 0
-          return { b, score }
-        })
-        .sort((x, y) => y.score - x.score || x.b.name.localeCompare(y.b.name))
-        .slice(0, 3)
+      const ranked = rankConcentrationPrograms(c.name, parent, requirementBundles).slice(0, 3)
       return {
         id: c.id,
         name: c.name,
-        programs: scored
-          .map(({ b }) => {
+        programs: ranked
+          .map((b) => {
             const v = pickVersion(b.catalogId, entryYear, campus)
             return v ? { catalogId: b.catalogId, auditId: v.auditId, name: b.name } : null
           })
