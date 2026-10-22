@@ -1,0 +1,13 @@
+# Cloudflare static asset headers (read by Wrangler at deploy; not served as a file).
+
+# Vite's hashed bundles never change.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Course data changes whenever you redeploy; let browsers revalidate.
+/data/*
+  Cache-Control: public, max-age=0, must-revalidate
+
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin

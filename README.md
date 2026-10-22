@@ -16,6 +16,7 @@ npm install
 npm run dev      # rebuilds data (npm run data), then starts Vite on :5173
 npm test         # unit tests (vitest)
 npm run build    # data + typecheck + production build into dist/
+npm run deploy   # build and deploy to Cloudflare (see below)
 ```
 
 ## Data
@@ -50,6 +51,34 @@ Mini sections are detected from the section name's last digit when it matches on
 1. Run `npm run fetch:soc -- F27` once the Schedule of Classes lists it (or drop a CSV in `data/raw/`).
 2. Add the term to `data/terms.json` with dates from the [official academic calendar](https://www.cmu.edu/hub/calendar/) and its sources.
 3. Run `npm run data`.
+
+## Deploying to Cloudflare
+
+Courseweave deploys as a Cloudflare Worker that serves the built site as static assets (Cloudflare's successor to Pages). `wrangler.jsonc` configures it; `worker/index.ts` only returns 404s for missing data files so the app can tell optional data is absent.
+
+Deploy from your machine, not from Cloudflare's Git builds: the data build needs local inputs (the ScottyLabs checkout, Stellic exports) that aren't in this repo.
+
+### First time
+
+1. Create a free Cloudflare account at <https://dash.cloudflare.com/sign-up>.
+2. `npx wrangler login` (opens the browser to authorize Wrangler).
+3. `npm run deploy`. This rebuilds the data, builds the site, drops FCE data from `dist/`, and uploads. Wrangler prints the URL, e.g. `https://courseweave.<your-subdomain>.workers.dev`.
+
+Redeploy the same way after updating data (`npm run fetch:stellic -- S27`, a new term, …). `npm run deploy:dry-run` checks everything without uploading, and `npm run preview:worker` serves the exact deploy locally on `wrangler dev`.
+
+### FCE data
+
+FCE results are CMU-internal, so `npm run deploy` leaves them out and the site hides its FCE features. To include them, put the deployment behind CMU-only access first, then deploy with `INCLUDE_FCE=1 npm run deploy`:
+
+1. If you haven't used Zero Trust before, turn it on: Cloudflare dashboard → Zero Trust (free for up to 50 users).
+2. Workers & Pages → courseweave → **Access** tab → **Protect this Worker behind Access** → **All traffic**. Under the authentication policy, allow emails ending in `@andrew.cmu.edu` (one-time PIN login works with no extra setup) → **Apply Access**.
+3. Open the site in a private window and confirm it asks for an Andrew email before showing anything.
+
+Course data from Stellic (Spring 2027 sections, degree requirements) also comes from a CMU login; if you'd rather not publish it openly, use the same Access setup without setting `INCLUDE_FCE`.
+
+### Custom domain
+
+Workers & Pages → courseweave → **Domains** tab → add a custom domain (the domain must be on Cloudflare). With a custom domain you can also scope Access to just `/data/fce/*` instead of the whole site.
 
 ## Layout
 

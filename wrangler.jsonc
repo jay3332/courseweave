@@ -1,0 +1,15 @@
+// Cloudflare Workers deployment: the built site (dist/) is served as static assets.
+// Deploy with `npm run deploy` (see README). Docs: https://developers.cloudflare.com/workers/static-assets/
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "courseweave",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-10-21",
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    // Client-side routes (/S27/schedule, …) get index.html. Missing /data files are 404'd by the Worker instead.
+    "not_found_handling": "single-page-application",
+  },
+  "observability": { "enabled": true },
+}

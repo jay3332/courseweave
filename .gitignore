@@ -11,3 +11,7 @@ dist
 
 # Local agent/editor settings
 .claude/settings.local.json
+
+# Cloudflare
+.wrangler/
+.dev.vars

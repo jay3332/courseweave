@@ -1,14 +1,16 @@
-import { useEffect } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import { BrowserRouter, Link, Navigate, Route, Routes, useNavigate, useParams, Outlet } from 'react-router'
 import { AppShell } from './components/AppShell'
 import { Spinner } from './components/ui'
-import { RequisitesPage } from './features/catalog/RequisitesPage'
-import { CoursesPage } from './features/explorer/CoursesPage'
-import { InstructorsPage } from './features/instructors/InstructorsPage'
-import { SchedulePage } from './features/planner/SchedulePage'
-import { RecordPage } from './features/record/RecordPage'
-import { PlanPage } from './features/degree/PlanPage'
 import { TermProvider, useTerms } from './state/term'
+
+// Each page is its own chunk, so the first visit only downloads the page it opens.
+const RequisitesPage = lazy(() => import('./features/catalog/RequisitesPage').then((m) => ({ default: m.RequisitesPage })))
+const CoursesPage = lazy(() => import('./features/explorer/CoursesPage').then((m) => ({ default: m.CoursesPage })))
+const InstructorsPage = lazy(() => import('./features/instructors/InstructorsPage').then((m) => ({ default: m.InstructorsPage })))
+const SchedulePage = lazy(() => import('./features/planner/SchedulePage').then((m) => ({ default: m.SchedulePage })))
+const RecordPage = lazy(() => import('./features/record/RecordPage').then((m) => ({ default: m.RecordPage })))
+const PlanPage = lazy(() => import('./features/degree/PlanPage').then((m) => ({ default: m.PlanPage })))
 
 export default function App() {
   return (
@@ -59,7 +61,9 @@ function TermLayout() {
         </FullMessage>
       )}
     >
-      <Outlet />
+      <Suspense fallback={<Loading />}>
+        <Outlet />
+      </Suspense>
     </TermProvider>
   )
 }
