@@ -21,7 +21,8 @@ export async function readSioRecord(file: File): Promise<SioRecord> {
   const doc = await task.promise
   try {
     const pages: TextPiece[][] = []
-    for (let i = 1; i <= Math.min(doc.numPages, 20); i++) {
+    // Long graduate + undergraduate records run several pages; 60 is far beyond any real record.
+    for (let i = 1; i <= Math.min(doc.numPages, 60); i++) {
       const page = await doc.getPage(i)
       const content = await page.getTextContent()
       const pieces: TextPiece[] = []

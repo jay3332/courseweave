@@ -133,7 +133,11 @@ const SEASON: Record<string, 'F' | 'S' | 'M'> = { fall: 'F', spring: 'S', summer
 
 /** "Fall 2026" → "F26"; "Summer One 2027" / "Summer Session II 2027" → "M27". */
 export function termCode(label: string): string | null {
-  const m = /^(Fall|Spring|Summer)(?:\s+(?:Session\s+)?(?:One|Two|I{1,2}|1|2|All))?\s+(\d{4})$/i.exec(label.trim())
+  const text = label
+    .trim()
+    .replace(/\s*[-–(]?\s*\(?cont(?:inued|'d|\.)?\)?\s*$/i, '')
+    .trim()
+  const m = /^(Fall|Spring|Summer)(?:\s+(?:Session\s+)?(?:One|Two|I{1,2}|1|2|All))?\s+(\d{4})$/i.exec(text)
   if (!m) return null
   return `${SEASON[m[1].toLowerCase()]}${m[2].slice(2)}`
 }
@@ -150,19 +154,20 @@ export function titleCase(text: string): string {
 }
 
 // DPT? CRS# TITLE UNITS [GRADE] [QUALITY POINTS]. Units and quality points always carry one decimal in SIO.
-const ROW = /^(?:([A-Z]{2,4})\s+)?(\d{5})\s+(.+?)\s+(\d{1,2}\.\d)(?:\s+([A-Z]{1,2}[+-]?|\*{1,2}))?(?:\s+(\d{1,3}\.\d))?$/
+const ROW =
+  /^(?:([A-Z][A-Z0-9]{1,3})\s+)?(\d{2})-?(\d{3})\s+(.+?)\s+(\d{1,3}\.\d{1,2})(?:\s+([A-Z]{1,2}[+-]?|\*{1,2}))?(?:\s+(\d{1,4}\.\d{1,2}))?(?:\s+[*#@^]+)?$/
 // Something that starts like a course row; used to report rows the full pattern couldn't read.
-const ROW_START = /^(?:[A-Z]{2,4}\s+)?\d{5}\s/
+const ROW_START = /^(?:[A-Z][A-Z0-9]{1,3}\s+)?\d{2}-?\d{3}\s/
 
 export function parseCourseRow(line: string): SioCourseRow | null {
   const m = ROW.exec(line)
   if (!m) return null
-  const units = Number(m[4])
+  const units = Number(m[5])
   if (!Number.isFinite(units)) return null
-  const grade = m[5] && !m[5].startsWith('*') ? m[5] : undefined
+  const grade = m[6] && !m[6].startsWith('*') ? m[6] : undefined
   return {
-    courseId: m[2],
-    title: m[3].trim(),
+    courseId: m[2] + m[3],
+    title: m[4].trim(),
     units,
     ...(grade ? { grade } : {}),
     ...(m[1] ? { dept: m[1] } : {}),
@@ -171,12 +176,15 @@ export function parseCourseRow(line: string): SioCourseRow | null {
 
 type Section = { kind: 'none' } | { kind: 'exam' } | { kind: 'transfer'; group: SioTransferGroup } | { kind: 'term'; term: SioTerm }
 
-const EXAM_HEADING = /^(?:ADVANCED PLACEMENT|INTERNATIONAL BACCALAUREATE|A[- ]LEVEL|CAMBRIDGE|CREDIT BY EXAM|EXAM(?:INATION)?|TEST)\b.*CREDIT$|^(?:ADVANCED PLACEMENT|INTERNATIONAL BACCALAUREATE) CREDIT/i
-const TRANSFER_HEADING = /^TRANSFER CREDIT(?: FROM (.+))?$/i
+const EXAM_HEADING = /^(?:ADVANCED PLACEMENT|INTERNATIONAL BACCALAUREATE|A[- ]LEVELS?|CAMBRIDGE|CREDIT BY EXAM|EXAM(?:INATION)?|TEST|AP|IB)\b.*CREDITS?$|^(?:ADVANCED PLACEMENT|INTERNATIONAL BACCALAUREATE) CREDITS?/i
+const TRANSFER_HEADING = /^TRANSFER(?:RED)? CREDITS?(?: (?:FROM|AT)\s+(.+?))?\s*$/i
+/** The block that holds AP and transfer credit ("Advanced Placement / Transfer Credits"). */
+const CREDITS_BLOCK = /^Advanced Placement\s*\/\s*Transfer Credits?$/i
+/** Any other all-caps "... CREDIT" sub-heading inside the credits block (e.g. "OTHER CREDIT"). */
+const OTHER_CREDIT_HEADING = /^[A-Z][A-Z &/,.'-]{2,60} CREDITS?$/
 const IGNORED = [
   /^=+$/,
   /^(?:Beginning|End) of (?:Undergraduate|Graduate) Record$/i,
-  /^Advanced Placement \/ Transfer Credits$/i,
   /^DPT\b/,
   /^(?:FINAL|GRADE|POINTS|UNITS|QUALITY|PASSED|FACTORABLE|QPA|TOTAL)\b/i,
   /^(?:Semester|Cumulative)\b/i,
@@ -207,7 +215,13 @@ export function parseSioLines(pages: string[][]): SioRecord {
   }
 
   let section: Section = { kind: 'none' }
+  let inCredits = false
   for (const line of all) {
+    if (CREDITS_BLOCK.test(line)) {
+      inCredits = true
+      section = { kind: 'exam' }
+      continue
+    }
     const field = /^(Name|College|Department|Major):\s*(.*)$/.exec(line)
     if (field) {
       const value = field[2].trim() || null
@@ -227,12 +241,13 @@ export function parseSioLines(pages: string[][]): SioRecord {
       section = { kind: 'transfer', group }
       continue
     }
-    if (EXAM_HEADING.test(line)) {
+    if (EXAM_HEADING.test(line) || (inCredits && OTHER_CREDIT_HEADING.test(line) && !/^TOTAL\b/i.test(line))) {
       section = { kind: 'exam' }
       continue
     }
     const code = termCode(line)
     if (code) {
+      inCredits = false
       let term = record.terms.find((t) => t.term === code)
       if (!term) {
         term = { term: code, label: line.trim(), rows: [] }
