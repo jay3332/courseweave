@@ -9,6 +9,7 @@ import { termLabel, useCourseLookup, useTermOptions } from './hooks'
 import { Field, Select } from './shared'
 import { TakenSection } from './TakenSection'
 import { TransferSection } from './TransferSection'
+import { RecordEmptyStart } from './RecordStart'
 import { SioImportButton } from './SioImport'
 import { WaiversSection } from './WaiversSection'
 
@@ -84,19 +85,21 @@ function Header() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <SioImportButton
-            onImported={(message) => {
-              setError(null)
-              setNotice(message)
-            }}
-          />
+          {!empty ? (
+            <SioImportButton
+              onImported={(message) => {
+                setError(null)
+                setNotice(message)
+              }}
+            />
+          ) : null}
           <Button onClick={download} disabled={empty}>
             <Download aria-hidden className="size-4" />
-            Export
+            Export backup
           </Button>
           <Button onClick={() => fileRef.current?.click()}>
             <Upload aria-hidden className="size-4" />
-            Import
+            Import backup
           </Button>
           <input
             ref={fileRef}
@@ -125,6 +128,14 @@ function Header() {
         <p role="status" className="text-[14px] text-ok">
           {notice}
         </p>
+      ) : null}
+      {empty ? (
+        <RecordEmptyStart
+          onImported={(message) => {
+            setError(null)
+            setNotice(message)
+          }}
+        />
       ) : null}
 
       <Dialog open={pending !== null} onClose={() => setPending(null)} title="Import record">

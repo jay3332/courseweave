@@ -127,7 +127,8 @@ export function Dialog({ open, onClose, title, children, className = '' }: { ope
   return (
     <dialog
       ref={ref}
-      onClose={onClose}
+      // React passes a nested dialog's close event up to this handler too; only this dialog closing counts.
+      onClose={(e) => e.target === ref.current && onClose()}
       onClick={(e) => e.target === ref.current && onClose()}
       aria-label={title}
       className={`m-auto max-h-[min(88dvh,900px)] w-[min(94vw,720px)] overflow-hidden rounded-xl border border-line bg-surface p-0 text-ink shadow-2xl backdrop:bg-[color-mix(in_oklab,var(--ink)_45%,transparent)] ${className}`}

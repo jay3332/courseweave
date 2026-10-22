@@ -1,8 +1,8 @@
 // "Import from SIO": read the unofficial academic record PDF in the browser and choose what to add to the record.
 import { FileText, Upload } from 'lucide-react'
-import { useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState, type ReactNode } from 'react'
 import { coursePreview } from '../../components/CoursePreview'
-import { Button, Dialog, Spinner } from '../../components/ui'
+import { Button, Dialog, Spinner, type ButtonProps } from '../../components/ui'
 import { codeOf } from '../../lib/requisite-format'
 import { termLabel } from '../../lib/requisites'
 import { NotSioRecordError, type SioRecord } from '../../lib/sio-record'
@@ -30,7 +30,16 @@ function importErrorMessage(e: unknown): string {
   return "This browser couldn't read the PDF. Update it, or try again in another browser such as Chrome or Firefox."
 }
 
-export function SioImportButton({ onImported }: { onImported(message: string): void }) {
+export function SioImportButton({
+  onImported,
+  variant = 'secondary',
+  children,
+}: {
+  onImported(message: string): void
+  variant?: ButtonProps['variant']
+  /** A custom trigger in place of the default button. */
+  children?: (choose: () => void, reading: boolean) => ReactNode
+}) {
   const term = useTerm()
   const lookup = useCourseLookup()
   const entries = useRecord((s) => s.entries)
@@ -79,10 +88,14 @@ export function SioImportButton({ onImported }: { onImported(message: string): v
 
   return (
     <>
-      <Button onClick={() => fileRef.current?.click()} disabled={state.kind === 'reading'}>
-        {state.kind === 'reading' ? <Spinner label="Reading the PDF" /> : <FileText aria-hidden className="size-4" />}
-        Import from SIO
-      </Button>
+      {children ? (
+        children(() => fileRef.current?.click(), state.kind === 'reading')
+      ) : (
+        <Button variant={variant} onClick={() => fileRef.current?.click()} disabled={state.kind === 'reading'}>
+          {state.kind === 'reading' ? <Spinner label="Reading the PDF" /> : <FileText aria-hidden className="size-4" />}
+          Import from SIO
+        </Button>
+      )}
       <input
         ref={fileRef}
         type="file"

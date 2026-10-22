@@ -1,4 +1,4 @@
-import { BookOpen, CalendarDays, GitFork, GraduationCap, Settings, Users, X } from 'lucide-react'
+import { BookOpen, CalendarDays, GitFork, GraduationCap, ScrollText, Settings, Users, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate, useParams } from 'react-router'
 import { useSession } from '../state/session'
@@ -13,6 +13,7 @@ const NAV = [
   { to: 'instructors', label: 'Instructors', icon: Users },
   { to: 'schedule', label: 'Schedule', icon: CalendarDays },
   { to: 'requisites', label: 'Requisites', icon: GitFork },
+  { to: 'record', label: 'Record', icon: ScrollText },
   { to: 'plan', label: 'Degree', icon: GraduationCap },
 ]
 
@@ -62,7 +63,7 @@ export function AppShell() {
       {/* Phones and small tablets: the main nav becomes a bottom tab bar. */}
       <nav
         aria-label="Main"
-        className="grid shrink-0 grid-cols-5 border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] md:hidden"
+        className="grid shrink-0 grid-cols-6 border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] md:hidden"
       >
         {NAV.map(({ to, label, icon: Icon }) => (
           <NavLink

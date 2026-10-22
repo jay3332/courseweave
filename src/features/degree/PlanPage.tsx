@@ -6,6 +6,7 @@ import type { ProgramSelection } from '../../lib/plan-types'
 import { termLabel } from '../../lib/requisites'
 import { usePlanList, usePlans } from '../../state/plan'
 import { useRecord } from '../../state/record'
+import { RecordPrompt } from '../record/RecordStart'
 import { useTerm } from '../../state/term'
 import { useMediaQuery } from '../planner/hooks'
 import { AuditColumn, ProgramsField, useAuditResult } from './AuditArea'
@@ -58,6 +59,7 @@ function PlanView({ plan }: { plan: Plan }) {
   const [openTerms, setOpenTerms] = useState<Record<string, boolean>>({})
   const audit = useAuditResult(derived?.auditInput ?? null)
   const scheduled = useScheduledCourses(plan.terms.map((t) => t.term))
+  const recordEmpty = useRecord((s) => s.entries.length === 0 && Object.keys(s.overrides).length === 0)
 
   const toggleTerm = useCallback(
     (t: string) => {
@@ -98,6 +100,9 @@ function PlanView({ plan }: { plan: Plan }) {
   return (
     <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-5 px-4 py-5 md:px-6 md:py-6">
       <PlanHeader plan={plan} derived={derived} audit={audit} />
+      {recordEmpty ? (
+        <RecordPrompt>Your record is empty, so this plan isn't counting past courses or AP, IB or transfer credit toward requirements yet.</RecordPrompt>
+      ) : null}
       <RequisiteProblems derived={derived} onJump={jumpTo} />
 
       {isWide ? (
@@ -195,19 +200,14 @@ function StartPlan() {
         </div>
       </div>
 
-      <p className="text-[14px] text-ink-2">
-        {recordCount > 0 ? (
-          <>
-            Your <Link to={`/${term.meta.id}/record`} className="text-accent underline underline-offset-2">academic record</Link> has {recordCount}{' '}
-            {recordCount === 1 ? 'entry' : 'entries'}. Courses you've taken appear in their semesters, and AP, IB and transfer credit count toward requirements.
-          </>
-        ) : (
-          <>
-            Taken courses already, or have AP, IB or transfer credit? Add them to your{' '}
-            <Link to={`/${term.meta.id}/record`} className="text-accent underline underline-offset-2">academic record</Link> and they'll show up in every plan.
-          </>
-        )}
-      </p>
+      {recordCount > 0 ? (
+        <p className="text-[14px] text-ink-2">
+          Your <Link to={`/${term.meta.id}/record`} className="text-accent underline underline-offset-2">academic record</Link> has {recordCount}{' '}
+          {recordCount === 1 ? 'entry' : 'entries'}. Courses you've taken appear in their semesters, and AP, IB and transfer credit count toward requirements.
+        </p>
+      ) : (
+        <RecordPrompt>Courses you've taken and AP, IB or transfer credit show up in every plan and count toward requirements.</RecordPrompt>
+      )}
     </div>
   )
 }

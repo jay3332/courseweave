@@ -1,8 +1,9 @@
-import { lazy, Suspense, useEffect } from 'react'
-import { BrowserRouter, Link, Navigate, Route, Routes, useNavigate, useParams, useSearchParams, Outlet } from 'react-router'
+import { lazy, Suspense, useEffect, useState } from 'react'
+import { BrowserRouter, Link, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams, Outlet } from 'react-router'
 import { AppShell } from './components/AppShell'
 import { CoursePreviewLayer } from './components/CoursePreview'
 import { Spinner } from './components/ui'
+import { useOnboardingDue } from './state/onboarding'
 import { useSession } from './state/session'
 import { startSync, stopSync } from './state/sync'
 import { TermProvider, useTerms } from './state/term'
@@ -14,6 +15,7 @@ const InstructorsPage = lazy(() => import('./features/instructors/InstructorsPag
 const SchedulePage = lazy(() => import('./features/planner/SchedulePage').then((m) => ({ default: m.SchedulePage })))
 const RecordPage = lazy(() => import('./features/record/RecordPage').then((m) => ({ default: m.RecordPage })))
 const PlanPage = lazy(() => import('./features/degree/PlanPage').then((m) => ({ default: m.PlanPage })))
+const RecordOnboarding = lazy(() => import('./features/record/RecordStart'))
 
 export default function App() {
   return (
@@ -95,7 +97,25 @@ function TermLayout() {
         <Outlet />
       </Suspense>
       <CoursePreviewLayer />
+      <Onboarding />
     </TermProvider>
+  )
+}
+
+/** Asks new students (and new accounts) to add their academic record, once. The record page asks on its own. */
+function Onboarding() {
+  const due = useOnboardingDue()
+  const onRecordPage = useLocation().pathname.split('/')[2] === 'record'
+  // Stays open once shown, so a record imported from the dialog can still show its confirmation.
+  const [open, setOpen] = useState(false)
+  useEffect(() => {
+    if (due && !onRecordPage) setOpen(true)
+  }, [due, onRecordPage])
+  if (!open) return null
+  return (
+    <Suspense fallback={null}>
+      <RecordOnboarding onClose={() => setOpen(false)} />
+    </Suspense>
   )
 }
 
