@@ -1,11 +1,12 @@
 // Loading degree programs and running audits in components.
 
+import { isJsonResponse } from './http'
 import { useEffect, useMemo, useState } from 'react'
 import { relatedAuditIds, runAudit } from './audit'
 import { loadCatalogIndex, type Loadable } from './catalog'
 import type { CatalogIndex } from './catalog-types'
 import type { ProgramVersion } from './degree-types'
-import type { AuditInput, AuditResult, ProgramInfo, ProgramsIndex, ProgramVersionInfo } from './plan-types'
+import type { AuditInput, AuditResult, ProgramInfo, ProgramSelection, ProgramsIndex, ProgramVersionInfo } from './plan-types'
 
 const base = import.meta.env.BASE_URL
 
@@ -17,7 +18,7 @@ const versionValues = new Map<number, ProgramVersion>()
 export function loadProgramsIndex(): Promise<ProgramsIndex> {
   indexPromise ??= fetch(`${base}data/programs/index.json`)
     .then((r) => {
-      if (!r.ok) throw new Error(`Couldn't load degree programs (HTTP ${r.status}). Run npm run data with the ScottyLabs export available.`)
+      if (!isJsonResponse(r)) throw new Error(`Couldn't load degree programs (HTTP ${r.status}). Run npm run data with the ScottyLabs export available.`)
       return r.json() as Promise<ProgramsIndex>
     })
     .then((index) => {
@@ -33,7 +34,7 @@ export function loadProgramVersion(auditId: number): Promise<ProgramVersion> {
   if (!p) {
     p = fetch(`${base}data/programs/${auditId}.json`)
       .then((r) => {
-        if (!r.ok) throw new Error(`Couldn't load requirements for program version ${auditId} (HTTP ${r.status}).`)
+        if (!isJsonResponse(r)) throw new Error(`Couldn't load requirements for program version ${auditId} (HTTP ${r.status}).`)
         return r.json() as Promise<ProgramVersion>
       })
       .then((v) => {
@@ -139,6 +140,12 @@ export function useAuditData(input: AuditInput): Loadable<AuditData> {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deps, inputKey])
+}
+
+/** The versions an audit of these programs would use (selected plus attached gen-eds and concentrations). */
+export function useAuditVersions(programs: ProgramSelection[]): Loadable<Map<number, ProgramVersion>> {
+  const key = JSON.stringify(programs)
+  return useAsync(`audit-versions:${key}`, () => (programs.length ? undefined : new Map()), () => loadAuditVersions({ programs, courses: [] }))
 }
 
 export function useAudit(input: AuditInput): Loadable<AuditResult> {

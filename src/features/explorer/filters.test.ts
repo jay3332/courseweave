@@ -15,6 +15,10 @@ describe('explorer filters', () => {
   it('round-trips through URL params', () => {
     const f: Filters = { ...EMPTY_FILTERS, depts: ['CS', 'MSC'], levels: ['U'], units: ['9', 'var'], days: [1, 3], dayMode: 'any', after: 600, before: 1020, delivery: ['remote'], sessions: ['full', '3'], fits: true, saved: true, scheduledOnly: true }
     expect(parseFilters(writeFilters(new URLSearchParams('q=abc'), f))).toEqual(f)
+    const withReq: Filters = { ...EMPTY_FILTERS, req: { auditId: 20440, nodeId: 8515435 } }
+    expect(writeFilters(new URLSearchParams(), withReq).get('req')).toBe('20440.8515435')
+    expect(parseFilters(writeFilters(new URLSearchParams(), withReq))).toEqual(withReq)
+    expect(parseFilters(new URLSearchParams('req=abc')).req).toBeNull()
     const withFce: Filters = { ...EMPTY_FILTERS, maxHours: 12, minRating: 4, withinUnits: true }
     expect(parseFilters(writeFilters(new URLSearchParams(), withFce))).toEqual(withFce)
     // Values outside the offered options are ignored rather than trusted from the URL.
@@ -38,6 +42,10 @@ describe('explorer filters', () => {
   })
 
   it('filters by dept, level, units, saved, session', () => {
+    const req = { auditId: 1, nodeId: 2 }
+    expect(term.courses.filter((c) => courseMatches(c, { ...EMPTY_FILTERS, req }, { ...ctx, reqAccepts: (id) => id === '15122' })).map((c) => c.id)).toEqual(['15122'])
+    // While the requirement loads, the filter is skipped rather than hiding everything.
+    expect(term.courses.filter((c) => courseMatches(c, { ...EMPTY_FILTERS, req }, ctx)).length).toBe(term.courses.length)
     expect(run({ depts: ['CS'] }).every((c) => c.dept === 'CS')).toBe(true)
     expect(run({ levels: ['G'] }).every((c) => c.level === 'G')).toBe(true)
     expect(run({ units: ['var'] }).every((c) => c.units === null)).toBe(true)

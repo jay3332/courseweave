@@ -3,15 +3,20 @@ import { useDeferredValue, useEffect, useMemo, useRef, useState, type KeyboardEv
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router'
 import { Button, Dialog, SearchInput } from '../../components/ui'
 import { parseCourseCode } from '../../lib/data'
+import { useCatalogIndex } from '../../lib/catalog'
 import { useFceSummary } from '../../lib/fce'
+import { useProgramVersions } from '../../lib/programs'
+import { compileAcceptor } from '../../lib/requirement-match'
 import { scoreCourse } from '../../lib/search'
 import type { Course } from '../../lib/types'
 import { fittingSelections, useScheduleView } from '../../state/schedule-view'
+import { usePlans } from '../../state/plan'
 import { useBookmarks } from '../../state/store'
 import { useTerm } from '../../state/term'
 import { CourseDetail } from './CourseDetail'
 import { HoursScatter } from '../fce/HoursScatter'
 import { FilterPanel } from './FilterPanel'
+import { RequirementChip } from './RequirementFilter'
 import {
   activeFilterCount,
   courseMatches,
@@ -40,6 +45,8 @@ const SORT_LABELS: Record<SortKey, string> = {
   rating: 'Course rating',
   teaching: 'Teaching rating',
 }
+
+const NO_IDS: number[] = []
 
 function isEditable(el: EventTarget | null): boolean {
   if (!(el instanceof HTMLElement)) return false
@@ -111,6 +118,20 @@ export function CoursesPage() {
       { replace: true },
     )
 
+  // "Counts toward a requirement": compile the chosen requirement once, then test every course against it.
+  const reqVersions = useProgramVersions(filters.req ? [filters.req.auditId] : NO_IDS)
+  const catalogIndex = useCatalogIndex()
+  const planPrograms = usePlans((s) => (s.activePlanId ? s.plans[s.activePlanId]?.programs : undefined))
+  const reqAccepts = useMemo(() => {
+    if (!filters.req || reqVersions.status === 'loading' || catalogIndex.status === 'loading') return undefined
+    const version = reqVersions.status === 'ready' ? reqVersions.value.get(filters.req.auditId) : undefined
+    if (!version) return null
+    return compileAcceptor(version, filters.req.nodeId, catalogIndex.status === 'ready' ? catalogIndex.value : null, {
+      term: termId,
+      programIds: (planPrograms ?? []).map((p) => p.catalogId),
+    })
+  }, [filters.req, reqVersions, catalogIndex, termId, planPrograms])
+
   const bookmarkSet = useMemo(() => new Set(bookmarks), [bookmarks])
   const entryColors = useMemo(() => new Map(schedule.entries.map((e) => [e.course.id, e.entry.color])), [schedule.entries])
 
@@ -125,19 +146,19 @@ export function CoursesPage() {
   }, [term, deferredQuery])
 
   const results = useMemo(() => {
-    const ctx = { bookmarks: bookmarkSet, fittingSelections: (c: Course) => fittingSelections(c, schedule), fce }
+    const ctx = { bookmarks: bookmarkSet, fittingSelections: (c: Course) => fittingSelections(c, schedule), fce, reqAccepts }
     return sortCourses(
       scored.filter((s) => courseMatches(s.course, filters, ctx)),
       sort,
       fce,
     )
-  }, [scored, filters, bookmarkSet, schedule, sort, fce])
+  }, [scored, filters, bookmarkSet, schedule, sort, fce, reqAccepts])
 
   const selectedId = courseCode ? parseCourseCode(courseCode) : null
   const selected = selectedId ? (term.courseById.get(selectedId) ?? null) : null
 
   // Keyboard highlight; falls back to the open course (or the top result) whenever the result set changes.
-  const resultsKey = JSON.stringify([deferredQuery, filters, sort, Boolean(fce)])
+  const resultsKey = JSON.stringify([deferredQuery, filters, sort, Boolean(fce), Boolean(reqAccepts)])
   const [active, setActive] = useState<{ key: string; index: number } | null>(null)
   const activeIndex =
     active && active.key === resultsKey ? active.index : Math.max(0, selectedId ? results.findIndex((c) => c.id === selectedId) : 0)
@@ -235,6 +256,11 @@ export function CoursesPage() {
               {filterCount ? <span className="grid size-5 place-items-center rounded-full bg-accent text-[11px] font-semibold text-accent-ink">{filterCount}</span> : null}
             </Button>
           </div>
+          {filters.req ? (
+            <div className="flex min-w-0">
+              <RequirementChip req={filters.req} onClear={() => setFilters({ ...filters, req: null })} />
+            </div>
+          ) : null}
           <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 text-[13px]">
             <span className="text-ink-2" aria-live="polite">
               <span className="font-semibold text-ink">{results.length.toLocaleString()}</span> {results.length === 1 ? 'course' : 'courses'}

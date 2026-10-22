@@ -1,7 +1,8 @@
 import { Link } from 'react-router'
 import { Spinner } from '../../components/ui'
-import { FCE_HOURS_HELP, formatHours, formatRating, termName, useInstructorFce, weightedMean } from '../../lib/fce'
+import { FCE_HOURS_HELP, formatHours, formatRating, termName, useFceAccess, useInstructorFce, weightedMean } from '../../lib/fce'
 import { useTerm } from '../../state/term'
+import { FceSignIn } from '../fce/FceSignIn'
 import { LineChart } from '../fce/LineChart'
 
 const RECENT_TERMS = 4
@@ -10,13 +11,16 @@ const RECENT_TERMS = 4
 export function InstructorFce({ name }: { name: string }) {
   const term = useTerm()
   const fce = useInstructorFce(name)
+  const access = useFceAccess()
 
   return (
     <section className="mt-9" aria-labelledby="evals-heading">
       <h2 id="evals-heading" className="display text-[22px] text-ink">
         Course evaluations
       </h2>
-      {fce === undefined ? (
+      {access === 'locked' ? (
+        <FceSignIn className="mt-3" />
+      ) : fce === undefined ? (
         <div className="mt-3 flex items-center gap-2 text-[13px] text-muted">
           <Spinner label="Loading evaluations" /> Loading evaluations
         </div>

@@ -133,6 +133,21 @@ function matchesCourse(courseId: string, inst: Inst, eq: Map<string, Set<string>
 
 const amount = (inst: Inst, units: boolean) => (units ? inst.units : 1)
 
+/** A bare course for matching outside an audit (explorer filters, "counts toward"). */
+function probe(courseId: string, ord: number | null): Inst {
+  return { key: -1, course: { courseId, term: null, status: 'planned', units: 0, passFail: false }, id: courseId, units: 0, ord, done: false, passFail: false, pfOnly: false }
+}
+
+/** Whether a course matches a pool set when taken in term ordinal `ord` (null ignores time windows). */
+export function courseMatchesSet(set: PoolSet, courseId: string, ord: number | null, eq: Map<string, Set<string>>): boolean {
+  return matchesSet(set, probe(courseId, ord), eq)
+}
+
+/** Whether a course matches a count rule (including "does not match" rules) when taken in term ordinal `ord`. */
+export function courseMatchesRule(rule: CountRule, courseId: string, ord: number | null, eq: Map<string, Set<string>>): boolean {
+  return matchesRule(rule, probe(courseId, ord), eq)
+}
+
 // ---------------------------------------------------------------------------
 // Assignment state (cloned for tentative evaluation of alternatives)
 

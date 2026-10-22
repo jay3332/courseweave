@@ -7,6 +7,7 @@ import { DAY_LETTERS, DAY_LONG, formatTime } from '../../lib/time'
 import type { Day } from '../../lib/types'
 import { FCE_HOURS_HELP } from '../../lib/fce'
 import { activeFilterCount, EMPTY_FILTERS, MAX_HOURS_OPTIONS, MIN_RATING_OPTIONS, UNIT_BUCKETS, type Delivery, type Filters, type Level } from './filters'
+import { RequirementPicker } from './RequirementFilter'
 
 const TIME_OPTIONS = Array.from({ length: (23 - 7) * 2 + 1 }, (_, i) => 7 * 60 + i * 30)
 
@@ -60,6 +61,10 @@ export function FilterPanel({
           Has a scheduled time
         </Toggle>
       </div>
+
+      <Group label="Counts toward a requirement">
+        <RequirementPicker value={filters.req} onChange={(v) => set('req', v)} />
+      </Group>
 
       {fceAvailable ? (
         <Group label="Workload and ratings">

@@ -1,6 +1,7 @@
-import { FCE_HOURS_HELP, WORKLOAD_TONE_CLASS, WORKLOAD_TONE_LABEL, formatHours, useFceSummary, workloadRatio, workloadTone } from '../../lib/fce'
+import { FCE_HOURS_HELP, WORKLOAD_TONE_CLASS, WORKLOAD_TONE_LABEL, formatHours, useFceAccess, useFceSummary, workloadRatio, workloadTone } from '../../lib/fce'
 import type { ResolvedEntry } from '../../state/schedule-view'
 import { useTerm } from '../../state/term'
+import { FceSignIn } from './FceSignIn'
 import { WorkloadMeter } from './WorkloadMeter'
 import { scheduleLoad } from './workload'
 
@@ -13,7 +14,17 @@ import { scheduleLoad } from './workload'
 export function ScheduleWorkload({ entries, compact = false }: { entries: ResolvedEntry[]; compact?: boolean }) {
   const term = useTerm()
   const data = useFceSummary()
-  if (data === undefined || data === null || !entries.some((e) => !e.entry.hidden)) return null
+  const access = useFceAccess()
+  if (!entries.some((e) => !e.entry.hidden)) return null
+  if (access === 'locked') {
+    return (
+      <section aria-label="Expected workload" className="flex flex-col gap-2">
+        <h3 className="text-[14px] font-semibold text-ink">Expected workload</h3>
+        <FceSignIn compact />
+      </section>
+    )
+  }
+  if (data === undefined || data === null) return null
 
   const load = scheduleLoad(entries, term.meta.minis, data.courses)
   const missing = load.rows.filter((r) => r.hours === null)

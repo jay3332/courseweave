@@ -1,3 +1,4 @@
+import { isJsonResponse } from './http'
 import { departmentName } from './departments'
 import { buildSearchDocs, normalize, type SearchDoc } from './search'
 import { teachesSection } from './sections'
@@ -10,7 +11,7 @@ const termPromises = new Map<string, Promise<Term>>()
 
 export function loadTerms(): Promise<TermIndexEntry[]> {
   termsPromise ??= fetch(`${base}data/terms.json`).then((r) => {
-    if (!r.ok) throw new Error(`Couldn't load the term list (HTTP ${r.status}).`)
+    if (!isJsonResponse(r)) throw new Error(`Couldn't load the term list (HTTP ${r.status}).`)
     return r.json()
   })
   return termsPromise
@@ -21,7 +22,7 @@ export function loadTerm(id: string): Promise<Term> {
   if (!p) {
     p = fetch(`${base}data/${encodeURIComponent(id)}.json`)
       .then((r) => {
-        if (!r.ok) throw new Error(`No schedule data for term ${id}.`)
+        if (!isJsonResponse(r)) throw new Error(`No schedule data for term ${id}.`)
         return r.json() as Promise<TermData>
       })
       .then(indexTerm)

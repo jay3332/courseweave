@@ -1,8 +1,10 @@
-import { BookOpen, CalendarDays, GitFork, GraduationCap, Settings, Users } from 'lucide-react'
+import { BookOpen, CalendarDays, GitFork, GraduationCap, Settings, Users, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate, useParams } from 'react-router'
+import { useSession } from '../state/session'
 import { useStore } from '../state/store'
 import { useTerms } from '../state/term'
+import { AccountMenu } from './AccountMenu'
 import { SettingsDialog } from './SettingsDialog'
 import { IconButton } from './ui'
 
@@ -16,13 +18,16 @@ const NAV = [
 
 export function AppShell() {
   const { termId = '' } = useParams()
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  // With the account control in the header, phones drop the wordmark (the logo mark stays) to make room.
+  const accounts = useSession((s) => s.status === 'anonymous' || s.status === 'signed-in')
   return (
     <div className="relative flex h-dvh flex-col overflow-clip">
       <div aria-hidden className="tartan h-2 shrink-0 md:h-2.5" />
       <header className="flex h-14 shrink-0 items-center gap-2 border-b border-line bg-surface px-3 md:gap-5 md:px-5">
         <Link to={`/${termId}/courses`} aria-label="Courseweave home" className="flex items-center gap-2 rounded-sm">
           <span aria-hidden className="tartan size-6 rounded-[5px]" />
-          <span className="display text-[21px] text-ink min-[400px]:text-[24px] md:text-[26px]">Courseweave</span>
+          <span className={`display text-[21px] text-ink min-[400px]:text-[24px] md:text-[26px] ${accounts ? 'hidden min-[460px]:inline' : ''}`}>Courseweave</span>
           <span className="hidden pt-1 text-[13px] text-muted 2xl:inline">CMU course planner</span>
         </Link>
         <nav aria-label="Main" className="hidden items-center gap-1 md:flex">
@@ -45,9 +50,12 @@ export function AppShell() {
         </nav>
         <div className="ml-auto flex items-center gap-1 md:gap-2">
           <TermSelect termId={termId} />
-          <SettingsButton />
+          <AccountMenu onOpenSettings={() => setSettingsOpen(true)} />
+          <SettingsButton onOpen={() => setSettingsOpen(true)} />
         </div>
       </header>
+      <SettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <AuthErrorBanner />
       <main className="scrollbar-thin min-h-0 flex-1 overflow-y-auto">
         <Outlet />
       </main>
@@ -104,9 +112,8 @@ function TermSelect({ termId }: { termId: string }) {
   )
 }
 
-function SettingsButton() {
+function SettingsButton({ onOpen }: { onOpen(): void }) {
   const theme = useStore((s) => s.theme)
-  const [open, setOpen] = useState(false)
 
   useEffect(() => {
     const root = document.documentElement
@@ -115,11 +122,28 @@ function SettingsButton() {
   }, [theme])
 
   return (
-    <>
-      <IconButton label="Settings" onClick={() => setOpen(true)}>
-        <Settings />
+    <IconButton label="Settings" onClick={onOpen}>
+      <Settings />
+    </IconButton>
+  )
+}
+
+const AUTH_ERROR_TEXT = {
+  domain: 'Sign in with your Andrew account (@andrew.cmu.edu or @cmu.edu). Other Google accounts can’t sign in.',
+  failed: 'Sign-in didn’t complete; try again.',
+}
+
+/** After a failed sign-in (?auth_error=…), explains what happened. */
+function AuthErrorBanner() {
+  const error = useSession((s) => s.authError)
+  const dismiss = useSession((s) => s.setAuthError)
+  if (!error) return null
+  return (
+    <div role="alert" className="flex shrink-0 items-start gap-2 border-b border-line bg-accent-soft px-4 py-2 text-[13.5px] text-ink">
+      <p className="min-w-0 flex-1 py-1">{AUTH_ERROR_TEXT[error]}</p>
+      <IconButton label="Dismiss" size="sm" onClick={() => dismiss(null)}>
+        <X />
       </IconButton>
-      <SettingsDialog open={open} onClose={() => setOpen(false)} />
-    </>
+    </div>
   )
 }

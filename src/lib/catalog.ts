@@ -1,3 +1,4 @@
+import { isJsonResponse } from './http'
 import { useEffect, useState } from 'react'
 import type { CatalogDetails, CatalogEntry, CatalogIndex, Requisite } from './catalog-types'
 import { isRequired, requisiteCourses } from './requisite-format'
@@ -16,7 +17,7 @@ const chunkValues = new Map<string, Record<string, CatalogDetails>>()
 export function loadCatalogIndex(): Promise<CatalogIndex> {
   indexPromise ??= fetch(`${base}data/catalog/index.json`)
     .then((r) => {
-      if (!r.ok) throw new Error(`Couldn't load the course catalog (HTTP ${r.status}).`)
+      if (!isJsonResponse(r)) throw new Error(`Couldn't load the course catalog (HTTP ${r.status}).`)
       return r.json() as Promise<CatalogIndex>
     })
     .then((index) => {
@@ -34,7 +35,7 @@ function loadChunk(prefix: string): Promise<Record<string, CatalogDetails>> {
       .then((r) => {
         // A missing chunk just means no course with this prefix has details.
         if (r.status === 404) return {}
-        if (!r.ok) throw new Error(`Couldn't load course descriptions (HTTP ${r.status}).`)
+        if (!isJsonResponse(r)) throw new Error(`Couldn't load course descriptions (HTTP ${r.status}).`)
         return r.json() as Promise<Record<string, CatalogDetails>>
       })
       .then((chunk) => {

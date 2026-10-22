@@ -33,10 +33,14 @@ export function SchedulePage() {
 
   const [selected, setSelected] = useState<CalendarSelection | null>(null)
   const [preview, setPreview] = useState<Preview | null>(null)
-  const [mini, setMini] = useState<number | null>(null)
+  const [miniChoice, setMini] = useState<number | null>(null)
   const [generatorOpen, setGeneratorOpen] = useState(false)
   const desktop = useMediaQuery('(min-width: 900px)')
   const narrow = useMediaQuery('(max-width: 520px)')
+
+  // The session toggle only matters when a placed course runs in one mini; otherwise both halves look the same.
+  const hasMinis = view.placed.some((e) => e.parts.some((p) => p.mini !== null))
+  const mini = hasMinis ? miniChoice : null
 
   // Switching schedules drops any selection or preview from the previous one.
   const [shownScheduleId, setShownScheduleId] = useState(scheduleId)
@@ -144,7 +148,7 @@ export function SchedulePage() {
           {!desktop ? <div className="sticky top-0 z-30 border-b border-line bg-surface px-3 py-2">{search}</div> : null}
 
           <div className="flex flex-wrap items-center gap-2 border-b border-line bg-surface px-3 py-2">
-            {term.meta.minis.length ? <SessionFilter minis={term.meta.minis} value={mini} onChange={setMini} /> : null}
+            {term.meta.minis.length && hasMinis ? <SessionFilter minis={term.meta.minis} value={mini} onChange={setMini} /> : null}
             <div className="ml-auto flex items-center gap-2">
               <Button size="sm" onClick={() => setGeneratorOpen(true)} disabled={view.entries.length === 0}>
                 <WandSparkles aria-hidden className="size-4" />

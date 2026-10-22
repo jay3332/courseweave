@@ -1,5 +1,6 @@
-// Cloudflare Workers deployment: the built site (dist/) is served as static assets.
-// Deploy with `npm run deploy` (see README). Docs: https://developers.cloudflare.com/workers/static-assets/
+// Cloudflare Workers deployment: the built site (dist/) is served as static assets; worker/ handles CMU sign-in,
+// synced data (D1) and the FCE gate. Setup and deploy steps: README, "Deploying to Cloudflare".
+// Docs: https://developers.cloudflare.com/workers/static-assets/
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "courseweave",
@@ -8,8 +9,30 @@
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",
-    // Client-side routes (/S27/schedule, …) get index.html. Missing /data files are 404'd by the Worker instead.
+    // Client-side routes (/S27/schedule, …) get index.html. The app's data loaders treat that HTML fallback as a
+    // missing file, so public /data files stay free, uncounted static asset requests.
     "not_found_handling": "single-page-application",
+    // These always go through the Worker (each counts as an invocation), even when a matching file exists:
+    // FCE files are only served to signed-in CMU users.
+    "run_worker_first": ["/api/*", "/auth/*", "/data/fce/*"],
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "courseweave",
+      // REPLACE with the id printed by `npx wrangler d1 create courseweave`. `npm run deploy` refuses to deploy
+      // while this placeholder is here; local dev (`npm run dev:worker`) works with it.
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations",
+    },
+  ],
+  "vars": {
+    // OpenID Connect provider. Google, limited to CMU accounts by ALLOWED_EMAIL_DOMAINS, is the default.
+    "OIDC_ISSUER": "https://accounts.google.com",
+    // Your OAuth client id. Empty = sign-in off: /auth/login returns 503, FCE stays locked and isn't deployed.
+    // The client secret and SESSION_SECRET are secrets: `npx wrangler secret put OIDC_CLIENT_SECRET` etc.
+    "OIDC_CLIENT_ID": "",
+    "ALLOWED_EMAIL_DOMAINS": "andrew.cmu.edu,cmu.edu",
   },
   "observability": { "enabled": true },
 }

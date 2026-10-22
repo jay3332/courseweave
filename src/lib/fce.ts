@@ -1,6 +1,7 @@
 // Faculty Course Evaluation data (built by scripts/build-fce.ts). Everything degrades to "no data" when the
 // FCE files aren't present, so the app still works without access to the CMU-internal export.
 import { useEffect, useState } from 'react'
+import { create } from 'zustand'
 import { NameIndex, sameInstructor, termName, termOrder } from './fce-names'
 import { expectedHours, isMostlyMini, setFceMiniSource, splitHalves, type FceMiniInfo, type HalfLoad } from './fce-minis'
 import type { Course } from './types'
@@ -87,16 +88,50 @@ export interface InstructorFce {
 
 const base = import.meta.env.BASE_URL
 
-async function getJson<T>(path: string): Promise<T | null> {
+/**
+ * Whether FCE data can be shown:
+ * - unknown: not checked yet;
+ * - available: the data loaded;
+ * - locked: the deployment gates FCEs behind CMU sign-in and nobody is signed in (401);
+ * - unavailable: this build doesn't include FCEs (404, or the dev server's index.html).
+ */
+export type FceAccess = 'unknown' | 'available' | 'locked' | 'unavailable'
+
+const useFceState = create<{ access: FceAccess; generation: number }>(() => ({ access: 'unknown', generation: 0 }))
+
+function noteAccess(access: FceAccess) {
+  if (useFceState.getState().access !== access) useFceState.setState({ access })
+}
+
+/** `primary` files (the summary) decide availability; any 401 means locked. */
+async function getJson<T>(path: string, primary = false): Promise<T | null> {
   try {
-    const r = await fetch(`${base}data/fce/${path}`)
-    if (!r.ok) return null
+    const r = await fetch(`${base}data/fce/${path}`, { credentials: 'same-origin' })
+    if (r.status === 401) {
+      noteAccess('locked')
+      return null
+    }
     // Vite's dev server answers unknown paths with index.html.
-    if (!(r.headers.get('content-type') ?? '').includes('json')) return null
-    return (await r.json()) as T
+    if (!r.ok || !(r.headers.get('content-type') ?? '').includes('json')) {
+      if (primary) noteAccess('unavailable')
+      return null
+    }
+    const json = (await r.json()) as T
+    if (primary) noteAccess('available')
+    return json
   } catch {
+    if (primary) noteAccess('unavailable')
     return null
   }
+}
+
+/** Forgets loaded FCE data (after signing in or out) so the next render reloads it with the new session. */
+export function resetFceCaches() {
+  summaryPromise = null
+  chunkPromises.clear()
+  instructorIndexPromise = null
+  setFceMiniSource(null)
+  useFceState.setState((s) => ({ access: 'unknown', generation: s.generation + 1 }))
 }
 
 type SummaryTuple = [number | null, number | null, number | null, number, number, number, string, number | null, number | null, number?, number?]
@@ -104,7 +139,7 @@ const HALF_CODES: FceMiniInfo['half'][] = [null, 'first', 'second', 'either']
 
 let summaryPromise: Promise<FceSummaryData | null> | null = null
 export function loadFceSummary(): Promise<FceSummaryData | null> {
-  summaryPromise ??= getJson<{ latest: string; recentTerms: number; courses: Record<string, SummaryTuple> }>('summary.json').then((raw) => {
+  summaryPromise ??= getJson<{ latest: string; recentTerms: number; courses: Record<string, SummaryTuple> }>('summary.json', true).then((raw) => {
     if (!raw) return null
     const courses = new Map<string, FceSummary>()
     for (const [id, t] of Object.entries(raw.courses)) {
@@ -199,19 +234,28 @@ function usePromise<T>(key: string | null, load: () => Promise<T>): T | undefine
   return state.key === key ? state.value : undefined
 }
 
-/** undefined while loading, null when FCE data isn't available. */
+/** undefined while loading, null when FCE data isn't available (see useFceAccess for why). */
 export function useFceSummary(): FceSummaryData | null | undefined {
-  return usePromise('summary', loadFceSummary)
+  const generation = useFceState((s) => s.generation)
+  return usePromise(`summary#${generation}`, loadFceSummary)
 }
 
-/** undefined while loading; [] when the course has no FCEs. */
+/** Whether FCEs are available, locked behind sign-in, or not part of this build. Loads the summary to find out. */
+export function useFceAccess(): FceAccess {
+  useFceSummary()
+  return useFceState((s) => s.access)
+}
+
+/** undefined while loading; [] when the course has no FCEs (or FCEs are locked/unavailable). */
 export function useCourseFce(courseId: string | null): FceRow[] | undefined {
-  return usePromise(courseId, () => loadCourseFce(courseId!))
+  const generation = useFceState((s) => s.generation)
+  return usePromise(courseId === null ? null : `${courseId}#${generation}`, () => loadCourseFce(courseId!))
 }
 
 /** undefined while loading; null when no FCE history matches this (schedule-style) name. */
 export function useInstructorFce(name: string | null): InstructorFce | null | undefined {
-  const index = usePromise(name === null ? null : 'instructors', loadInstructorIndex)
+  const generation = useFceState((s) => s.generation)
+  const index = usePromise(name === null ? null : `instructors#${generation}`, loadInstructorIndex)
   if (name === null || index === undefined) return undefined
   return index?.get(name) ?? null
 }

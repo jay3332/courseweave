@@ -54,36 +54,74 @@ Mini sections are detected from the section name's last digit when it matches on
 
 ## Deploying to Cloudflare
 
-Courseweave deploys as a Cloudflare Worker that serves the built site as static assets (Cloudflare's successor to Pages). `wrangler.jsonc` configures it; `worker/index.ts` only returns 404s for missing data files so the app can tell optional data is absent.
+Courseweave runs as a Cloudflare Worker that serves the built site as static assets (Cloudflare's successor to Pages). `wrangler.jsonc` configures it. `worker/` handles sign-in with a CMU account, keeps each user's schedules, record and degree plans in a D1 database, serves FCE data only to signed-in CMU users, and 404s missing data files.
 
 Deploy from your machine, not from Cloudflare's Git builds: the data build needs local inputs (the ScottyLabs checkout, Stellic exports) that aren't in this repo.
 
-### First time
+### 1. Cloudflare (once)
 
-1. Create a free Cloudflare account at <https://dash.cloudflare.com/sign-up>.
-2. `npx wrangler login` (opens the browser to authorize Wrangler).
-3. `npm run deploy`. This rebuilds the data, builds the site, drops FCE data from `dist/`, and uploads. Wrangler prints the URL, e.g. `https://courseweave.<your-subdomain>.workers.dev`.
+1. Create a free account at <https://dash.cloudflare.com/sign-up>, then run `npx wrangler login`.
+2. Create the database: `npx wrangler d1 create courseweave`. Paste the printed `database_id` into `wrangler.jsonc`, replacing the `00000000-…` placeholder.
+3. Create its tables: `npm run db:migrate:remote`. Run it again whenever `migrations/` gets a new file.
 
-Redeploy the same way after updating data (`npm run fetch:stellic -- S27`, a new term, …). `npm run deploy:dry-run` checks everything without uploading, and `npm run preview:worker` serves the exact deploy locally on `wrangler dev`.
+### 2. Sign in with CMU (once)
 
-### FCE data
+Andrew accounts are CMU's Google Workspace accounts, so "Sign in with Google" goes through CMU's own login page (with Duo). The Worker only accepts verified emails on `ALLOWED_EMAIL_DOMAINS` (`andrew.cmu.edu` and `cmu.edu` by default), checks the ID token's signature, issuer, audience, expiry and nonce, and uses PKCE.
 
-FCE results are CMU-internal, so `npm run deploy` leaves them out and the site hides its FCE features. To include them, put the deployment behind CMU-only access first, then deploy with `INCLUDE_FCE=1 npm run deploy`:
+1. In the [Google Cloud console](https://console.cloud.google.com/), create a project (any name, e.g. "Courseweave").
+2. Open **Google Auth Platform** (APIs & Services → OAuth consent screen):
+   - **Branding**: app name "Courseweave", your support email.
+   - **Audience**: user type **External**, then **Publish app**. Only the `openid`, `email` and `profile` scopes are used, which need no Google verification. (In "Testing" mode only the test users you list can sign in.)
+3. **Clients** → **Create client** → **Web application**. Under **Authorized redirect URIs** add:
+   - `https://courseweave.<your-subdomain>.workers.dev/auth/callback` (and `https://<custom-domain>/auth/callback` if you add one)
+   - `http://localhost:8787/auth/callback` and `http://localhost:5173/auth/callback` for local development
+4. Put the client ID in `wrangler.jsonc` under `vars.OIDC_CLIENT_ID`.
+5. Store the secrets with Cloudflare (Wrangler offers to create the Worker if it doesn't exist yet):
+   - `npx wrangler secret put OIDC_CLIENT_SECRET` (the client secret from step 3)
+   - `npx wrangler secret put SESSION_SECRET` (any long random string, e.g. from `openssl rand -base64 32`)
 
-1. If you haven't used Zero Trust before, turn it on: Cloudflare dashboard → Zero Trust (free for up to 50 users).
-2. Workers & Pages → courseweave → **Access** tab → **Protect this Worker behind Access** → **All traffic**. Under the authentication policy, allow emails ending in `@andrew.cmu.edu` (one-time PIN login works with no extra setup) → **Apply Access**.
-3. Open the site in a private window and confirm it asks for an Andrew email before showing anything.
+Without `OIDC_CLIENT_ID`, the site still deploys: sign-in reports that accounts aren't set up, FCE data is left out of the upload, and everything else works locally in the browser as before.
 
-Course data from Stellic (Spring 2027 sections, degree requirements) also comes from a CMU login; if you'd rather not publish it openly, use the same Access setup without setting `INCLUDE_FCE`.
+### 3. Deploy
+
+```sh
+npm run deploy
+```
+
+This rebuilds the data, builds the site, decides what ships, and uploads. Wrangler prints the URL, e.g. `https://courseweave.<your-subdomain>.workers.dev`.
+
+- FCE data ships only when sign-in is configured, and the Worker serves it only to signed-in CMU users (`Cache-Control: private`). `INCLUDE_FCE=0` / `INCLUDE_FCE=1` override the default.
+- `npm run deploy` refuses to run while `wrangler.jsonc` still has the placeholder database id.
+- `npm run deploy:dry-run` checks everything without uploading.
+
+Redeploy the same way after updating data (`npm run fetch:stellic -- S27`, a new term, …).
+
+Course schedules, catalog data and degree requirements stay public. Some of that (Spring 2027 sections, degree requirements) came from Stellic behind a CMU login; to put the whole site behind CMU sign-in instead, use Cloudflare Access: Workers & Pages → courseweave → **Access** → **Protect this Worker behind Access** → All traffic, allowing emails ending in `@andrew.cmu.edu`.
+
+### Local development
+
+- `npm run dev` runs the app alone; account features report themselves unavailable.
+- For the full loop with sign-in and sync: copy `.dev.vars.example` to `.dev.vars` and fill it in, build once (`npm run build`), then run `npm run dev:worker` (applies migrations to a local database and starts `wrangler dev` on :8787) next to `npm run dev`. Vite forwards `/api` and `/auth` to the Worker.
+- `npm run preview:worker` serves the exact production build on :8787.
+
+### Other sign-in providers
+
+Any OpenID Connect provider works: set `OIDC_ISSUER` to its issuer URL and use its client ID and secret. For example ScottyLabs' login service (which federates CMU login) if they register a client for you. CMU's own Shibboleth login is SAML; it needs CMU to register the app and an OIDC bridge (such as Keycloak) in front of it. `ALLOWED_EMAIL_DOMAINS` applies to every provider, which must return a verified `email` claim.
+
+### Limits on the free plan
+
+Requests to `/api`, `/auth` and `/data` run the Worker (100,000 a day on the free plan); pages, scripts and styles are served without it. D1's free tier covers 5 GB and millions of reads a day, far beyond a few hundred users' plans.
 
 ### Custom domain
 
-Workers & Pages → courseweave → **Domains** tab → add a custom domain (the domain must be on Cloudflare). With a custom domain you can also scope Access to just `/data/fce/*` instead of the whole site.
+Workers & Pages → courseweave → **Domains** → add a custom domain (the domain must be on Cloudflare), then add its `/auth/callback` URL to the Google client.
 
 ## Layout
 
 ```
-scripts/                 data builds, source adapters (scripts/sources), fetchers
+scripts/                 data builds, source adapters (scripts/sources), fetchers, deploy checks
+worker/                  Cloudflare Worker: CMU sign-in (OIDC), sessions and sync (D1), FCE gate
+migrations/              D1 schema
 src/lib/                 pure logic: types, time, sections, conflicts, search, generator, ics, share,
                          catalog, requisites, exam credit, FCE, audit engine, plans
 src/state/               zustand stores (schedules, record, plans) and the routed term

@@ -1,4 +1,4 @@
-import { FCE_HOURS_HELP, formatHours, instructorCourseStats, termName, useCourseFce } from '../../lib/fce'
+import { FCE_HOURS_HELP, formatHours, instructorCourseStats, termName, useCourseFce, useFceAccess } from '../../lib/fce'
 
 interface InstructorFceBadgeProps {
   courseId: string
@@ -15,7 +15,8 @@ interface InstructorFceBadgeProps {
  */
 export function InstructorFceBadge({ courseId, instructor, showEmpty = false, className = '' }: InstructorFceBadgeProps) {
   const rows = useCourseFce(courseId)
-  if (!rows) return null
+  const access = useFceAccess()
+  if (!rows || access === 'locked') return null
   const stats = instructorCourseStats(rows, instructor)
   if (!stats) return showEmpty ? <span className={`text-[11.5px] text-muted ${className}`}>No FCEs for this course</span> : null
 

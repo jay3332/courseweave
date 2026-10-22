@@ -1,0 +1,13 @@
+# Local secrets for `npm run dev:worker` / `wrangler dev`. Copy to .dev.vars (gitignored) and fill in.
+# Values here override wrangler.jsonc "vars" locally.
+
+# OAuth client from Google Cloud (README, "Sign in with CMU"). Its redirect URIs must include
+# http://localhost:8787/auth/callback (and http://localhost:5173/auth/callback if you sign in through `npm run dev`).
+OIDC_CLIENT_ID=
+OIDC_CLIENT_SECRET=
+
+# Any long random string, e.g. the output of: openssl rand -base64 32
+SESSION_SECRET=
+
+# Lets the Vite dev server (npm run dev) send account requests through its proxy.
+DEV_ORIGINS=http://localhost:5173

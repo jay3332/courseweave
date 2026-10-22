@@ -1,7 +1,9 @@
 import { lazy, Suspense, useEffect } from 'react'
-import { BrowserRouter, Link, Navigate, Route, Routes, useNavigate, useParams, Outlet } from 'react-router'
+import { BrowserRouter, Link, Navigate, Route, Routes, useNavigate, useParams, useSearchParams, Outlet } from 'react-router'
 import { AppShell } from './components/AppShell'
 import { Spinner } from './components/ui'
+import { useSession } from './state/session'
+import { startSync, stopSync } from './state/sync'
 import { TermProvider, useTerms } from './state/term'
 
 // Each page is its own chunk, so the first visit only downloads the page it opens.
@@ -15,6 +17,7 @@ const PlanPage = lazy(() => import('./features/degree/PlanPage').then((m) => ({ 
 export default function App() {
   return (
     <BrowserRouter>
+      <SessionBoot />
       <Routes>
         <Route index element={<DefaultTermRedirect />} />
         <Route path=":termId" element={<AppShell />}>
@@ -36,6 +39,32 @@ export default function App() {
       </Routes>
     </BrowserRouter>
   )
+}
+
+/** Checks who's signed in, surfaces sign-in errors, and runs cloud sync while signed in. */
+function SessionBoot() {
+  const [params, setParams] = useSearchParams()
+  const status = useSession((s) => s.status)
+
+  useEffect(() => {
+    void useSession.getState().refresh()
+  }, [])
+
+  useEffect(() => {
+    const error = params.get('auth_error')
+    if (!error) return
+    useSession.getState().setAuthError(error === 'domain' ? 'domain' : 'failed')
+    const next = new URLSearchParams(params)
+    next.delete('auth_error')
+    setParams(next, { replace: true })
+  }, [params, setParams])
+
+  useEffect(() => {
+    if (status === 'signed-in') void startSync()
+    else if (status !== 'loading') stopSync()
+  }, [status])
+
+  return null
 }
 
 function DefaultTermRedirect() {

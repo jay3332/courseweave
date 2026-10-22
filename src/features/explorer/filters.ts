@@ -10,6 +10,12 @@ export type DayMode = 'any' | 'only'
 export type Level = 'U' | 'G'
 export type Delivery = 'inperson' | 'remote'
 
+/** A requirement in a program version: "courses that can count toward this". */
+export interface ReqRef {
+  auditId: number
+  nodeId: number
+}
+
 export interface Filters {
   depts: string[]
   levels: Level[]
@@ -32,6 +38,8 @@ export interface Filters {
   minRating: number | null
   /** FCE hours no more than the hours its units suggest (2 × units for minis). */
   withinUnits: boolean
+  /** Only courses that can count toward this degree requirement. */
+  req: ReqRef | null
 }
 
 export const EMPTY_FILTERS: Filters = {
@@ -50,6 +58,7 @@ export const EMPTY_FILTERS: Filters = {
   maxHours: null,
   minRating: null,
   withinUnits: false,
+  req: null,
 }
 
 export const MAX_HOURS_OPTIONS = [6, 9, 12, 15, 20]
@@ -92,6 +101,16 @@ function minutes(params: URLSearchParams, key: string): number | null {
   return Number.isFinite(n) && n >= 0 && n < 24 * 60 ? n : null
 }
 
+/** "20440.8515435" → { auditId: 20440, nodeId: 8515435 }. */
+export function parseReq(value: string | null): ReqRef | null {
+  const m = /^(\d+)\.(\d+)$/.exec(value ?? '')
+  return m ? { auditId: Number(m[1]), nodeId: Number(m[2]) } : null
+}
+
+export function reqParam(req: ReqRef): string {
+  return `${req.auditId}.${req.nodeId}`
+}
+
 export function parseFilters(params: URLSearchParams): Filters {
   const dayStr = params.get('days') ?? ''
   const days = [...new Set([...dayStr].map((c) => DAY_LETTERS.indexOf(c as (typeof DAY_LETTERS)[number])).filter((d) => d >= 0))].sort() as Day[]
@@ -111,6 +130,7 @@ export function parseFilters(params: URLSearchParams): Filters {
     maxHours: positive(params, 'maxh', MAX_HOURS_OPTIONS),
     minRating: positive(params, 'minrate', MIN_RATING_OPTIONS),
     withinUnits: params.get('light') === '1',
+    req: parseReq(params.get('req')),
   }
 }
 
@@ -137,6 +157,7 @@ export function writeFilters(params: URLSearchParams, f: Filters): URLSearchPara
   put('maxh', f.maxHours === null ? null : String(f.maxHours))
   put('minrate', f.minRating === null ? null : String(f.minRating))
   put('light', f.withinUnits ? '1' : null)
+  put('req', f.req ? reqParam(f.req) : null)
   return next
 }
 
@@ -160,7 +181,8 @@ export function activeFilterCount(f: Filters): number {
     (f.scheduledOnly ? 1 : 0) +
     (f.maxHours !== null ? 1 : 0) +
     (f.minRating !== null ? 1 : 0) +
-    (f.withinUnits ? 1 : 0)
+    (f.withinUnits ? 1 : 0) +
+    (f.req ? 1 : 0)
   )
 }
 
@@ -227,6 +249,8 @@ export interface FilterContext {
   fittingSelections(course: Course): Choice[]
   /** FCE summaries; when absent (loading or unavailable) the FCE filters are ignored. */
   fce?: Map<string, FceSummary> | null
+  /** Whether a course can count toward the requirement filter; absent while it loads (the filter is skipped). */
+  reqAccepts?: ((courseId: string) => boolean) | null
 }
 
 function fceMatches(course: Course, f: Filters, fce: Map<string, FceSummary> | null | undefined): boolean {
@@ -246,6 +270,7 @@ export function courseMatches(course: Course, f: Filters, ctx: FilterContext): b
   if (f.levels.length && !f.levels.includes(course.level)) return false
   if (f.units.length && !UNIT_BUCKETS.some((b) => f.units.includes(b.id) && b.test(course.units))) return false
   if (f.saved && !ctx.bookmarks.has(course.id)) return false
+  if (f.req && ctx.reqAccepts && !ctx.reqAccepts(course.id)) return false
   if (!fceMatches(course, f, ctx.fce)) return false
   if (!hasSectionFilters(f)) return true
   const fitting = f.fits ? new Set(ctx.fittingSelections(course).map(choiceKey)) : null

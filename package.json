@@ -14,9 +14,12 @@
     "preview": "vite preview",
     "fetch:soc": "node scripts/fetch-soc.ts",
     "fetch:stellic": "node scripts/fetch-stellic.ts",
-    "deploy": "npm run build && node scripts/prune-dist.ts && wrangler deploy",
+    "deploy": "npm run build && node scripts/prune-dist.ts --deploy && wrangler deploy",
     "deploy:dry-run": "npm run build && node scripts/prune-dist.ts && wrangler deploy --dry-run",
-    "preview:worker": "npm run build && node scripts/prune-dist.ts && wrangler dev"
+    "preview:worker": "npm run build && node scripts/prune-dist.ts && npm run db:migrate:local && wrangler dev",
+    "dev:worker": "npm run db:migrate:local && wrangler dev --port 8787",
+    "db:migrate:local": "wrangler d1 migrations apply courseweave --local",
+    "db:migrate:remote": "wrangler d1 migrations apply courseweave --remote"
   },
   "dependencies": {
     "lucide-react": "^1.61.0",

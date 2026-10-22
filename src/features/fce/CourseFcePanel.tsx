@@ -14,6 +14,7 @@ import {
   termName,
   termOrder,
   useCourseFce,
+  useFceAccess,
   useFceSummary,
   rowsExpectedHours,
   weightedMean,
@@ -23,6 +24,7 @@ import {
 } from '../../lib/fce'
 import { displayFceName, fceNameKeys } from '../../lib/fce-names'
 import { useTerm } from '../../state/term'
+import { FceSignIn } from './FceSignIn'
 import { LineChart } from './LineChart'
 import { WorkloadMeter } from './WorkloadMeter'
 
@@ -41,8 +43,17 @@ export function CourseFcePanel({ courseId, units: unitsProp, currentInstructors:
   const units = unitsProp !== undefined ? unitsProp : (course?.units ?? null)
   const current = currentProp ?? course?.instructors ?? []
   const summaryData = useFceSummary()
+  const access = useFceAccess()
   const rows = useCourseFce(courseId)
   const summary = summaryData?.courses.get(courseId)
+
+  if (access === 'locked') {
+    return (
+      <Section>
+        <FceSignIn />
+      </Section>
+    )
+  }
 
   if (summaryData === undefined || rows === undefined) {
     return (

@@ -14,6 +14,7 @@ import { partsConflict, useActiveScheduleId, useScheduleView, type ResolvedEntry
 import { useBookmarks, useStore } from '../../state/store'
 import { useTerm } from '../../state/term'
 import { childForSection, initialChoice, joinList, PASS_FAIL_ONLY_HELP, partBlocks, partLabel, sectionCounts } from '../planner/format'
+import { CountsToward } from './CountsToward'
 import { courseMini, miniName, unitsText } from './summary'
 import { CourseAbout } from '../catalog/CourseAbout'
 import { CourseFcePanel } from '../fce/CourseFcePanel'
@@ -220,6 +221,8 @@ export function CourseDetail({ course, closeHref, search }: { course: Course; cl
         </header>
 
         <CourseAbout courseId={course.id} status={chipStatus} />
+
+        <CountsToward courseId={course.id} termId={termId} />
 
         <section aria-labelledby="detail-calendar">
           <div className="mb-2 flex items-baseline justify-between gap-3">
