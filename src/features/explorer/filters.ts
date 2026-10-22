@@ -1,5 +1,6 @@
 import { isRemote } from '../../lib/departments'
 import { courseIsMini, expectedHours, type FceSummary } from '../../lib/fce'
+import { allSelections } from '../../lib/sections'
 import { DAY_LETTERS, isScheduled } from '../../lib/time'
 import type { Course, Day, Section } from '../../lib/types'
 
@@ -167,9 +168,22 @@ function hasSectionFilters(f: Filters): boolean {
   return Boolean(f.days.length || f.after !== null || f.before !== null || f.delivery.length || f.sessions.length || f.fits || f.scheduledOnly)
 }
 
-/** Section-level filters must all hold for the same section. */
-function sectionMatches(section: Section, f: Filters, fitting: Set<Section> | null): boolean {
-  const scheduled = section.meetings.filter(isScheduled)
+/** A way to take the course: a lecture/section plus, when it has them, one of its recitations. */
+interface Choice {
+  section: Section
+  child: Section | null
+}
+
+const choiceKey = (c: Choice) => `${c.section.name}/${c.child?.name ?? ''}`
+
+/**
+ * Section-level filters must all hold for the same choice, judged on everything a student would attend:
+ * a lecture that meets MWF with a TR recitation doesn't match "Tue/Thu only".
+ */
+function choiceMatches(choice: Choice, f: Filters, fitting: Set<string> | null): boolean {
+  const { section } = choice
+  const parts = choice.child ? [section, choice.child] : [section]
+  const scheduled = parts.flatMap((p) => p.meetings.filter(isScheduled))
 
   if (f.scheduledOnly && !scheduled.length) return false
 
@@ -197,19 +211,20 @@ function sectionMatches(section: Section, f: Filters, fitting: Set<Section> | nu
   }
 
   if (f.sessions.length) {
-    const key = section.mini === null ? 'full' : String(section.mini)
+    const mini = section.mini ?? choice.child?.mini ?? null
+    const key = mini === null ? 'full' : String(mini)
     if (!f.sessions.includes(key)) return false
   }
 
-  if (fitting && !fitting.has(section)) return false
+  if (fitting && !fitting.has(choiceKey(choice))) return false
 
   return true
 }
 
 export interface FilterContext {
   bookmarks: Set<string>
-  /** Sections of a course that fit the active schedule. Only called when the "fits" filter is on. */
-  fittingSections(course: Course): Section[]
+  /** (Section, recitation) choices of a course that fit the active schedule. Only called when the "fits" filter is on. */
+  fittingSelections(course: Course): Choice[]
   /** FCE summaries; when absent (loading or unavailable) the FCE filters are ignored. */
   fce?: Map<string, FceSummary> | null
 }
@@ -233,8 +248,8 @@ export function courseMatches(course: Course, f: Filters, ctx: FilterContext): b
   if (f.saved && !ctx.bookmarks.has(course.id)) return false
   if (!fceMatches(course, f, ctx.fce)) return false
   if (!hasSectionFilters(f)) return true
-  const fitting = f.fits ? new Set(ctx.fittingSections(course)) : null
-  return course.sections.some((s) => sectionMatches(s, f, fitting))
+  const fitting = f.fits ? new Set(ctx.fittingSelections(course).map(choiceKey)) : null
+  return allSelections(course).some((c) => choiceMatches(c, f, fitting))
 }
 
 /** FCE value used by a sort; null sorts last in every direction. */

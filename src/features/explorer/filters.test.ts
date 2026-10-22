@@ -7,7 +7,7 @@ import { courseMatches, EMPTY_FILTERS, parseFilters, sortCourses, writeFilters, 
 import { meetingSummary } from './summary'
 
 const term = indexTerm(JSON.parse(readFileSync('public/data/S27.json', 'utf8')) as TermData)
-const ctx = { bookmarks: new Set<string>(['15122']), fittingSections: () => [] }
+const ctx = { bookmarks: new Set<string>(['15122']), fittingSelections: () => [] }
 const run = (f: Partial<Filters>) => term.courses.filter((c) => courseMatches(c, { ...EMPTY_FILTERS, ...f }, ctx))
 const get = (id: string) => term.courseById.get(id)!
 
@@ -22,15 +22,19 @@ describe('explorer filters', () => {
     expect(writeFilters(new URLSearchParams('q=abc'), EMPTY_FILTERS).toString()).toBe('q=abc')
   })
 
-  it('applies section-level filters to the same section', () => {
+  it('applies day and time filters to a lecture together with its recitation', () => {
+    // 15-150: TR lecture + Wednesday recitations; 21-127: MWF lectures + TR recitations; 15-122: TR (+ T evening) + Friday recitations.
     const tr = run({ days: [1, 3], dayMode: 'only' })
-    expect(tr.some((c) => c.id === '15150')).toBe(true)
+    expect(tr.some((c) => c.id === '15150')).toBe(false)
     expect(tr.some((c) => c.id === '21127')).toBe(false)
-    // 15-122 meets TR plus a T evening slot → only-TR passes, but ending by 5pm fails.
-    expect(tr.some((c) => c.id === '15122')).toBe(true)
+    expect(tr.some((c) => c.id === '15122')).toBe(false)
+    expect(run({ days: [1, 2, 3], dayMode: 'only' }).some((c) => c.id === '15150')).toBe(true)
+    // The T 7pm lecture slot fails "ends by 5pm" whatever recitation is chosen.
     expect(run({ days: [1, 3], before: 17 * 60 }).some((c) => c.id === '15122')).toBe(false)
     expect(run({ after: 9 * 60 }).some((c) => c.id === '21127')).toBe(true)
-    expect(courseMatches(get('21127'), { ...EMPTY_FILTERS, after: 10 * 60, before: 11 * 60, days: [0, 2, 4] }, ctx)).toBe(true)
+    // Lec 2 (MWF 10:00) with recitation E (TR 10:00) fits a 10–11 window.
+    expect(courseMatches(get('21127'), { ...EMPTY_FILTERS, after: 10 * 60, before: 11 * 60, days: [0, 2, 4], dayMode: 'any' }, ctx)).toBe(true)
+    expect(courseMatches(get('21127'), { ...EMPTY_FILTERS, after: 10 * 60, before: 10 * 60 + 30 }, ctx)).toBe(false)
   })
 
   it('filters by dept, level, units, saved, session', () => {
@@ -43,7 +47,7 @@ describe('explorer filters', () => {
   })
 
   it('summarizes meetings', () => {
-    expect(meetingSummary(get('15150')).primary).toBe('2 sections')
+    expect(meetingSummary(get('15150')).primary).toBe('2 lectures')
     expect(meetingSummary(get('15213')).primary).toBe('TR 2:00–3:20 PM')
   })
 

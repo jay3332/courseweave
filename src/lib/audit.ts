@@ -48,7 +48,9 @@ function toInstances(courses: PlannedCourse[], catalog: CatalogIndex | null): In
       units: course.units,
       ord: course.term ? termOrdinal(course.term) : null,
       done: course.status === 'completed' || course.status === 'credit',
-      passFail: course.passFail || pfOnly || (grade !== undefined && NON_LETTER_PASS.has(grade)),
+      // Transfer and exam credit is ungraded for QPA purposes (PlannedCourse.passFail), but it satisfies requirements
+      // like the course itself; only CMU work graded P/S counts as pass/fail here.
+      passFail: course.status !== 'credit' && (course.passFail || pfOnly || (grade !== undefined && NON_LETTER_PASS.has(grade))),
       pfOnly,
     })
   })
@@ -394,9 +396,10 @@ function evalCourseLeaf(node: ReqNode, inh: Inherited, st: State, ctx: ProgramCo
   const courseId = node.course!.id
   const times = node.repeat?.times ?? 1
   const assigned: Inst[] = []
-  // The course itself before its equivalents.
+  // The course itself before its equivalents. An equivalent that another requirement names outright stays free for
+  // that requirement (e.g. 21-122 is listed as equivalent to 21-120, but "Calculus" asks for both by name).
   const candidates = ctx.insts
-    .filter((i) => matchesCourse(courseId, i, ctx.eq))
+    .filter((i) => matchesCourse(courseId, i, ctx.eq) && (i.id === courseId || !ctx.named.has(i.id)))
     .sort((a, b) => Number(a.id !== courseId) - Number(b.id !== courseId) || byPreference(a, b))
   for (const inst of candidates) {
     if (assigned.length >= times) break

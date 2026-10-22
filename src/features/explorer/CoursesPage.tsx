@@ -6,7 +6,7 @@ import { parseCourseCode } from '../../lib/data'
 import { useFceSummary } from '../../lib/fce'
 import { scoreCourse } from '../../lib/search'
 import type { Course } from '../../lib/types'
-import { fittingSections, useScheduleView } from '../../state/schedule-view'
+import { fittingSelections, useScheduleView } from '../../state/schedule-view'
 import { useBookmarks } from '../../state/store'
 import { useTerm } from '../../state/term'
 import { CourseDetail } from './CourseDetail'
@@ -125,7 +125,7 @@ export function CoursesPage() {
   }, [term, deferredQuery])
 
   const results = useMemo(() => {
-    const ctx = { bookmarks: bookmarkSet, fittingSections: (c: Course) => fittingSections(c, schedule), fce }
+    const ctx = { bookmarks: bookmarkSet, fittingSelections: (c: Course) => fittingSelections(c, schedule), fce }
     return sortCourses(
       scored.filter((s) => courseMatches(s.course, filters, ctx)),
       sort,

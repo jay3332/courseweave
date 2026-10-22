@@ -1,5 +1,6 @@
 import { departmentName } from './departments'
 import { buildSearchDocs, normalize, type SearchDoc } from './search'
+import { teachesSection } from './sections'
 import type { Course, TermData, TermIndexEntry, TermMeta } from './types'
 
 const base = import.meta.env.BASE_URL
@@ -73,6 +74,8 @@ export function indexTerm(data: TermData): Term {
   for (const course of data.courses) {
     for (const section of course.sections) {
       for (const name of section.instructors) {
+        // Recitations that only repeat their lecture's instructors aren't extra teaching.
+        if (!teachesSection(course, section, name)) continue
         let inst = instructorMap.get(name)
         if (!inst) {
           let slug = instructorSlug(name)

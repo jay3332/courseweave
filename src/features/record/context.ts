@@ -3,6 +3,7 @@ import { useCatalogIndex } from '../../lib/catalog'
 import type { CatalogIndex } from '../../lib/catalog-types'
 import { buildEquivalence, createContext, termOrdinal, type CourseCredit, type RequisiteContext } from '../../lib/requisites'
 import { entryGrade, useRecord, type RecordData } from '../../state/record'
+import { usePlans } from '../../state/plan'
 import { useStore } from '../../state/store'
 import { useTerm } from '../../state/term'
 
@@ -79,8 +80,34 @@ export function useScheduleCourseIds(termId: string): string[] {
 }
 
 /**
- * Requisite context from the record plus the active schedule for `termId`.
- * The degree planner should call buildRequisiteContext() with its own planned courses instead.
+ * Courses planned for other terms: the active degree plan's semesters plus the active schedule of every other
+ * term. buildRequisiteContext keeps only those before the term being checked.
+ */
+export function usePlannedElsewhere(termId: string): PlannedCourse[] {
+  const plan = usePlans((s) => (s.activePlanId ? s.plans[s.activePlanId] : undefined))
+  const schedules = useStore((s) => s.schedules)
+  const active = useStore((s) => s.activeSchedule)
+  return useMemo(() => {
+    const out: PlannedCourse[] = []
+    const seen = new Set<string>()
+    const add = (courseId: string, term: string) => {
+      const key = `${courseId}@${term}`
+      if (term === termId || seen.has(key)) return
+      seen.add(key)
+      out.push({ courseId, term })
+    }
+    for (const t of plan?.terms ?? []) for (const c of t.courses) add(c.courseId, t.term)
+    for (const [term, id] of Object.entries(active)) {
+      for (const e of schedules[id]?.entries ?? []) if (!e.hidden) add(e.courseId, term)
+    }
+    return out
+  }, [plan, schedules, active, termId])
+}
+
+/**
+ * Requisite context from the record, courses planned for earlier terms (active degree plan and other terms'
+ * active schedules), and the active schedule for `termId` itself (same-term, so corequisites only).
+ * The degree planner calls buildRequisiteContext() with its own plan instead.
  */
 export function useRequisiteContext(termId: string): ContextState {
   const catalog = useCatalogIndex()
@@ -88,12 +115,14 @@ export function useRequisiteContext(termId: string): ContextState {
   const overrides = useRecord((s) => s.overrides)
   const profile = useRecord((s) => s.profile)
   const sameTerm = useScheduleCourseIds(termId)
+  const planned = usePlannedElsewhere(termId)
   const groups = useCrossListGroups(termId)
 
   const index = catalog.status === 'ready' ? catalog.value : null
   const ctx = useMemo(
-    () => (index ? buildRequisiteContext({ record: { entries, overrides, profile }, catalog: index, term: termId, sameTerm, equivalentGroups: groups }) : null),
-    [index, entries, overrides, profile, termId, sameTerm, groups],
+    () =>
+      index ? buildRequisiteContext({ record: { entries, overrides, profile }, catalog: index, term: termId, sameTerm, planned, equivalentGroups: groups }) : null,
+    [index, entries, overrides, profile, termId, sameTerm, planned, groups],
   )
 
   if (catalog.status === 'error') return { status: 'error', error: catalog.error, ctx: null, catalog: null }

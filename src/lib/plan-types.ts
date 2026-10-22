@@ -10,7 +10,10 @@ export interface PlannedCourse {
   /** Letter or P/N/S/etc. when known. */
   grade?: string
   units: number
-  /** Graded pass/fail (course is P/F-only or elected) — non-factorable. */
+  /**
+   * Non-factorable: graded pass/fail (P/F-only or elected), or transfer/exam credit. Affects QPA only — the audit
+   * still lets `status: 'credit'` satisfy requirements that exclude pass/fail coursework.
+   */
   passFail: boolean
   /** Where it came from, for display ("AP Calculus BC (5)", "Transfer: Pitt MATH 0230"). */
   source?: string

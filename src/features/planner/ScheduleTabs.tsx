@@ -1,10 +1,12 @@
-import { Copy, MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react'
+import { Copy, GraduationCap, MoreHorizontal, Pencil, Plus, Trash2, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button, Dialog, IconButton } from '../../components/ui'
 import { useActiveScheduleId } from '../../state/schedule-view'
+import { usePlanList } from '../../state/plan'
 import { useStore, useTermSchedules, type Schedule } from '../../state/store'
 import { useTerm } from '../../state/term'
 import { plural, scheduleUnits } from './format'
+import { entriesFromPlan } from './fromPlan'
 import { useDismiss } from './hooks'
 
 /** Switcher for the term's schedule versions, with create / rename / duplicate / delete. */
@@ -26,6 +28,28 @@ export function ScheduleTabs() {
   const menuRef = useRef<HTMLDivElement>(null)
   const closeMenu = useCallback(() => setMenuOpen(false), [])
   useDismiss(menuRef, menuOpen, closeMenu)
+
+  // Degree plans with courses in this semester can seed a new schedule.
+  const plans = usePlanList()
+  const plansForTerm = plans
+    .map((plan) => ({ plan, courses: plan.terms.find((t) => t.term === termId)?.courses ?? [] }))
+    .filter((p) => p.courses.length)
+  const [newOpen, setNewOpen] = useState(false)
+  const newRef = useRef<HTMLDivElement>(null)
+  const closeNew = useCallback(() => setNewOpen(false), [])
+  useDismiss(newRef, newOpen, closeNew)
+  const [notice, setNotice] = useState<string | null>(null)
+
+  const createFromPlan = (name: string, courses: { courseId: string; passFail?: boolean }[]) => {
+    const { entries, skipped } = entriesFromPlan(courses, term)
+    createSchedule(termId, `From ${name}`, entries)
+    setNewOpen(false)
+    setNotice(
+      skipped.length
+        ? `Added ${plural(entries.length, 'course')} from ${name}. Not offered in ${term.meta.name}: ${skipped.map((id) => `${id.slice(0, 2)}-${id.slice(2)}`).join(', ')}.`
+        : `Added ${plural(entries.length, 'course')} from ${name}.`,
+    )
+  }
 
   const active = schedules.find((s) => s.id === activeId) ?? null
 
@@ -69,9 +93,37 @@ export function ScheduleTabs() {
       </div>
 
       <div className="mb-1 flex shrink-0 items-center">
-        <IconButton label="New schedule" size="sm" onClick={() => createSchedule(termId)}>
-          <Plus />
-        </IconButton>
+        {plansForTerm.length ? (
+          <div ref={newRef} className="relative">
+            <IconButton label="New schedule" size="sm" aria-haspopup="menu" aria-expanded={newOpen} onClick={() => setNewOpen((o) => !o)}>
+              <Plus />
+            </IconButton>
+            {newOpen ? (
+              <div role="menu" className="absolute top-8 right-0 z-40 w-64 rounded-lg border border-line bg-surface p-1 shadow-xl">
+                <MenuItem
+                  icon={Plus}
+                  label="Blank schedule"
+                  onClick={() => {
+                    setNewOpen(false)
+                    createSchedule(termId)
+                  }}
+                />
+                {plansForTerm.map(({ plan, courses }) => (
+                  <MenuItem
+                    key={plan.id}
+                    icon={GraduationCap}
+                    label={`From ${plan.name} (${plural(courses.length, 'course')})`}
+                    onClick={() => createFromPlan(plan.name, courses)}
+                  />
+                ))}
+              </div>
+            ) : null}
+          </div>
+        ) : (
+          <IconButton label="New schedule" size="sm" onClick={() => createSchedule(termId)}>
+            <Plus />
+          </IconButton>
+        )}
         {active ? (
           <div ref={menuRef} className="relative">
             <IconButton label={`Options for ${active.name}`} size="sm" aria-haspopup="menu" aria-expanded={menuOpen} onClick={() => setMenuOpen((o) => !o)}>
@@ -109,6 +161,15 @@ export function ScheduleTabs() {
           </div>
         ) : null}
       </div>
+
+      {notice ? (
+        <div role="status" className="absolute top-full right-3 left-3 z-30 mt-2 flex items-start gap-2 rounded-lg border border-line bg-surface px-3 py-2 text-[13px] text-ink-2 shadow-md">
+          <span className="min-w-0 flex-1">{notice}</span>
+          <IconButton label="Dismiss" size="sm" onClick={() => setNotice(null)}>
+            <X />
+          </IconButton>
+        </div>
+      ) : null}
 
       <Dialog open={pendingDelete !== null} onClose={() => setPendingDelete(null)} title="Delete this schedule?" className="w-[min(94vw,440px)]">
         {pendingDelete ? (

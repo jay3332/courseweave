@@ -1,4 +1,5 @@
 import { formatDays, formatTimeRange, isScheduled } from '../../lib/time'
+import { topSections } from '../../lib/sections'
 import type { Course, TermMeta } from '../../lib/types'
 
 export interface MeetingSummary {
@@ -8,15 +9,19 @@ export interface MeetingSummary {
 
 /** Compact meeting description for a result row. */
 export function meetingSummary(course: Course): MeetingSummary {
-  const sections = course.sections
+  // Summarize what students pick first (lectures / standalone sections); recitations are noted, not listed.
+  const sections = topSections(course)
+  const childCount = course.sections.length - sections.length
+  const recitations = childCount ? `${childCount} recitation${childCount === 1 ? '' : 's'}` : undefined
   if (sections.length === 1) {
     const scheduled = sections[0].meetings.filter(isScheduled)
-    if (!scheduled.length) return { primary: 'Time TBA' }
+    if (!scheduled.length) return { primary: 'Time TBA', secondary: recitations }
     // Prefer the meeting that covers the most days (the regular lecture over a one-off evening slot).
     const main = [...scheduled].sort((a, b) => b.days.length - a.days.length)[0]
+    const more = scheduled.length > 1 ? `plus ${scheduled.length - 1} more meeting${scheduled.length > 2 ? 's' : ''}` : undefined
     return {
       primary: `${formatDays(main.days)} ${formatTimeRange(main.start, main.end)}`,
-      secondary: scheduled.length > 1 ? `plus ${scheduled.length - 1} more meeting${scheduled.length > 2 ? 's' : ''}` : undefined,
+      secondary: [more, recitations].filter(Boolean).join(', ') || undefined,
     }
   }
 
@@ -36,7 +41,8 @@ export function meetingSummary(course: Course): MeetingSummary {
   if (patterns.length === 0) secondary = 'Times TBA'
   else if (patterns.length === 1) secondary = unscheduled ? `${patterns[0]} or TBA` : `All ${patterns[0]}`
   else secondary = patterns.length > 3 ? `${patterns.slice(0, 3).join(' / ')} / …` : patterns.join(' / ')
-  return { primary: `${sections.length} sections`, secondary }
+  const noun = sections.every((s) => s.kind === 'lecture') ? 'lecture' : 'section'
+  return { primary: `${sections.length} ${noun}s`, secondary: recitations ? `${secondary}, ${recitations}` : secondary }
 }
 
 /** "Mini 3" when every section is the same mini, else null. */

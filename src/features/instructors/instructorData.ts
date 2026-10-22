@@ -1,4 +1,5 @@
 import { instructorSlug, lastName, type Instructor, type Term } from '../../lib/data'
+import { teachesSection } from '../../lib/sections'
 import { codeQuery, normalize, wordStarts } from '../../lib/search'
 import { isScheduled } from '../../lib/time'
 import type { Course, Section } from '../../lib/types'
@@ -15,7 +16,7 @@ export function taughtSections(inst: Instructor, term: Term): Taught[] {
     const course = term.courseById.get(id)
     if (!course) continue
     for (const section of course.sections) {
-      if (section.instructors.includes(inst.name)) out.push({ course, section })
+      if (teachesSection(course, section, inst.name)) out.push({ course, section })
     }
   }
   return out

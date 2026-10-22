@@ -35,7 +35,8 @@ function version(catalogId: number, root: ReqNode, extra: Partial<ProgramVersion
 
 const done = (courseId: string, units = 12, grade?: string, term = 'F25'): PlannedCourse => ({ courseId, term, status: 'completed', units, passFail: false, ...(grade ? { grade } : {}) })
 const planned = (courseId: string, units = 12, term = 'S27'): PlannedCourse => ({ courseId, term, status: 'planned', units, passFail: false })
-const credit = (courseId: string, units = 10): PlannedCourse => ({ courseId, term: null, status: 'credit', units, passFail: false, grade: 'AD' })
+// Matches planToAuditInput: credit is non-factorable (passFail: true) but still satisfies requirements.
+const credit = (courseId: string, units = 10): PlannedCourse => ({ courseId, term: null, status: 'credit', units, passFail: true })
 
 function audit(versions: ProgramVersion[], courses: PlannedCourse[], catalog: CatalogIndex | null = null, selected = versions.slice(0, 1)): AuditResult {
   return runAudit(
@@ -198,6 +199,11 @@ describe('runAudit: grades and grading', () => {
     expect(audit([v], [credit('21127')]).programs[0].state).toBe('complete')
   })
 
+  it('counts transfer and exam credit toward requirements that exclude pass/fail work', () => {
+    const strict = version(3, group('CS', { kind: 'all' }, [leaf('15122')]))
+    expect(audit([strict], [credit('15122', 12)]).programs[0].state).toBe('complete')
+  })
+
   it('keeps pass/fail work out unless allowed', () => {
     const pf = { ...done('21127'), passFail: true, grade: 'P' }
     expect(audit([v], [pf]).programs[0].state).toBe('missing')
@@ -209,6 +215,15 @@ describe('runAudit: grades and grading', () => {
     const catalog: CatalogIndex = { generatedAt: '', courses: { '99101': entry('99101', { passFail: true, units: 3 }) } }
     const r = audit([version(1, group('Root', { kind: 'all' }, [leaf('99101')]))], [{ ...done('99101', 3), passFail: true }], catalog)
     expect(r.programs[0].state).toBe('complete')
+  })
+
+  it("doesn't spend a course named elsewhere on an equivalent requirement", () => {
+    const catalog: CatalogIndex = { generatedAt: '', courses: { '21120': entry('21120', { equivalents: ['21122'], units: 10 }), '21122': entry('21122', { units: 10 }) } }
+    const root = group('Calculus', { kind: 'all' }, [leaf('21120'), leaf('21122')])
+    const r = audit([version(1, root)], [credit('21122')], catalog)
+    const [calc120, calc122] = r.programs[0].root.children
+    expect(calc120.state).toBe('missing')
+    expect(calc122.state).toBe('complete')
   })
 
   it('counts equivalent courses for named requirements', () => {

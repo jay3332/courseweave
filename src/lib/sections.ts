@@ -61,3 +61,14 @@ export function allSelections(course: Course): { section: Section; child: Sectio
   }
   return out
 }
+
+/**
+ * Whether `name` actually teaches `section`. Recitations often just repeat their lecture's instructors (the TAs
+ * aren't listed), so a recitation only counts when the person isn't already on its lecture.
+ */
+export function teachesSection(course: Course, section: Section, name: string): boolean {
+  if (!section.instructors.includes(name)) return false
+  if (section.parent === null) return true
+  const parent = course.sections.find((s) => s.name === section.parent)
+  return !parent?.instructors.includes(name)
+}
