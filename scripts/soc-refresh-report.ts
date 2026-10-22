@@ -7,7 +7,9 @@
 //   time) when nothing else in its term changed, so a quiet week leaves the tree clean.
 // - Each remaining term is parsed before and after (with the same adapter the build uses) to list added, removed
 //   and changed courses. A term whose pages changed without changing any course is restored too.
-// - Terms the SOC now lists that data/terms.json doesn't build from it are called out (e.g. a new semester).
+// - A configured term the SOC now lists but data/terms.json builds from something else (e.g. Spring 2027 from a CSV
+//   before the SOC published it) is switched to the SOC as its primary source, keeping its Stellic supplement.
+//   Terms not in data/terms.json at all are called out (adding one needs its academic calendar dates).
 // Prints `changed=true|false` to $GITHUB_OUTPUT when set.
 import { execFileSync } from 'node:child_process'
 import { appendFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
@@ -24,8 +26,8 @@ const SOC_DIR = 'data/raw/soc'
 /** Most courses listed per change type and term; the rest are counted. */
 const LIST_LIMIT = 40
 
-const git = (...args: string[]) => execFileSync('git', args, { cwd: root, encoding: 'utf8' })
-const gitBuffer = (...args: string[]) => execFileSync('git', args, { cwd: root, maxBuffer: 256 * 1024 * 1024 })
+const git = (...args: string[]) => execFileSync('git', args, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] })
+const gitBuffer = (...args: string[]) => execFileSync('git', args, { cwd: root, maxBuffer: 256 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'] })
 
 /** The cached page with the SOC's per-day "last updated" stamp removed. */
 function normalized(gz: Buffer): string {
@@ -84,7 +86,12 @@ async function load(dir: string, term: string): Promise<Map<string, Course>> {
 
 /** The committed version of a term's cache, extracted into a scratch data/ directory. */
 function headCopy(term: string): string | null {
-  const files = git('ls-tree', '--name-only', `HEAD:${SOC_DIR}/${term}`).split('\n').filter(Boolean)
+  let files: string[]
+  try {
+    files = git('ls-tree', '--name-only', `HEAD:${SOC_DIR}/${term}`).split('\n').filter(Boolean)
+  } catch {
+    return null // a semester new to the cache
+  }
   if (!files.length) return null
   const dir = mkdtempSync(join(tmpdir(), 'soc-head-'))
   for (const f of files) {
@@ -152,19 +159,28 @@ for (const term of changedTerms) {
 
 const cached = existsSync(join(root, SOC_DIR)) ? readdirSync(join(root, SOC_DIR)).filter((d) => /^[FSM]\d\d$/.test(d)) : []
 const notes: string[] = []
+const switched: string[] = []
 for (const term of cached.filter((t) => !socTermIds.has(t)).sort()) {
   const configured = terms.find((t) => t.id === term)
-  notes.push(
-    configured
-      ? `- **${configured.name}** is on the Schedule of Classes now, but data/terms.json still builds it from ${configured.sources[0]?.type}. Make \`{ "type": "soc" }\` its primary source (keep the Stellic supplement for recitations).`
-      : `- **${term}** is on the Schedule of Classes but isn't in data/terms.json. Add it (calendar dates and minis from the academic calendar) to show it on the site.`,
-  )
+  if (!configured) {
+    notes.push(`- **${term}** is on the Schedule of Classes but isn't in data/terms.json. Add it (calendar dates and minis from the academic calendar) to show it on the site.`)
+    continue
+  }
+  // The SOC is now the authority on which sections exist (like the other terms); Stellic only fills in details.
+  const previous = configured.sources[0]?.type
+  configured.sources = [
+    { type: 'soc', term },
+    ...configured.sources.slice(1).map((s) => (s.type === 'stellic' ? { ...s, addMissingSections: false } : s)),
+  ]
+  switched.push(`- **${configured.name}** is on the Schedule of Classes now, so this switches its primary source from ${previous} to the SOC (its Stellic supplement still adds instructors and rooms where the SOC has none).`)
 }
+if (switched.length) writeFileSync(join(dataDir, 'terms.json'), `${JSON.stringify(terms, null, 2)}\n`)
 
-const changedAny = changedPaths().length > 0
+const changedAny = changedPaths().length > 0 || switched.length > 0
 const summary = [
   changedAny ? '## Schedule of Classes changes' : '## No Schedule of Classes changes',
   '',
+  ...(switched.length ? ['## New on the Schedule of Classes', '', ...switched, ''] : []),
   ...(changedAny ? lines : ['Every cached term matches what the SOC lists now.', '']),
   ...(notes.length ? ['## Needs attention', '', ...notes, ''] : []),
 ].join('\n')

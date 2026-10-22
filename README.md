@@ -53,9 +53,9 @@ Mini sections are detected from the section name's last digit when it matches on
 
 ### Keeping data fresh
 
-The **Refresh course data** workflow (`.github/workflows/refresh-data.yml`) runs every Monday, or any time from the Actions tab:
+The **Refresh course data** workflow (`.github/workflows/refresh-data.yml`) runs every Monday and Thursday, or any time from the Actions tab:
 
-- It re-downloads the public Schedule of Classes. When sections really changed (not just the SOC's daily "last updated" stamp), it builds and tests the new data and opens a pull request on `data/schedule-of-classes` listing the added, removed and changed courses.
+- It re-downloads the public Schedule of Classes. When sections really changed (not just the SOC's daily "last updated" stamp), it builds and tests the new data and opens a pull request on `data/schedule-of-classes` listing the added, removed and changed courses. When a semester that `data/terms.json` builds from something else appears on the SOC (Spring 2027 is due Monday, October 26), the pull request also switches it to the SOC as its primary source.
 - It keeps one **Data refresh checklist** issue for what CI can't do: newer FCE data from ScottyLabs, Stellic sections more than two weeks old for a term that hasn't ended (Stellic needs your CMU login), merged data the live site doesn't have yet, and semesters newly on the Schedule of Classes. The issue closes itself once everything is current.
 
 Deploys stay on your machine, because a deploy also needs the Stellic and FCE data that live there. After merging a refresh pull request (or refreshing Stellic or FCE data), run `npm run data`, commit `data/derived/refreshed.json` if it changed, and `npm run deploy`. Pull requests from the workflow need **Settings → Actions → General → Allow GitHub Actions to create and approve pull requests**.

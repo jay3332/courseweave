@@ -1,4 +1,4 @@
-# Weekly course data refresh.
+# Twice-weekly course data refresh.
 #
 # CI can only reach public sources, so this workflow:
 #  - re-downloads CMU's Schedule of Classes and, when sections really changed, opens (or updates) a pull request
@@ -13,7 +13,7 @@ name: Refresh course data
 
 on:
   schedule:
-    - cron: '23 13 * * 1' # Mondays 13:23 UTC (9:23 AM in Pittsburgh during daylight time)
+    - cron: '23 13 * * 1,4' # Mondays and Thursdays 13:23 UTC (9:23 AM in Pittsburgh during daylight time)
   workflow_dispatch:
 
 permissions:
@@ -69,7 +69,7 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git switch -C "$BRANCH"
-          git add data/raw/soc
+          git add data/raw/soc data/terms.json
           git commit -q -m 'Refresh Schedule of Classes data' -m 'Downloaded by the weekly data workflow.'
           git push --force origin "$BRANCH"
           if [ "$(gh pr list --head "$BRANCH" --state open --json number --jq length)" = "0" ]; then
