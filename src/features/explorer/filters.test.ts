@@ -28,7 +28,8 @@ describe('explorer filters', () => {
     expect(writeFilters(new URLSearchParams('q=abc'), EMPTY_FILTERS).toString()).toBe('q=abc')
   })
 
-  it('applies day and time filters to a lecture together with its recitation', () => {
+  // S27 recitations come from a local Stellic fetch; builds without it (e.g. CI) list lectures only.
+  it.skipIf(!get('15150')?.sections.some((s) => s.parent !== null))('applies day and time filters to a lecture together with its recitation', () => {
     // 15-150: TR lecture + Wednesday recitations; 21-127: MWF lectures + TR recitations; 15-122: TR (+ T evening) + Friday recitations.
     const tr = run({ days: [1, 3], dayMode: 'only' })
     expect(tr.some((c) => c.id === '15150')).toBe(false)

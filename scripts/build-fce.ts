@@ -16,11 +16,12 @@
 // Minis are detected from FCE section names (fall A1/B2, spring A3/B4, summer A5/B6). Each history row carries
 // its mini number; the summary carries the share of recent sections that were minis and which half they ran in.
 
+import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { NameIndex, displayFceName, fceNameKeys, fceSectionMini, fceTermCode, miniHalf, normalizeFceCourse, termOrder, type FceSeason } from '../src/lib/fce-names.ts'
 import type { TermData } from '../src/lib/types.ts'
-import { publicDataDir, readCsvRecords, scottylabsDir } from './lib/common.ts'
+import { publicDataDir, readCsvRecords, scottylabsDir, updateRefreshRecord } from './lib/common.ts'
 
 export const RECENT_TERMS = 4
 
@@ -269,6 +270,14 @@ console.log(
 console.log(
   `fce: ${rows.length} rows (${dropped} unparseable), ${earliest.term}–${latest.term}, ${Object.keys(summary).length} courses with responses, ${Object.keys(instructors).length} instructors`,
 )
+
+// Record which upstream export this build used, so the weekly data check can tell when ScottyLabs publishes a newer one.
+try {
+  const [commit, date] = execFileSync('git', ['-C', scottylabsDir(), 'log', '-1', '--format=%H %cI', '--', 'data/fces.csv'], { encoding: 'utf8' }).trim().split(' ')
+  if (commit && date) updateRefreshRecord((r) => void (r.fce = { upstreamCommit: commit, upstreamDate: date }))
+} catch {
+  // Not a git checkout (e.g. a copied CSV): nothing to record.
+}
 
 // ---- Diagnostics: how many instructors in built terms have FCE history ----
 

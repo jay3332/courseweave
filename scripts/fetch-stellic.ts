@@ -15,7 +15,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { parseArgs } from 'node:util'
-import { dataDir, publicDataDir, readCsvRecords } from './lib/common.ts'
+import { dataDir, publicDataDir, readCsvRecords, updateRefreshRecord } from './lib/common.ts'
 
 const BASE = 'https://academicaudit.andrew.cmu.edu'
 const SEM_ID = { fall: 1, spring: 2, summer: 3 } as const
@@ -180,4 +180,6 @@ async function worker() {
 await Promise.all(Array.from({ length: Math.max(1, Number(values.concurrency)) }, worker))
 
 writeFileSync(join(outDir, 'meta.json'), JSON.stringify({ term: termId, endpoint: byTerm ? 'term' : 'plan', lyear, sem, fetchedAt: new Date().toISOString(), courses: ids.length, saved }, null, 2))
+// Committed (dates only), so the weekly data check knows how fresh this term's Stellic sections are.
+updateRefreshRecord((r) => void (r.stellic = { ...r.stellic, [termId]: new Date().toISOString().slice(0, 10) }))
 console.log(`${termId}: ${saved} courses with sections saved to ${outDir} (${failed} failed)`)

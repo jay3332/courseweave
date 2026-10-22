@@ -1,0 +1,105 @@
+# Weekly course data refresh.
+#
+# CI can only reach public sources, so this workflow:
+#  - re-downloads CMU's Schedule of Classes and, when sections really changed, opens (or updates) a pull request
+#    listing what changed. Merge it, then run `npm run deploy` on your machine: a deploy also needs the Stellic and
+#    FCE data that only live there.
+#  - keeps one "Data refresh checklist" issue for what needs you: newer FCE data from ScottyLabs, Stellic sections
+#    due for a refresh (that needs your CMU login), merged updates the live site doesn't have yet, and new semesters
+#    on the Schedule of Classes. The issue closes itself once everything is current.
+#
+# Run it any time from the Actions tab (Run workflow).
+name: Refresh course data
+
+on:
+  schedule:
+    - cron: '23 13 * * 1' # Mondays 13:23 UTC (9:23 AM in Pittsburgh during daylight time)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: refresh-data
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+      BRANCH: data/schedule-of-classes
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # data-status compares the live site's data commit with this branch's history
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - name: Download the Schedule of Classes
+        run: node scripts/fetch-soc.ts
+
+      - name: Keep real changes and summarize them
+        id: soc
+        run: node scripts/soc-refresh-report.ts --out soc-summary.md
+
+      - name: Check that the new data builds and passes tests
+        if: steps.soc.outputs.changed == 'true'
+        run: |
+          node scripts/build-data.ts
+          npx tsc -b
+          npx vitest run
+
+      - name: Open or update the pull request
+        if: steps.soc.outputs.changed == 'true'
+        run: |
+          {
+            echo
+            echo '---'
+            echo 'From the weekly data workflow. Merging updates the repo; the site changes when you run `npm run deploy` on your machine (deploys also need the Stellic and FCE data that live there).'
+          } >> soc-summary.md
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git switch -C "$BRANCH"
+          git add data/raw/soc
+          git commit -q -m 'Refresh Schedule of Classes data' -m 'Downloaded by the weekly data workflow.'
+          git push --force origin "$BRANCH"
+          if [ "$(gh pr list --head "$BRANCH" --state open --json number --jq length)" = "0" ]; then
+            gh pr create --head "$BRANCH" --base "${{ github.event.repository.default_branch }}" --title 'Refresh Schedule of Classes data' --body-file soc-summary.md
+          else
+            gh pr edit "$BRANCH" --body-file soc-summary.md
+          fi
+          git switch -q -
+
+      # The checklist runs even if the pull request step failed (e.g. Actions can't create pull requests yet).
+      - name: Check what needs a manual refresh
+        id: status
+        if: ${{ !cancelled() }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          DATA_REF: origin/${{ github.event.repository.default_branch }}
+        run: node scripts/data-status.ts --soc-notes soc-summary.md --out checklist.md
+
+      - name: Update the checklist issue
+        if: ${{ !cancelled() && steps.status.outcome == 'success' }}
+        run: |
+          gh label create data-refresh --color 0E8A16 --description 'Weekly data check' --force > /dev/null
+          number=$(gh issue list --label data-refresh --state open --json number --jq '.[0].number // empty')
+          if [ "${{ steps.status.outputs.pending }}" = 'true' ]; then
+            if [ -n "$number" ]; then
+              gh issue edit "$number" --body-file checklist.md
+            else
+              gh issue create --title 'Data refresh checklist' --label data-refresh --body-file checklist.md
+            fi
+          elif [ -n "$number" ]; then
+            gh issue comment "$number" --body "Everything is current as of $(date -u +%Y-%m-%d)."
+            gh issue close "$number"
+          fi

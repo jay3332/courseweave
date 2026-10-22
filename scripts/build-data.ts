@@ -2,10 +2,11 @@
 // Each term lists one or more sources (see scripts/sources/types.ts); the first is primary.
 // Usage: npm run data   (or: node scripts/build-data.ts [TERM ...] to rebuild only some terms)
 
+import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import type { Course, Section, TermData, TermIndexEntry, TermMeta } from '../src/lib/types.ts'
-import { dataDir, derivedDir, finalizeCourse, meetingKey, publicDataDir, scottylabsDir } from './lib/common.ts'
+import { DATA_INPUT_PATHS, dataDir, derivedDir, finalizeCourse, meetingKey, publicDataDir, root, scottylabsDir } from './lib/common.ts'
 import { mergeSupplement } from './lib/merge.ts'
 import { csvSource } from './sources/csv.ts'
 import { socSource } from './sources/soc.ts'
@@ -129,3 +130,14 @@ for (const config of configs) {
 const seasonOrder = { spring: 0, summer: 1, fall: 2 }
 index.sort((a, b) => b.year - a.year || seasonOrder[b.season] - seasonOrder[a.season])
 writeFileSync(join(publicDataDir, 'terms.json'), JSON.stringify(index, null, 2))
+
+// Which commit of the data inputs this build reflects, so the weekly data check can tell when merged updates aren't
+// deployed yet. `dirty` marks builds with uncommitted input changes.
+try {
+  const git = (...args: string[]) => execFileSync('git', args, { cwd: root, encoding: 'utf8' }).trim()
+  const dataCommit = git('log', '-1', '--format=%H', '--', ...DATA_INPUT_PATHS)
+  const dirty = git('status', '--porcelain', '--', ...DATA_INPUT_PATHS) !== ''
+  writeFileSync(join(publicDataDir, 'build.json'), JSON.stringify({ dataCommit, dirty }))
+} catch {
+  // Not a git checkout: no build marker.
+}

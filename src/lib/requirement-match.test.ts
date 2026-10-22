@@ -108,8 +108,10 @@ describe('requirement matching', () => {
 // Real data: EY2023+ SCS General Education (built by npm run data from the Stellic export).
 const GENED = 'public/data/programs/20440.json'
 describe.skipIf(!existsSync(GENED))('SCS general education (real data)', () => {
-  const v = JSON.parse(readFileSync(GENED, 'utf8')) as ProgramVersion
-  const flat = flattenRequirements(v)
+  // Vitest runs a skipped suite's body while collecting it, so don't read the file when it isn't there (e.g. in CI).
+  const present = existsSync(GENED)
+  const v = (present ? JSON.parse(readFileSync(GENED, 'utf8')) : null) as ProgramVersion
+  const flat = present ? flattenRequirements(v) : []
   const byName = (prefix: string) => flat.find((f) => f.name.startsWith(prefix))!
 
   it('exposes the gen-ed categories', () => {

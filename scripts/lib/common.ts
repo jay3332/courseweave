@@ -1,5 +1,5 @@
 // Helpers shared by every data source adapter and build script.
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -9,6 +9,32 @@ export const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
 export const dataDir = join(root, 'data')
 export const publicDataDir = join(root, 'public', 'data')
 export const derivedDir = join(dataDir, 'derived')
+
+/**
+ * Committed record of when the data CI can't fetch itself was last refreshed: the upstream FCE export a build used,
+ * and when each term's Stellic sections were fetched. scripts/data-status.ts compares it with upstream. It holds
+ * dates and commit ids only, never the data.
+ */
+export interface RefreshRecord {
+  fce?: { upstreamCommit: string; upstreamDate: string }
+  /** Term id → date (YYYY-MM-DD) the Stellic sections were fetched. */
+  stellic?: Record<string, string>
+}
+
+export const refreshRecordPath = join(derivedDir, 'refreshed.json')
+
+/** The committed inputs a deploy's course data is built from; public/data/build.json records their last commit. */
+export const DATA_INPUT_PATHS = ['data/raw/soc', 'data/raw/S27.csv', 'data/raw/soc-details.json', 'data/terms.json', 'data/derived']
+
+export function readRefreshRecord(): RefreshRecord {
+  return existsSync(refreshRecordPath) ? (JSON.parse(readFileSync(refreshRecordPath, 'utf8')) as RefreshRecord) : {}
+}
+
+export function updateRefreshRecord(update: (record: RefreshRecord) => void) {
+  const record = readRefreshRecord()
+  update(record)
+  writeFileSync(refreshRecordPath, `${JSON.stringify(record, null, 2)}\n`)
+}
 
 /**
  * Checkout of the ScottyLabs courses repo (FCE CSV, Stellic exports, scraper).

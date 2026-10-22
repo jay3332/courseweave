@@ -24,7 +24,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 async function get(url: string, init?: RequestInit, attempt = 1): Promise<string> {
   try {
-    const res = await fetch(url, { ...init, headers: { 'User-Agent': 'plaid-course-planner (personal schedule planner)', ...init?.headers } })
+    const res = await fetch(url, { ...init, headers: { 'User-Agent': 'courseweave (CMU course planner; weekly schedule refresh)', ...init?.headers } })
     if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`)
     return new TextDecoder('latin1').decode(await res.arrayBuffer())
   } catch (e) {
