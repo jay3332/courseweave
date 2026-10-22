@@ -110,7 +110,7 @@ Any OpenID Connect provider works: set `OIDC_ISSUER` to its issuer URL and use i
 
 ### Limits on the free plan
 
-Requests to `/api`, `/auth` and `/data` run the Worker (100,000 a day on the free plan); pages, scripts and styles are served without it. D1's free tier covers 5 GB and millions of reads a day, far beyond a few hundred users' plans.
+Requests to `/api`, `/auth` and `/data/fce` run the Worker (100,000 a day on the free plan); pages, scripts, styles and the other data files are served without it. D1's free tier covers 5 GB and millions of reads a day, far beyond a few hundred users' plans.
 
 ### Custom domain
 
