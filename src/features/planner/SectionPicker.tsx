@@ -1,6 +1,7 @@
 import { AlertTriangle, Check, ChevronDown } from 'lucide-react'
 import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
 import type { Section } from '../../lib/types'
+import { InstructorFceBadge } from '../fce/InstructorFceBadge'
 import { joinList, locationSummary, meetingSummary, partLabel } from './format'
 import { useDismiss } from './hooks'
 
@@ -18,10 +19,12 @@ interface SectionPickerProps {
   onPreview(section: string | null): void
   /** Shown in place of a current value; styled as a prompt to act. */
   placeholder?: string
+  /** When set, each option shows its instructors' FCE for this course. */
+  fceCourseId?: string
 }
 
 /** Listbox of sections. Hovering or arrowing to an option previews it on the calendar. */
-export function SectionPicker({ noun, listLabel, options, current, conflictsFor, onChange, onPreview, placeholder }: SectionPickerProps) {
+export function SectionPicker({ noun, listLabel, options, current, conflictsFor, onChange, onPreview, placeholder, fceCourseId }: SectionPickerProps) {
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(0)
   const ref = useRef<HTMLDivElement>(null)
@@ -156,6 +159,7 @@ export function SectionPicker({ noun, listLabel, options, current, conflictsFor,
                 <div className="flex flex-wrap gap-x-3 text-[12px] text-muted">
                   <span className="shrink-0">{locationSummary(s)}</span>
                   {s.instructors.length ? <span className="min-w-0 truncate">{s.instructors.join(', ')}</span> : null}
+                  {fceCourseId ? s.instructors.map((name) => <InstructorFceBadge key={name} courseId={fceCourseId} instructor={name} />) : null}
                 </div>
               </li>
             )

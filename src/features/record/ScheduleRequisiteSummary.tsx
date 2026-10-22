@@ -5,7 +5,8 @@ import { useCatalogIndex } from '../../lib/catalog'
 import { checkCourse, type CourseCheck, type RequisiteContext } from '../../lib/requisites'
 import { useRecord } from '../../state/record'
 import { useRequisiteContext } from './context'
-import { RequisiteStatus, summarizeCheck } from './RequisiteStatus'
+import { summarizeCheck } from './check-summary'
+import { RequisiteStatus } from './RequisiteStatus'
 
 interface Props {
   /** Courses in the schedule (ResolvedEntry works as-is). */

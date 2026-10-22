@@ -2,7 +2,8 @@ import { Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { Button, IconButton } from '../../components/ui'
 import { useRecord } from '../../state/record'
-import { CoursePicker, Empty, Field, Section, Select, TextInput, termLabel, useCourseLookup, useTermOptions } from './shared'
+import { termLabel, useCourseLookup, useTermOptions } from './hooks'
+import { CoursePicker, Empty, Field, Section, Select, TextInput } from './shared'
 
 export function TransferSection() {
   const entries = useRecord((s) => s.entries)

@@ -144,6 +144,12 @@
     -webkit-font-smoothing: antialiased;
     font-variant-numeric: tabular-nums;
   }
+  /* The app shell is exactly one viewport tall; panes scroll inside it, never the document. */
+  html,
+  body {
+    height: 100%;
+    overflow: hidden;
+  }
   body {
     background: var(--paper);
     color: var(--ink);

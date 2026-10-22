@@ -3,7 +3,8 @@ import { useMemo, useState } from 'react'
 import { Button, Chip, IconButton } from '../../components/ui'
 import { awardFor, EXAM_SOURCES, EXAMS, examById, type ExamBoard } from '../../lib/exam-credit'
 import { COLLEGES, useRecord, type RecordEntry } from '../../state/record'
-import { CoursePicker, Empty, Field, Section, Select, TextInput, useCourseLookup } from './shared'
+import { useCourseLookup } from './hooks'
+import { CoursePicker, Empty, Field, Section, Select, TextInput } from './shared'
 
 const BOARDS: ExamBoard[] = ['AP', 'IB', 'A-Level']
 const BOARD_LABEL: Record<ExamBoard, string> = { AP: 'AP', IB: 'IB (HL)', 'A-Level': 'A-Level' }
@@ -21,7 +22,7 @@ export function ExamSection() {
   const [score, setScore] = useState('')
   const [manualOpen, setManualOpen] = useState(false)
 
-  const examEntries = entries.filter((e) => e.source === 'exam' || (e.source === 'waiver' && e.exam))
+  const examEntries = useMemo(() => entries.filter((e) => e.source === 'exam' || (e.source === 'waiver' && e.exam)), [entries])
   const takenExams = [...new Set(examEntries.map((e) => e.exam?.id).filter((x): x is string => !!x))]
   const result = exam && score ? awardFor(exam, score, college, takenExams.filter((id) => id !== exam.id)) : null
   const already = exam ? takenExams.includes(exam.id) : false

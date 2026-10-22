@@ -6,9 +6,10 @@ import { codeOf } from '../../lib/requisite-format'
 import { isFactorableGrade, termOrdinal } from '../../lib/requisites'
 import { entryUnits, useRecord, type RecordEntry } from '../../state/record'
 import { useTerm } from '../../state/term'
-import { CoursePicker, Empty, Field, Section, Select, TextInput, termLabel, useCourseLookup, useTermOptions, type CourseInfo } from './shared'
+import { termLabel, useCourseLookup, useTermOptions, type CourseInfo } from './hooks'
+import { CoursePicker, Empty, Field, Section, Select, TextInput } from './shared'
 
-export const GRADE_OPTIONS: { value: string; label: string }[] = [
+const GRADE_OPTIONS: { value: string; label: string }[] = [
   { value: '', label: 'No grade yet' },
   ...['A', 'B', 'C', 'D'].map((g) => ({ value: g, label: g })),
   { value: 'R', label: 'R (failed)' },

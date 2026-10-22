@@ -6,7 +6,7 @@
   "scripts": {
     "predev": "npm run data",
     "dev": "vite",
-    "data": "node scripts/build-catalog.ts && node scripts/build-fce.ts && node scripts/build-data.ts",
+    "data": "node scripts/build-catalog.ts && node scripts/build-fce.ts && node scripts/build-programs.ts && node scripts/build-data.ts",
     "build": "npm run data && tsc -b && vite build",
     "typecheck": "tsc -b",
     "test": "vitest run",

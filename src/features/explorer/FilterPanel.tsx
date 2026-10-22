@@ -313,7 +313,7 @@ function DepartmentPicker({ term, selected, onChange }: { term: Term; selected: 
           const on = selected.includes(d.code)
           return (
             <li key={d.code}>
-              <label className="flex cursor-pointer items-center gap-2 px-2.5 py-1 text-[13px] hover:bg-surface-2">
+              <label className="relative flex cursor-pointer items-center gap-2 px-2.5 py-1 text-[13px] hover:bg-surface-2">
                 <input type="checkbox" checked={on} onChange={() => onChange(toggle(selected, d.code))} className="peer sr-only" />
                 <span
                   aria-hidden

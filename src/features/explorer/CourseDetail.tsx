@@ -15,6 +15,12 @@ import { useBookmarks, useStore } from '../../state/store'
 import { useTerm } from '../../state/term'
 import { childForSection, initialChoice, joinList, PASS_FAIL_ONLY_HELP, partBlocks, partLabel, sectionCounts } from '../planner/format'
 import { courseMini, miniName, unitsText } from './summary'
+import { CourseAbout } from '../catalog/CourseAbout'
+import { CourseFcePanel } from '../fce/CourseFcePanel'
+import { InstructorFceBadge } from '../fce/InstructorFceBadge'
+import { statusFnFor } from '../record/check-summary'
+import { useRequisiteContext } from '../record/context'
+import { RequisiteStatus } from '../record/RequisiteStatus'
 
 function codeOf(id: string) {
   return `${id.slice(0, 2)}-${id.slice(2)}`
@@ -35,6 +41,8 @@ export function CourseDetail({ course, closeHref, search }: { course: Course; cl
   const saved = useBookmarks(termId).includes(course.id)
   const [hovered, setHovered] = useState<Section | null>(null)
   const slugByName = useMemo(() => new Map(term.instructors.map((i) => [i.name, i.slug])), [term])
+  const requisites = useRequisiteContext(termId)
+  const chipStatus = useMemo(() => (requisites.ctx ? statusFnFor(requisites.ctx, false) : undefined), [requisites.ctx])
 
   const entry = view.entries.find((e) => e.course.id === course.id) ?? null
   const others = view.placed.filter((e) => e.course.id !== course.id)
@@ -208,7 +216,10 @@ export function CourseDetail({ course, closeHref, search }: { course: Course; cl
             )}
           </div>
           {entry?.needsChild ? <p className="mt-1 text-[13px] text-warn">Pick a recitation below to finish this course's schedule.</p> : null}
+          <RequisiteStatus courseId={course.id} termId={termId} context={requisites.ctx ?? undefined} className="mt-3" />
         </header>
+
+        <CourseAbout courseId={course.id} status={chipStatus} />
 
         <section aria-labelledby="detail-calendar">
           <div className="mb-2 flex items-baseline justify-between gap-3">
@@ -256,6 +267,8 @@ export function CourseDetail({ course, closeHref, search }: { course: Course; cl
             onRemove={() => scheduleId && removeCourse(scheduleId, course.id)}
           />
         </section>
+
+        <CourseFcePanel courseId={course.id} units={course.units} currentInstructors={course.instructors} />
       </div>
     </article>
   )
@@ -374,6 +387,7 @@ function SectionRow({ course, entry, canEdit, conflictsFor, onHover, onAct, onRe
         {s.title ? <div className="mt-0.5 font-medium text-ink">{s.title}</div> : null}
         <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[12.5px] text-muted">
           {s.instructors.length || !isChild ? <span className="text-ink-2">{s.instructors.length ? s.instructors.join(', ') : 'Instructor TBA'}</span> : null}
+          {!isChild ? s.instructors.map((name) => <InstructorFceBadge key={name} courseId={course.id} instructor={name} />) : null}
           <span title={`Delivery mode ${s.mode}`}>{modeLabel(s.mode)}</span>
           {s.mini !== null ? <span className="font-medium text-ink-2">{miniName(s.mini, term.meta)}</span> : null}
           {s.capacity ? <span>{s.capacity} seats</span> : null}

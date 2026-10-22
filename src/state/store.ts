@@ -27,6 +27,14 @@ export interface Schedule {
 
 export type Theme = 'system' | 'light' | 'dark'
 
+/** What calendar blocks show besides the course code. */
+export interface CalendarDisplay {
+  /** Section label next to the code ("Lec 1", "Rec A"). */
+  section: boolean
+  time: boolean
+  location: boolean
+}
+
 export interface SectionChoice {
   section: string | null
   child: string | null
@@ -39,6 +47,7 @@ interface State {
   /** termId → bookmarked course ids. */
   bookmarks: Record<string, string[]>
   theme: Theme
+  calendarDisplay: CalendarDisplay
 
   /** Makes sure the term has at least one schedule and an active one. Returns the active id. */
   ensureSchedule(termId: string): string
@@ -61,6 +70,7 @@ interface State {
 
   toggleBookmark(termId: string, courseId: string): void
   setTheme(theme: Theme): void
+  setCalendarDisplay(patch: Partial<CalendarDisplay>): void
 }
 
 const uid = () => Math.random().toString(36).slice(2, 10)
@@ -86,6 +96,7 @@ export const useStore = create<State>()(
         activeSchedule: {},
         bookmarks: {},
         theme: 'system',
+        calendarDisplay: { section: true, time: true, location: true },
 
         ensureSchedule(termId) {
           const { activeSchedule, schedules } = get()
@@ -201,6 +212,10 @@ export const useStore = create<State>()(
 
         setTheme(theme) {
           set({ theme })
+        },
+
+        setCalendarDisplay(patch) {
+          set((state) => ({ calendarDisplay: { ...state.calendarDisplay, ...patch } }))
         },
       }
     },

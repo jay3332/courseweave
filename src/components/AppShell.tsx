@@ -1,8 +1,9 @@
-import { BookOpen, CalendarDays, GitFork, GraduationCap, Monitor, Moon, Sun, Users } from 'lucide-react'
-import { useEffect } from 'react'
+import { BookOpen, CalendarDays, GitFork, GraduationCap, Settings, Users } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate, useParams } from 'react-router'
-import { useStore, type Theme } from '../state/store'
+import { useStore } from '../state/store'
 import { useTerms } from '../state/term'
+import { SettingsDialog } from './SettingsDialog'
 import { IconButton } from './ui'
 
 const NAV = [
@@ -10,13 +11,13 @@ const NAV = [
   { to: 'instructors', label: 'Instructors', icon: Users },
   { to: 'schedule', label: 'Schedule', icon: CalendarDays },
   { to: 'requisites', label: 'Requisites', icon: GitFork },
-  { to: 'record', label: 'Record', icon: GraduationCap },
+  { to: 'plan', label: 'Degree', icon: GraduationCap },
 ]
 
 export function AppShell() {
   const { termId = '' } = useParams()
   return (
-    <div className="flex h-dvh flex-col">
+    <div className="relative flex h-dvh flex-col overflow-clip">
       <div aria-hidden className="tartan h-2 shrink-0 md:h-2.5" />
       <header className="flex h-14 shrink-0 items-center gap-2 border-b border-line bg-surface px-3 md:gap-5 md:px-5">
         <Link to={`/${termId}/courses`} aria-label="Courseweave home" className="flex items-center gap-2 rounded-sm">
@@ -44,10 +45,10 @@ export function AppShell() {
         </nav>
         <div className="ml-auto flex items-center gap-1 md:gap-2">
           <TermSelect termId={termId} />
-          <ThemeToggle />
+          <SettingsButton />
         </div>
       </header>
-      <main className="min-h-0 flex-1">
+      <main className="scrollbar-thin min-h-0 flex-1 overflow-y-auto">
         <Outlet />
       </main>
       {/* Phones and small tablets: the main nav becomes a bottom tab bar. */}
@@ -103,14 +104,9 @@ function TermSelect({ termId }: { termId: string }) {
   )
 }
 
-const THEME_ORDER: Theme[] = ['system', 'light', 'dark']
-const THEME_ICON = { system: Monitor, light: Sun, dark: Moon }
-const THEME_LABEL = { system: 'Theme: match system', light: 'Theme: light', dark: 'Theme: dark' }
-
-function ThemeToggle() {
+function SettingsButton() {
   const theme = useStore((s) => s.theme)
-  const setTheme = useStore((s) => s.setTheme)
-  const Icon = THEME_ICON[theme]
+  const [open, setOpen] = useState(false)
 
   useEffect(() => {
     const root = document.documentElement
@@ -119,8 +115,11 @@ function ThemeToggle() {
   }, [theme])
 
   return (
-    <IconButton label={THEME_LABEL[theme]} onClick={() => setTheme(THEME_ORDER[(THEME_ORDER.indexOf(theme) + 1) % THEME_ORDER.length])}>
-      <Icon />
-    </IconButton>
+    <>
+      <IconButton label="Settings" onClick={() => setOpen(true)}>
+        <Settings />
+      </IconButton>
+      <SettingsDialog open={open} onClose={() => setOpen(false)} />
+    </>
   )
 }

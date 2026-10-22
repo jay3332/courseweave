@@ -1,6 +1,7 @@
 import { AlertTriangle } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { courseColorStyle } from '../lib/colors'
+import { useStore, type CalendarDisplay } from '../state/store'
 import { DAY_LONG, DAY_SHORT, formatTime, formatTimeRange } from '../lib/time'
 import type { Day } from '../lib/types'
 
@@ -14,8 +15,12 @@ export interface CalendarBlock {
   color: number
   /** Primary text, usually the course code. */
   label: string
-  /** Secondary text, e.g. "Lec 1 · GHC 4401". */
+  /** Secondary text, e.g. "Lec 1 · GHC 4401". Used when `section`/`location` aren't given. */
   detail?: string
+  /** Short section label shown next to the code, e.g. "Lec 1", "Rec A". */
+  section?: string
+  /** Room, e.g. "GHC 4401". */
+  location?: string
   /**
    * solid: in the schedule.
    * preview: hovered/candidate section (hatched).
@@ -83,6 +88,7 @@ function layoutDay(blocks: CalendarBlock[]): Laid[] {
 }
 
 export function WeekGrid({ blocks, days, minHour = 8, maxHour = 18, hourHeight = 52, compact = false, className = '', empty }: WeekGridProps) {
+  const display = useStore((s) => s.calendarDisplay)
   const shownDays: Day[] =
     days ?? ([0, 1, 2, 3, 4, 5, 6] as Day[]).filter((d) => d < 5 || blocks.some((b) => b.day === d))
 
@@ -135,6 +141,7 @@ export function WeekGrid({ blocks, days, minHour = 8, maxHour = 18, hourHeight =
                   key={block.key}
                   block={block}
                   compact={compact}
+                  display={display}
                   style={{
                     top: top(block.start) + 1,
                     height: Math.max(top(block.end) - top(block.start) - 2, 14),
@@ -152,11 +159,15 @@ export function WeekGrid({ blocks, days, minHour = 8, maxHour = 18, hourHeight =
   )
 }
 
-function Block({ block, compact, style }: { block: CalendarBlock; compact: boolean; style: React.CSSProperties }) {
+function Block({ block, compact, style, display }: { block: CalendarBlock; compact: boolean; style: React.CSSProperties; display: CalendarDisplay }) {
   const variant = block.variant ?? 'solid'
   const h = typeof style.height === 'number' ? style.height : 40
-  const showDetail = !compact && h >= 44 && block.detail
-  const showTime = !compact && h >= 30
+  const structured = block.section !== undefined || block.location !== undefined
+  const sectionTag = display.section && block.section ? block.section : null
+  // Room line (or the legacy combined detail line for blocks built by hand).
+  const detail = structured ? (display.location ? block.location : undefined) : block.detail
+  const showTime = display.time && !compact && h >= 30
+  const showDetail = !compact && Boolean(detail) && h >= (showTime ? 50 : 30)
 
   const base = '@container absolute overflow-hidden rounded-[5px] text-left leading-tight transition-[box-shadow,opacity] duration-100'
   const variants = {
@@ -173,7 +184,10 @@ function Block({ block, compact, style }: { block: CalendarBlock; compact: boole
   const content = (
     <>
       <div className={`flex items-start gap-1 ${compact ? 'px-1 pt-0.5' : 'px-1.5 pt-1'}`}>
-        <span className={`course-code truncate ${compact ? 'text-[10.5px]' : 'text-[13px]'}`}>{block.label}</span>
+        <span className={`flex min-w-0 flex-wrap items-baseline gap-x-1 leading-tight ${compact ? 'text-[10.5px]' : 'text-[13px]'}`}>
+          <span className="course-code">{block.label}</span>
+          {sectionTag ? <span className={`font-semibold whitespace-nowrap opacity-85 ${compact ? 'text-[9.5px]' : 'text-[11.5px]'}`}>{sectionTag}</span> : null}
+        </span>
         {block.mini ? (
           <span className="ml-auto shrink-0 rounded-sm bg-[color-mix(in_oklab,var(--course)_22%,transparent)] px-1 text-[9.5px] font-semibold @max-[5.5rem]:hidden">
             M{block.mini}
@@ -184,7 +198,7 @@ function Block({ block, compact, style }: { block: CalendarBlock; compact: boole
       {showTime ? (
         <div className="truncate px-1.5 text-[11px] opacity-80">{formatTimeRange(block.start, block.end)}</div>
       ) : null}
-      {showDetail ? <div className="truncate px-1.5 text-[11px] opacity-80">{block.detail}</div> : null}
+      {showDetail ? <div className="truncate px-1.5 text-[11px] opacity-80">{detail}</div> : null}
     </>
   )
 

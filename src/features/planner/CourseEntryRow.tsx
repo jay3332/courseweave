@@ -84,6 +84,7 @@ export function CourseEntryRow({ resolved, view, scheduleId, termId, selected, o
             listLabel={`${topNoun === 'lecture' ? 'Lectures' : 'Sections'} of ${course.code}`}
             options={tops}
             current={section}
+            fceCourseId={course.id}
             conflictsFor={conflictsFor}
             onChange={(name) => name !== section?.name && setSection(scheduleId, course.id, name, childForSection(course, name, view))}
             onPreview={(name) => onPreview(name ? { courseId: course.id, sections: [name] } : null)}

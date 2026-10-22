@@ -19,6 +19,8 @@ import { SavedCourses } from './SavedCourses'
 import { ScheduleTabs } from './ScheduleTabs'
 import type { CalendarSelection, Preview } from './types'
 import { UnscheduledList } from './UnscheduledList'
+import { ScheduleWorkload } from '../fce/ScheduleWorkload'
+import { ScheduleRequisiteSummary } from '../record/ScheduleRequisiteSummary'
 
 export function SchedulePage() {
   const term = useTerm()
@@ -123,6 +125,13 @@ export function SchedulePage() {
               <p className="px-2 text-[13.5px] text-muted">Courses you add show up here, with their sections and any time conflicts.</p>
             )}
           </section>
+
+          {view.entries.length ? (
+            <div className="flex flex-col gap-4 border-t border-line px-4 py-4">
+              <ScheduleRequisiteSummary entries={view.entries} termId={termId} />
+              <ScheduleWorkload entries={view.entries} />
+            </div>
+          ) : null}
 
           <UnitsFooter view={view} conflictCount={conflictCount} />
         </aside>

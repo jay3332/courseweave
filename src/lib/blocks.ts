@@ -2,8 +2,10 @@ import type { CalendarBlock } from '../components/WeekGrid'
 import { formatLocation, isScheduled } from './time'
 import type { Course, Section } from './types'
 
+/** "Lec 1" for lectures, "Rec A" for sections under a lecture, "Sec A" for standalone sections. */
 export function sectionLabel(section: Section): string {
-  return section.kind === 'lecture' ? `Lec ${section.name}` : `Sec ${section.name}`
+  if (section.kind === 'lecture') return `Lec ${section.name}`
+  return section.parent !== null ? `Rec ${section.name}` : `Sec ${section.name}`
 }
 
 /** One calendar block per (meeting, day) of a section. Spread `extra` onto every block. */
@@ -25,6 +27,8 @@ export function sectionBlocks(
         end: m.end,
         color,
         label: course.code,
+        section: sectionLabel(section),
+        location: formatLocation(m),
         detail: `${sectionLabel(section)} · ${formatLocation(m)}`,
         mini: section.mini,
         tooltip: `${course.code} ${course.title}, ${sectionLabel(section)}`,

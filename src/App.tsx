@@ -7,6 +7,7 @@ import { CoursesPage } from './features/explorer/CoursesPage'
 import { InstructorsPage } from './features/instructors/InstructorsPage'
 import { SchedulePage } from './features/planner/SchedulePage'
 import { RecordPage } from './features/record/RecordPage'
+import { PlanPage } from './features/degree/PlanPage'
 import { TermProvider, useTerms } from './state/term'
 
 export default function App() {
@@ -25,6 +26,8 @@ export default function App() {
             <Route path="requisites" element={<RequisitesPage />} />
             <Route path="requisites/:courseCode" element={<RequisitesPage />} />
             <Route path="record" element={<RecordPage />} />
+            <Route path="plan" element={<PlanPage />} />
+            <Route path="plan/:planId" element={<PlanPage />} />
             <Route path="*" element={<NotFound />} />
           </Route>
         </Route>
