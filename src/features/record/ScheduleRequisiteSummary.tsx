@@ -1,3 +1,4 @@
+import { coursePreview } from '../../components/CoursePreview'
 import { AlertTriangle, Check, ChevronDown } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router'
@@ -76,7 +77,7 @@ export function ScheduleRequisiteSummary({ entries, termId, context, className =
           <ul className="flex flex-col gap-2">
             {rows.map((r) => (
               <li key={r.check.courseId} className="flex min-w-0 flex-col gap-0.5">
-                <span className="course-code text-[14px] text-ink">{r.code}</span>
+                <span {...coursePreview(r.code)} className="course-code text-[14px] text-ink">{r.code}</span>
                 <RequisiteStatus courseId={r.check.courseId} termId={termId} context={context} />
               </li>
             ))}

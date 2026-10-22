@@ -1,3 +1,4 @@
+import { coursePreview } from '../../components/CoursePreview'
 import { AlertTriangle, ArrowLeft, ArrowLeftRight, Check, ChevronDown, Info, Plus, Star, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router'
@@ -186,6 +187,7 @@ export function CourseDetail({ course, closeHref, search }: { course: Course; cl
                     <Link
                       key={id}
                       to={`/${termId}/courses/${codeOf(id)}${search}`}
+                      {...coursePreview(id)}
                       className="course-code text-[14.5px] text-ink underline decoration-line-strong underline-offset-2 hover:decoration-accent"
                     >
                       {codeOf(id)}

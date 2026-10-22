@@ -1,3 +1,4 @@
+import { coursePreview } from '../../components/CoursePreview'
 import { Plus } from 'lucide-react'
 import { IconButton } from '../../components/ui'
 import type { ScheduleView } from '../../state/schedule-view'
@@ -28,7 +29,7 @@ export function SavedCourses({ view, scheduleId, onPreview }: { view: ScheduleVi
             onMouseLeave={() => onPreview(null)}
             className="flex items-center gap-2.5 rounded-md py-0.5 pl-1"
           >
-            <span className="course-code w-[52px] shrink-0 text-[14px] text-ink">{course.code}</span>
+            <span {...coursePreview(course.code)} className="course-code w-[52px] shrink-0 text-[14px] text-ink">{course.code}</span>
             <span className="min-w-0 flex-1 truncate text-[13px] text-ink-2">{course.title}</span>
             <IconButton
               size="sm"

@@ -445,14 +445,19 @@ function evalPoolLeaf(node: ReqNode, inh: Inherited, st: State, ctx: ProgramCont
   const hasTarget = Boolean(node.minUnits || node.minCourses || repeat || rules.some((r) => r.min))
   const effective: ReqNode = hasTarget ? node : { ...node, minCourses: 1 }
 
-  const candidates = ctx.insts
+  let candidates = ctx.insts
     .filter(inPool)
     .sort((a, b) => Number(ctx.named.has(a.id)) - Number(ctx.named.has(b.id)) || byPreference(a, b))
+
+  // "All from the same subject code": fill the pool from each department separately and keep the best one.
+  if (rules.some((r) => r.sameDept)) candidates = bestDeptCandidates(candidates, effective, node, inh, st, ctx)
+  const differentDepts = rules.some((r) => r.differentDepts)
 
   const assigned: Inst[] = []
   for (const inst of candidates) {
     if (targetsMet(effective, assigned, ctx.eq)) break
     if (!canCount(inst, node, inh, st, ctx, false)) continue
+    if (differentDepts && assigned.some((a) => deptOf(a.id) === deptOf(inst.id))) continue
     // Exact/at-most rules on the leaf itself.
     if (rules.some((r) => r.max !== undefined && matchesRule(r, inst, ctx.eq) && assigned.filter((i) => matchesRule(r, i, ctx.eq)).reduce((n, i) => n + amount(i, r.units), 0) + amount(inst, r.units) > r.max + 1e-9)) continue
     if (!contributes(effective, assigned, inst, ctx.eq)) continue
@@ -471,6 +476,37 @@ function evalPoolLeaf(node: ReqNode, inh: Inherited, st: State, ctx: ProgramCont
     viaEquivalent: 0,
     ...targetsFor(effective, assigned, assigned),
   }
+}
+
+const deptOf = (id: string) => id.slice(0, 2)
+
+/** Lexicographic comparison of equal-length score vectors. */
+function compareScores(a: number[], b: number[]): number {
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return a[i] - b[i]
+  return 0
+}
+
+/** The candidates from the one department that best fills the pool: done work first, then planned, then progress. */
+function bestDeptCandidates(candidates: Inst[], effective: ReqNode, node: ReqNode, inh: Inherited, st: State, ctx: ProgramContext): Inst[] {
+  const byDept = new Map<string, Inst[]>()
+  for (const inst of candidates) {
+    const list = byDept.get(deptOf(inst.id)) ?? []
+    list.push(inst)
+    byDept.set(deptOf(inst.id), list)
+  }
+  let best: { list: Inst[]; score: number[] } | null = null
+  for (const list of byDept.values()) {
+    const got: Inst[] = []
+    for (const inst of list) {
+      if (targetsMet(effective, got, ctx.eq)) break
+      if (!canCount(inst, node, inh, st, ctx, false) || !contributes(effective, got, inst, ctx.eq)) continue
+      got.push(inst)
+    }
+    const done = got.filter((i) => i.done)
+    const score = [Number(targetsMet(effective, done, ctx.eq)), Number(targetsMet(effective, got, ctx.eq)), progressOf(effective, got, ctx.eq), done.length]
+    if (!best || compareScores(score, best.score) > 0) best = { list, score }
+  }
+  return best?.list ?? []
 }
 
 /** Whether adding `inst` moves any unmet target forward. */

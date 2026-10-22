@@ -22,7 +22,9 @@ describe('explorer filters', () => {
     const withFce: Filters = { ...EMPTY_FILTERS, maxHours: 12, minRating: 4, withinUnits: true }
     expect(parseFilters(writeFilters(new URLSearchParams(), withFce))).toEqual(withFce)
     // Values outside the offered options are ignored rather than trusted from the URL.
-    expect(parseFilters(new URLSearchParams('maxh=7&minrate=9')).maxHours).toBeNull()
+    expect(parseFilters(new URLSearchParams('maxh=99&minrate=9')).maxHours).toBeNull()
+    expect(parseFilters(new URLSearchParams('maxh=99&minrate=9')).minRating).toBeNull()
+    expect(parseFilters(new URLSearchParams('maxh=7&minrate=4.2'))).toMatchObject({ maxHours: 7, minRating: 4.2 })
     expect(writeFilters(new URLSearchParams('q=abc'), EMPTY_FILTERS).toString()).toBe('q=abc')
   })
 

@@ -1,5 +1,6 @@
 // Modal that enumerates conflict-free section combinations for the active schedule's courses
 // and applies the chosen one (store.setSections) or saves it as a new schedule.
+import { coursePreview } from '../../components/CoursePreview'
 import { ChevronLeft, ChevronRight, Lock, LockOpen } from 'lucide-react'
 import { useMemo, useState, type ReactNode } from 'react'
 import { WeekGrid, type CalendarBlock } from '../../components/WeekGrid'
@@ -280,7 +281,7 @@ function CourseRow({ item, included, locked, onInclude, onLock }: { item: Resolv
       <input id={id} type="checkbox" checked={included} onChange={onInclude} className="size-4 shrink-0 accent-[var(--accent)]" />
       <span aria-hidden className="course-swatch h-4 w-1 shrink-0 rounded-full" />
       <label htmlFor={id} className="min-w-0 flex-1 cursor-pointer">
-        <span className="course-code text-[14px]">{course.code}</span>{' '}
+        <span {...coursePreview(course.code)} className="course-code text-[14px]">{course.code}</span>{' '}
         <span className="text-[12.5px] text-muted">{locked && section ? `keeping ${current}` : sectionCounts(course)}</span>
         <span className="block truncate text-[12.5px] text-ink-2">{course.title}</span>
       </label>
@@ -398,7 +399,7 @@ function ResultView({ result, entries, prefs }: { result: GeneratedSchedule; ent
               <span aria-hidden className="course-swatch mt-1 h-4 w-1 shrink-0 rounded-full" />
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-baseline gap-x-2">
-                  <span className="course-code text-[14px]">{course.code}</span>
+                  <span {...coursePreview(course.code)} className="course-code text-[14px]">{course.code}</span>
                   <span className="font-medium">{now}</span>
                   {changed ? (
                     <span className="rounded bg-accent-soft px-1.5 text-[12px] font-medium text-accent">{row.section ? `was ${was}` : 'new pick'}</span>

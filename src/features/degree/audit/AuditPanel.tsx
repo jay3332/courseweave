@@ -1,3 +1,4 @@
+import { coursePreview } from '../../../components/CoursePreview'
 import { ListChecks } from 'lucide-react'
 import { isGeneralCredit } from '../../../lib/plan'
 import { useMemo } from 'react'
@@ -92,7 +93,8 @@ export function AuditPanel({ input, onAddCourse, termLabel = defaultTermLabel }:
               <li key={id}>
                 <Link
                   to={courseHref({ termId: term.meta.id, offered: (x) => term.courseById.has(x) }, id)}
-                  title={catalog?.courses[id]?.title}
+                  aria-label={catalog?.courses[id]?.title ? `${codeOf(id)} ${catalog.courses[id].title}` : codeOf(id)}
+                  {...coursePreview(id)}
                   className="course-code inline-flex min-h-9 items-center rounded-md border border-line-strong bg-surface px-2 text-[13.5px] text-ink hover:border-ink-2 md:min-h-7"
                 >
                   {codeOf(id)}

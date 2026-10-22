@@ -1,3 +1,4 @@
+import { coursePreview } from '../../components/CoursePreview'
 import { AlertTriangle, ChevronDown } from 'lucide-react'
 import { useState } from 'react'
 import { termPhase } from '../../lib/plan'
@@ -34,7 +35,7 @@ export function RequisiteProblems({ derived, onJump }: { derived: PlanDerived; o
                 onClick={() => onJump(p.planCourseId, p.term)}
                 className="flex min-h-10 w-full items-start gap-2 rounded-md px-1.5 py-1.5 text-left hover:bg-surface-2"
               >
-                <span className="course-code w-[52px] shrink-0 text-[14px] text-ink">{codeOf(p.courseId)}</span>
+                <span {...coursePreview(p.courseId)} className="course-code w-[52px] shrink-0 text-[14px] text-ink">{codeOf(p.courseId)}</span>
                 <span className="min-w-0 flex-1 text-[13px]">
                   <span className="block text-danger">{p.check.issues.find((i) => i.severity === 'error')?.message}</span>
                   <span className="text-muted">{termLabel(p.term)}</span>

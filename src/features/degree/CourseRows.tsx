@@ -1,3 +1,4 @@
+import { coursePreview } from '../../components/CoursePreview'
 import { AlertTriangle, ArrowRightLeft, Check, Clock, ExternalLink, GripVertical, Info, MoreHorizontal, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router'
@@ -63,7 +64,7 @@ export function PlanCourseRow({ course, term, current, catalog, unitsOf, title, 
       }}
       className="group rounded-md border border-transparent px-1.5 py-1 outline-none focus-visible:border-accent hover:bg-surface-2 target:border-accent"
     >
-      <div className="flex min-h-9 items-center gap-1.5 md:min-h-7">
+      <div className="flex min-h-9 items-center gap-1.5 md:min-h-7" {...coursePreview(course.courseId)}>
         {draggable ? <GripVertical aria-hidden className="size-3.5 shrink-0 cursor-grab text-line-strong group-hover:text-muted" /> : null}
         <Link to={href(course.courseId)} className="course-code shrink-0 text-[14.5px] text-ink hover:text-accent">
           {codeOf(course.courseId)}
@@ -194,7 +195,8 @@ export function PlanCourseRow({ course, term, current, catalog, unitsOf, title, 
 export function RecordCourseRow({ entry, title, units }: { entry: RecordEntryLike; title: string | undefined; units: number }) {
   const href = useCourseHref()
   return (
-    <li className="flex min-h-9 items-center gap-1.5 px-1.5 py-1 md:min-h-7" title="From your academic record">
+    <li className="flex min-h-9 items-center gap-1.5 px-1.5 py-1 md:min-h-7" {...coursePreview(entry.courseId)}>
+      <span className="sr-only">From your academic record:</span>
       {entry.courseId ? (
         <Link to={href(entry.courseId)} className="course-code shrink-0 text-[14.5px] text-ink-2 hover:text-accent">
           {codeOf(entry.courseId)}

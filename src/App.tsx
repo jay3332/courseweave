@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect } from 'react'
 import { BrowserRouter, Link, Navigate, Route, Routes, useNavigate, useParams, useSearchParams, Outlet } from 'react-router'
 import { AppShell } from './components/AppShell'
+import { CoursePreviewLayer } from './components/CoursePreview'
 import { Spinner } from './components/ui'
 import { useSession } from './state/session'
 import { startSync, stopSync } from './state/sync'
@@ -93,6 +94,7 @@ function TermLayout() {
       <Suspense fallback={<Loading />}>
         <Outlet />
       </Suspense>
+      <CoursePreviewLayer />
     </TermProvider>
   )
 }

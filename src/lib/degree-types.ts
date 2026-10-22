@@ -37,6 +37,10 @@ export interface CountRule {
   min?: number
   /** At most this many may count. */
   max?: number
+  /** All counted courses must share one subject code (first two digits), e.g. "2 courses, same department". */
+  sameDept?: boolean
+  /** Every counted course must come from a different subject code. */
+  differentDepts?: boolean
 }
 
 export type GroupRule = { kind: 'all' } | { kind: 'any' } | { kind: 'atLeast'; n: number }

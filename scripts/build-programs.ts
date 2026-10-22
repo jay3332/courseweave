@@ -246,7 +246,14 @@ function normalize(raw: RawNode, ctx: BuildContext, isRoot = false): ReqNode {
         addCodes(set, d.additional_courses ?? [])
         const x = Number(d.x ?? 0)
         if (isEmptySet(set)) note(c)
-        else pool.push({ sets: [set], units: Boolean(d.is_units), ...(x > 0 ? { min: x } : {}) })
+        else
+          pool.push({
+            sets: [set],
+            units: Boolean(d.is_units),
+            ...(x > 0 ? { min: x } : {}),
+            ...(d.all_from_same_choice ? { sameDept: true } : {}),
+            ...(d.all_from_different_choice ? { differentDepts: true } : {}),
+          })
         break
       }
       case 'xfromallcourses': {

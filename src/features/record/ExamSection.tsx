@@ -1,3 +1,4 @@
+import { coursePreview } from '../../components/CoursePreview'
 import { Plus, Trash2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Button, Chip, IconButton } from '../../components/ui'
@@ -122,7 +123,7 @@ export function ExamSection() {
                 <ul className="flex flex-col gap-1">
                   {result.award.courses.map((c) => (
                     <li key={c.courseId} className="flex min-w-0 items-baseline gap-2">
-                      <span className="course-code shrink-0 text-[15px] text-ink">{`${c.courseId.slice(0, 2)}-${c.courseId.slice(2)}`}</span>
+                      <span {...coursePreview(c.courseId)} className="course-code shrink-0 text-[15px] text-ink">{`${c.courseId.slice(0, 2)}-${c.courseId.slice(2)}`}</span>
                       <span className="min-w-0 flex-1 text-[14px] text-ink-2">{c.title}</span>
                       <span className="shrink-0 text-[13px] text-muted">{result.award!.waiverOnly ? 'No units' : `${c.units} units`}</span>
                     </li>
@@ -192,7 +193,7 @@ function ExamRow({ entries }: { entries: RecordEntry[] }) {
           {entries.map((e, i) => (
             <span key={e.id}>
               {i > 0 ? ', ' : ''}
-              <span className="course-code text-ink">{lookup(e.courseId ?? '').code}</span>
+              <span {...coursePreview(e.courseId)} className="course-code text-ink">{lookup(e.courseId ?? '').code}</span>
               {e.source === 'waiver' ? ' (placement, no credit)' : ''}
             </span>
           ))}

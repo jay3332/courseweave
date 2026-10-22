@@ -1,3 +1,4 @@
+import { coursePreview } from '../../components/CoursePreview'
 import { useMemo } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { WeekGrid, type CalendarBlock } from '../../components/WeekGrid'
@@ -67,7 +68,7 @@ export function InstructorDetail({ inst }: { inst: Instructor }) {
             return (
               <li key={`${course.id}-${section.name}`} className="px-3 py-2.5 text-[13.5px]">
                 <div className="flex items-baseline gap-2">
-                  <Link to={`/${termId}/courses/${course.code}`} className="course-code text-[15px] text-ink hover:text-accent">
+                  <Link {...coursePreview(course.code)} to={`/${termId}/courses/${course.code}`} className="course-code text-[15px] text-ink hover:text-accent">
                     {course.code}
                   </Link>
                   <span className="text-ink-2">{sectionLabel(section)}</span>
@@ -115,7 +116,7 @@ export function InstructorDetail({ inst }: { inst: Instructor }) {
                 return (
                   <tr key={`${course.id}-${section.name}`} className="border-b border-line/70 align-top last:border-b-0">
                     <td className="px-3 py-2 whitespace-nowrap">
-                      <Link to={`/${termId}/courses/${course.code}`} className="course-code text-[15px] text-ink hover:text-accent">
+                      <Link {...coursePreview(course.code)} to={`/${termId}/courses/${course.code}`} className="course-code text-[15px] text-ink hover:text-accent">
                         {course.code}
                       </Link>
                     </td>
@@ -190,7 +191,7 @@ export function InstructorDetail({ inst }: { inst: Instructor }) {
             <ul className="mt-1.5 flex flex-wrap gap-x-5 gap-y-1">
               {unscheduled.map(({ course, section }) => (
                 <li key={`${course.id}-${section.name}`} className="text-[13.5px]">
-                  <Link to={`/${termId}/courses/${course.code}`} className="course-code text-ink hover:text-accent">
+                  <Link {...coursePreview(course.code)} to={`/${termId}/courses/${course.code}`} className="course-code text-ink hover:text-accent">
                     {course.code}
                   </Link>{' '}
                   <span className="text-ink-2">{sectionLabel(section)}</span>{' '}
@@ -219,7 +220,7 @@ export function InstructorDetail({ inst }: { inst: Instructor }) {
                   {p.courseIds.map((id) => {
                     const course = term.courseById.get(id)
                     return course ? (
-                      <Link key={id} to={`/${termId}/courses/${course.code}`} className="course-code text-[13px] text-muted hover:text-accent">
+                      <Link {...coursePreview(course.code)} key={id} to={`/${termId}/courses/${course.code}`} className="course-code text-[13px] text-muted hover:text-accent">
                         {course.code}
                       </Link>
                     ) : null

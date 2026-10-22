@@ -1,3 +1,4 @@
+import { coursePreview } from '../../components/CoursePreview'
 import { Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router'
@@ -75,7 +76,7 @@ export function WaiversSection() {
                   <li key={e.id} className="flex items-start gap-3 px-3 py-2">
                     <div className="min-w-0 flex-1">
                       <p className="flex min-w-0 items-baseline gap-2">
-                        <span className="course-code shrink-0 text-[15px] text-ink">{info.code}</span>
+                        <span {...coursePreview(info.code)} className="course-code shrink-0 text-[15px] text-ink">{info.code}</span>
                         <span className="min-w-0 truncate text-[14px] text-ink-2">{info.title ?? ''}</span>
                       </p>
                       {e.note ? <p className="text-[13px] text-muted">{e.note}</p> : null}
@@ -127,6 +128,7 @@ export function WaiversSection() {
                       <p className="flex min-w-0 items-baseline gap-2">
                         <Link
                           to={offered ? `/${term.meta.id}/courses/${info.code}` : `/${term.meta.id}/requisites/${info.code}`}
+                          {...coursePreview(info.code)}
                           className="course-code shrink-0 text-[15px] text-ink hover:underline"
                         >
                           {info.code}

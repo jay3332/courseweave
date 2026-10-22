@@ -1,3 +1,4 @@
+import { coursePreview } from '../../components/CoursePreview'
 import { Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { Button, IconButton } from '../../components/ui'
@@ -123,7 +124,7 @@ export function TransferSection() {
               <li key={e.id} className="flex items-start gap-3 px-3 py-2.5">
                 <div className="min-w-0 flex-1">
                   <p className="flex min-w-0 items-baseline gap-2">
-                    {info ? <span className="course-code shrink-0 text-[15px] text-ink">{info.code}</span> : null}
+                    {info ? <span {...coursePreview(info.code)} className="course-code shrink-0 text-[15px] text-ink">{info.code}</span> : null}
                     <span className="min-w-0 truncate text-[14px] text-ink-2">{e.label ?? info?.title ?? 'Transfer credit'}</span>
                   </p>
                   <p className="text-[13px] text-muted">

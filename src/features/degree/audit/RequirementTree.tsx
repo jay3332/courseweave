@@ -1,3 +1,4 @@
+import { coursePreview } from '../../../components/CoursePreview'
 import { ChevronRight, Info, Plus } from 'lucide-react'
 import { useId, useMemo, useState } from 'react'
 import { Link } from 'react-router'
@@ -145,7 +146,8 @@ function AssignedChip({ a, ctx }: { a: RequirementResult['assigned'][number]; ct
   return (
     <Link
       to={courseHref(ctx, a.courseId)}
-      title={title ? `${codeOf(a.courseId)} ${title}` : codeOf(a.courseId)}
+      aria-label={title ? `${codeOf(a.courseId)} ${title}` : codeOf(a.courseId)}
+      {...coursePreview(a.courseId)}
       className={`inline-flex min-h-9 items-center gap-1.5 rounded-md border px-2 text-[12.5px] transition-colors md:min-h-7 ${
         done
           ? 'border-[color-mix(in_oklab,var(--ok)_45%,transparent)] bg-[color-mix(in_oklab,var(--ok)_8%,var(--surface))] text-ink hover:border-ok'
@@ -167,13 +169,13 @@ function CourseLeafRow({ r, ctx }: { r: RequirementResult; ctx: TreeContext }) {
   const counted = a && a.courseId !== id ? a.courseId : null
   const done = state === 'complete' || state === 'complete-with-plan'
   return (
-    <li className="flex min-h-10 items-center gap-2 border-t border-line py-1.5 first:border-t-0 md:min-h-9">
+    <li className="flex min-h-10 items-center gap-2 border-t border-line py-1.5 first:border-t-0 md:min-h-9" {...coursePreview(id)}>
       <StateIcon state={state} className="size-4" />
       <span className="sr-only">{STATE_LABEL[state]}</span>
       <Link to={courseHref(ctx, id)} className="course-code shrink-0 text-[14.5px] text-ink hover:text-accent">
         {codeOf(id)}
       </Link>
-      <span className={`min-w-0 flex-1 truncate text-[13.5px] ${state === 'skipped' ? 'text-muted' : 'text-ink-2'}`} title={title}>
+      <span className={`min-w-0 flex-1 truncate text-[13.5px] ${state === 'skipped' ? 'text-muted' : 'text-ink-2'}`}>
         {title ?? ''}
         {counted ? <span className="text-muted"> (as {codeOf(counted)})</span> : null}
       </span>
@@ -224,11 +226,11 @@ function WaysToSatisfy({ node, ctx }: { node: ReqNode; ctx: TreeContext }) {
       </p>
       <ul className="mt-1 flex flex-col">
         {shown.map((id) => (
-          <li key={id} className="flex min-h-10 items-center gap-2 md:min-h-8">
+          <li key={id} className="flex min-h-10 items-center gap-2 md:min-h-8" {...coursePreview(id)}>
             <Link to={courseHref(ctx, id)} className={`course-code shrink-0 text-[13.5px] hover:text-accent ${ctx.offered(id) ? 'text-ink' : 'text-muted'}`}>
               {codeOf(id)}
             </Link>
-            <span className="min-w-0 flex-1 truncate text-[13px] text-ink-2" title={ctx.title(id)}>
+            <span className="min-w-0 flex-1 truncate text-[13px] text-ink-2">
               {ctx.title(id)}
             </span>
             {ctx.units(id) !== null ? <span className="shrink-0 text-[12px] text-muted tabular-nums">{fmt(ctx.units(id)!)}u</span> : null}

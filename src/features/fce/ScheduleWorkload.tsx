@@ -1,3 +1,4 @@
+import { coursePreview } from '../../components/CoursePreview'
 import { FCE_HOURS_HELP, WORKLOAD_TONE_CLASS, WORKLOAD_TONE_LABEL, formatHours, useFceAccess, useFceSummary, workloadRatio, workloadTone } from '../../lib/fce'
 import type { ResolvedEntry } from '../../state/schedule-view'
 import { useTerm } from '../../state/term'
@@ -74,7 +75,7 @@ export function ScheduleWorkload({ entries, compact = false }: { entries: Resolv
             const miniName = mini !== null ? term.meta.minis.find((m) => m.number === mini)?.name : null
             return (
               <li key={e.course.id} className="grid grid-cols-[4rem_minmax(0,1fr)_4.5rem] items-center gap-2 text-[12.5px]">
-                <span className="course-code text-[13px] text-ink">{e.course.code}</span>
+                <span {...coursePreview(e.course.code)} className="course-code text-[13px] text-ink">{e.course.code}</span>
                 {hours !== null ? <WorkloadMeter hours={hours} units={e.course.units} mini={mini !== null} /> : <span className="text-muted">No FCE hours</span>}
                 <span className="text-right text-ink-2 tabular-nums" title={miniName ? `${miniName}: runs half the semester, so its units count double per week` : undefined}>
                   {hours !== null ? formatHours(hours) : '—'}

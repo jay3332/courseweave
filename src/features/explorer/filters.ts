@@ -61,8 +61,9 @@ export const EMPTY_FILTERS: Filters = {
   req: null,
 }
 
-export const MAX_HOURS_OPTIONS = [6, 9, 12, 15, 20]
-export const MIN_RATING_OPTIONS = [3.5, 4, 4.5]
+/** Slider ranges for the FCE filters. The far end of each slider means "Any". */
+export const MAX_HOURS_RANGE = { min: 3, max: 24, step: 1 }
+export const MIN_RATING_RANGE = { min: 3, max: 4.8, step: 0.1 }
 
 export interface UnitBucket {
   id: string
@@ -89,9 +90,13 @@ function list(params: URLSearchParams, key: string): string[] {
   return v ? v.split(',').filter(Boolean) : []
 }
 
-function positive(params: URLSearchParams, key: string, allowed: number[]): number | null {
-  const n = Number(params.get(key))
-  return allowed.includes(n) ? n : null
+/** A slider value from the URL, snapped to its step; values outside the slider's range are ignored. */
+function inRange(params: URLSearchParams, key: string, range: { min: number; max: number; step: number }): number | null {
+  const raw = params.get(key)
+  if (raw === null || raw === '') return null
+  const n = Number(raw)
+  if (!Number.isFinite(n) || n < range.min || n > range.max) return null
+  return Number((Math.round(n / range.step) * range.step).toFixed(1))
 }
 
 function minutes(params: URLSearchParams, key: string): number | null {
@@ -127,8 +132,8 @@ export function parseFilters(params: URLSearchParams): Filters {
     fits: params.get('fits') === '1',
     saved: params.get('saved') === '1',
     scheduledOnly: params.get('scheduled') === '1',
-    maxHours: positive(params, 'maxh', MAX_HOURS_OPTIONS),
-    minRating: positive(params, 'minrate', MIN_RATING_OPTIONS),
+    maxHours: inRange(params, 'maxh', MAX_HOURS_RANGE),
+    minRating: inRange(params, 'minrate', MIN_RATING_RANGE),
     withinUnits: params.get('light') === '1',
     req: parseReq(params.get('req')),
   }

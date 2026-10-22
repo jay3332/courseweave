@@ -1,4 +1,5 @@
 // Mounted once on the schedule page. Handles ?import=<payload> share links.
+import { coursePreview } from '../../components/CoursePreview'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 import { WeekGrid } from '../../components/WeekGrid'
@@ -118,7 +119,7 @@ function ImportPreview({ shared, onClose }: { shared: SharedSchedule; onClose():
                 <span aria-hidden className="course-swatch mt-1 h-4 w-1 shrink-0 rounded-full" />
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-baseline gap-x-2">
-                    <span className="course-code text-[14px]">{course.code}</span>
+                    <span {...coursePreview(course.code)} className="course-code text-[14px]">{course.code}</span>
                     <span className="truncate">{course.title}</span>
                     {entry.hidden ? <span className="text-[12px] text-muted">hidden</span> : null}
                     {!factorable ? <span className="text-[12px] text-muted">pass/fail</span> : null}

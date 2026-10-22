@@ -1,3 +1,4 @@
+import { coursePreview } from '../../components/CoursePreview'
 import { Check, Clock, X } from 'lucide-react'
 import { Link } from 'react-router'
 import { codeOf } from '../../lib/requisite-format'
@@ -30,8 +31,8 @@ export function CourseChip({ id, minGrade, ctx, className = '' }: { id: string; 
   return (
     <Link
       to={ctx.href(id)}
-      title={label}
       aria-label={label}
+      {...coursePreview(id)}
       className={`inline-flex min-h-9 items-center gap-1 rounded-md border px-2 align-middle whitespace-nowrap transition-colors md:min-h-7 md:px-1.5 ${
         status ? STATUS_STYLE[status] : offered ? 'border-line-strong bg-surface hover:border-ink-2' : 'border-dashed border-line-strong bg-transparent hover:border-ink-2'
       } ${offered ? 'text-ink' : 'text-ink-2'} ${className}`}

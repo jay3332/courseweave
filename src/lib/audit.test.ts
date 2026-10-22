@@ -131,6 +131,25 @@ describe('runAudit: alternatives', () => {
 })
 
 describe('runAudit: pools', () => {
+  it('keeps "same subject code" pools to one department', () => {
+    const sameDept = () =>
+      group('Science', { kind: 'all' }, [pool('Same department', { pool: [{ sets: [{ depts: ['09', '33', '03'] }], units: false, min: 2, sameDept: true }] })])
+    // Physics + chemistry: two departments, so not satisfied.
+    const mixed = audit([version(1, sameDept())], [credit('33142', 12), credit('09105', 10)])
+    expect(find(mixed.programs[0].root, 'Same department').state).not.toBe('complete')
+    // Adding a second chemistry course completes it with the chemistry pair.
+    const r = audit([version(2, sameDept())], [credit('33142', 12), credit('09105', 10), done('09106', 10)])
+    const p = find(r.programs[0].root, 'Same department')
+    expect(p.state).toBe('complete')
+    expect(assignedIds(p).sort()).toEqual(['09105', '09106'])
+  })
+
+  it('spreads "different subject codes" pools across departments', () => {
+    const root = group('Breadth', { kind: 'all' }, [pool('Different', { pool: [{ sets: [{ depts: ['09', '33'] }], units: false, min: 2, differentDepts: true }] })])
+    const r = audit([version(1, root)], [done('09105', 10), done('09106', 10), done('33141', 12)])
+    expect(assignedIds(find(r.programs[0].root, 'Different')).sort()).toEqual(['09105', '33141'])
+  })
+
   it('fills unit targets from a pool, honoring exclusions', () => {
     const root = group('Major', { kind: 'all' }, [
       pool('SCS electives', {

@@ -1,3 +1,4 @@
+import { coursePreview } from '../../components/CoursePreview'
 import { Link } from 'react-router'
 import { Spinner } from '../../components/ui'
 import { FCE_HOURS_HELP, formatHours, formatRating, termName, useFceAccess, useInstructorFce, weightedMean } from '../../lib/fce'
@@ -106,11 +107,11 @@ function Body({ fce, termId, courseById }: { fce: NonNullable<ReturnType<typeof 
                 <tr key={c.courseId} className="border-b border-line/70 align-top last:border-b-0">
                   <td className="px-3 py-1.5">
                     {course ? (
-                      <Link to={`/${termId}/courses/${code}`} className="course-code text-[14px] text-ink hover:text-accent">
+                      <Link {...coursePreview(code)} to={`/${termId}/courses/${code}`} className="course-code text-[14px] text-ink hover:text-accent">
                         {code}
                       </Link>
                     ) : (
-                      <span className="course-code text-[14px] text-ink-2" title="Not offered this term">
+                      <span {...coursePreview(code)} className="course-code text-[14px] text-ink-2">
                         {code}
                       </span>
                     )}

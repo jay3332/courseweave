@@ -1,12 +1,12 @@
 import { Check } from 'lucide-react'
-import { useMemo, useState, type ReactNode } from 'react'
+import { useId, useMemo, useState, type ReactNode } from 'react'
 import { Chip } from '../../components/ui'
 import type { Term } from '../../lib/data'
 import { normalize } from '../../lib/search'
 import { DAY_LETTERS, DAY_LONG, formatTime } from '../../lib/time'
 import type { Day } from '../../lib/types'
 import { FCE_HOURS_HELP } from '../../lib/fce'
-import { activeFilterCount, EMPTY_FILTERS, MAX_HOURS_OPTIONS, MIN_RATING_OPTIONS, UNIT_BUCKETS, type Delivery, type Filters, type Level } from './filters'
+import { activeFilterCount, EMPTY_FILTERS, MAX_HOURS_RANGE, MIN_RATING_RANGE, UNIT_BUCKETS, type Delivery, type Filters, type Level } from './filters'
 import { RequirementPicker } from './RequirementFilter'
 
 const TIME_OPTIONS = Array.from({ length: (23 - 7) * 2 + 1 }, (_, i) => 7 * 60 + i * 30)
@@ -68,19 +68,23 @@ export function FilterPanel({
 
       {fceAvailable ? (
         <Group label="Workload and ratings">
-          <div className="grid grid-cols-2 gap-2">
-            <NumberSelect
-              label="FCE hours at most"
+          <div className="flex flex-col gap-3">
+            <FilterSlider
+              label="FCE hours a week, at most"
               title={FCE_HOURS_HELP}
+              range={MAX_HOURS_RANGE}
+              anyAt="max"
               value={filters.maxHours}
-              options={MAX_HOURS_OPTIONS.map((h) => [h, `${h} a week`])}
+              format={(v) => `${v} h`}
               onChange={(v) => set('maxHours', v)}
             />
-            <NumberSelect
-              label="Course rating at least"
+            <FilterSlider
+              label="Course rating, at least"
               title="Overall course rating from FCEs, 1 to 5"
+              range={MIN_RATING_RANGE}
+              anyAt="min"
               value={filters.minRating}
-              options={MIN_RATING_OPTIONS.map((r) => [r, r.toFixed(1)])}
+              format={(v) => v.toFixed(1)}
               onChange={(v) => set('minRating', v)}
             />
           </div>
@@ -239,35 +243,69 @@ function Toggle({ checked, onChange, children }: { checked: boolean; onChange(v:
   )
 }
 
-function NumberSelect({
+/**
+ * A range slider whose far end (`anyAt`) means "no filter". The label updates while dragging; the filter (and the
+ * URL) only changes when the thumb is released or moved with the keyboard, so dragging doesn't flood history.
+ */
+function FilterSlider({
   label,
   title,
+  range,
+  anyAt,
   value,
-  options,
+  format,
   onChange,
 }: {
   label: string
   title?: string
+  range: { min: number; max: number; step: number }
+  anyAt: 'min' | 'max'
   value: number | null
-  options: [number, string][]
+  format(v: number): string
   onChange(v: number | null): void
 }) {
+  const anyValue = anyAt === 'max' ? range.max : range.min
+  const [draft, setDraft] = useState<number | null>(null)
+  const shown = draft ?? value ?? anyValue
+  const isAny = shown === anyValue
+  const commit = (v: number) => {
+    setDraft(null)
+    const next = v === anyValue ? null : v
+    if (next !== value) onChange(next)
+  }
+  const read = (e: { currentTarget: HTMLInputElement }) => Number(Number(e.currentTarget.value).toFixed(1))
+  const fill = ((shown - range.min) / (range.max - range.min)) * 100
+  const id = useId()
   return (
-    <label className="flex min-w-0 flex-col gap-1" title={title}>
-      <span className="text-[12px] text-muted">{label}</span>
-      <select
-        value={value ?? ''}
-        onChange={(e) => onChange(e.target.value === '' ? null : Number(e.target.value))}
-        className={`h-9 w-full rounded-md border bg-surface px-1.5 text-[13px] lg:h-8 ${value !== null ? 'border-ink font-medium text-ink' : 'border-line-strong text-ink-2'}`}
-      >
-        <option value="">Any</option>
-        {options.map(([v, text]) => (
-          <option key={v} value={v}>
-            {text}
-          </option>
-        ))}
-      </select>
-    </label>
+    <div title={title}>
+      <div className="mb-1 flex items-baseline justify-between gap-2">
+        <label htmlFor={id} className="text-[12px] text-muted">
+          {label}
+        </label>
+        <span className={`text-[12.5px] tabular-nums ${isAny ? 'text-muted' : 'font-semibold text-ink'}`}>{isAny ? 'Any' : format(shown)}</span>
+      </div>
+      <input
+        id={id}
+        type="range"
+        min={range.min}
+        max={range.max}
+        step={range.step}
+        value={shown}
+        aria-valuetext={isAny ? 'Any' : format(shown)}
+        onChange={(e) => setDraft(read(e))}
+        onPointerUp={(e) => commit(read(e))}
+        onKeyUp={(e) => commit(read(e))}
+        onBlur={(e) => draft !== null && commit(read(e))}
+        className="h-9 w-full cursor-pointer accent-[var(--ink)] lg:h-6"
+        style={{
+          background: `linear-gradient(to right, ${anyAt === 'max' ? 'var(--ink-2)' : 'var(--line-strong)'} 0 ${fill}%, ${anyAt === 'max' ? 'var(--line-strong)' : 'var(--ink-2)'} ${fill}% 100%) center / 100% 4px no-repeat`,
+        }}
+      />
+      <div className="flex justify-between text-[11px] text-muted">
+        <span>{anyAt === 'min' ? 'Any' : format(range.min)}</span>
+        <span>{anyAt === 'max' ? 'Any' : format(range.max)}</span>
+      </div>
+    </div>
   )
 }
 

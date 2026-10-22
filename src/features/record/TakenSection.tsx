@@ -1,3 +1,4 @@
+import { coursePreview } from '../../components/CoursePreview'
 import { Plus, Trash2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router'
@@ -225,7 +226,7 @@ function TakenRow({ entry }: { entry: RecordEntry }) {
       <div className="min-w-0">
         <div className="flex min-w-0 items-baseline gap-2">
           {href ? (
-            <Link to={href} className="course-code shrink-0 text-[15px] text-ink hover:underline">
+            <Link {...coursePreview(info!.code)} to={href} className="course-code shrink-0 text-[15px] text-ink hover:underline">
               {info!.code}
             </Link>
           ) : null}
