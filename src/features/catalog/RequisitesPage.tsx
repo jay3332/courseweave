@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
+import { ArrowLeft } from 'lucide-react'
 import { Spinner } from '../../components/ui'
 import { buildUnlocks, prerequisiteDepth, useCatalogIndex } from '../../lib/catalog'
 import type { CatalogIndex } from '../../lib/catalog-types'
@@ -40,6 +41,14 @@ export function RequisitesPage() {
       <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 pt-5 pb-12 md:px-6">
         <header className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between md:gap-6">
           <div>
+            {/* Reached from a course's page (Courses), so the way back leads there. */}
+            <Link
+              to={id && term.courseById.has(id) ? `/${termId}/courses/${codeOf(id)}` : `/${termId}/courses`}
+              className="mb-1 inline-flex min-h-9 items-center gap-1 text-[13px] font-medium text-ink-2 hover:text-ink md:min-h-0"
+            >
+              <ArrowLeft aria-hidden className="size-3.5" />
+              Courses
+            </Link>
             <h1 className="display text-[28px] text-ink">Requisites</h1>
             <p className="mt-1 max-w-[60ch] text-[14px] text-ink-2">See what a course requires, and which courses it opens up. Select any course to follow the chain.</p>
           </div>

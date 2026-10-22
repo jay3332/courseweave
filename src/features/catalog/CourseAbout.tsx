@@ -93,6 +93,13 @@ export function CourseAbout({ courseId, status }: { courseId: string; status?: S
           <Row label="Prerequisites">
             {e.prereqs ? <RequisiteExpression req={e.prereqs} status={status} /> : <span className="text-ink-2">None listed</span>}
             {e.prereqText ? <p className="mt-1 text-[12.5px] text-muted">Schedule of Classes: {e.prereqText}</p> : null}
+            <Link
+              to={`/${termId}/requisites/${codeOf(courseId)}`}
+              className="mt-1 inline-flex min-h-9 items-center gap-1.5 text-[13px] font-medium text-ink-2 underline decoration-line-strong underline-offset-2 hover:text-ink hover:decoration-accent md:min-h-0"
+            >
+              <GitFork aria-hidden className="size-3.5" />
+              Prerequisite tree and what it unlocks
+            </Link>
           </Row>
           {e.coreqs.length ? (
             <Row label="Corequisites">
@@ -153,26 +160,17 @@ export function CourseAbout({ courseId, status }: { courseId: string; status?: S
         </details>
       ) : null}
 
-      <div className="flex flex-wrap gap-x-4 gap-y-1 text-[13px] font-medium">
-        <Link
-          to={`/${termId}/requisites/${codeOf(courseId)}`}
-          className="inline-flex min-h-9 items-center gap-1.5 text-ink-2 underline decoration-line-strong underline-offset-2 hover:text-ink hover:decoration-accent md:min-h-0"
+      {d?.website ? (
+        <a
+          href={d.website}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex min-h-9 items-center gap-1.5 self-start text-[13px] font-medium text-ink-2 underline decoration-line-strong underline-offset-2 hover:text-ink hover:decoration-accent md:min-h-0"
         >
-          <GitFork aria-hidden className="size-3.5" />
-          Explore requisites and what it unlocks
-        </Link>
-        {d?.website ? (
-          <a
-            href={d.website}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex min-h-9 items-center gap-1.5 text-ink-2 underline decoration-line-strong underline-offset-2 hover:text-ink hover:decoration-accent md:min-h-0"
-          >
-            <ExternalLink aria-hidden className="size-3.5" />
-            Course website
-          </a>
-        ) : null}
-      </div>
+          <ExternalLink aria-hidden className="size-3.5" />
+          Course website
+        </a>
+      ) : null}
     </section>
   )
 }

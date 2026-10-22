@@ -1,4 +1,4 @@
-import { BookOpen, CalendarDays, GitFork, GraduationCap, ScrollText, Settings, Users, X } from 'lucide-react'
+import { BookOpen, CalendarDays, GraduationCap, ScrollText, Settings, Users, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate, useParams } from 'react-router'
 import { useSession } from '../state/session'
@@ -12,13 +12,18 @@ const NAV = [
   { to: 'courses', label: 'Courses', icon: BookOpen },
   { to: 'instructors', label: 'Instructors', icon: Users },
   { to: 'schedule', label: 'Schedule', icon: CalendarDays },
-  { to: 'requisites', label: 'Requisites', icon: GitFork },
   { to: 'record', label: 'Record', icon: ScrollText },
   { to: 'plan', label: 'Degree', icon: GraduationCap },
 ]
 
+/** A course's requisite explorer is part of Courses. */
+function navActive(to: string, isActive: boolean, pathname: string): boolean {
+  return isActive || (to === 'courses' && pathname.split('/')[2] === 'requisites')
+}
+
 export function AppShell() {
   const { termId = '' } = useParams()
+  const { pathname } = useLocation()
   const [settingsOpen, setSettingsOpen] = useState(false)
   // With the account control in the header, phones drop the wordmark (the logo mark stays) to make room.
   const accounts = useSession((s) => s.status === 'anonymous' || s.status === 'signed-in')
@@ -38,7 +43,7 @@ export function AppShell() {
               to={`/${termId}/${to}`}
               className={({ isActive }) =>
                 `relative flex h-14 items-center gap-2 px-2.5 text-[14px] font-medium transition-colors lg:px-3 ${
-                  isActive
+                  navActive(to, isActive, pathname)
                     ? 'text-ink after:absolute after:inset-x-2 after:bottom-0 after:h-[3px] after:rounded-t after:bg-accent'
                     : 'text-muted hover:text-ink'
                 }`
@@ -63,7 +68,7 @@ export function AppShell() {
       {/* Phones and small tablets: the main nav becomes a bottom tab bar. */}
       <nav
         aria-label="Main"
-        className="grid shrink-0 grid-cols-6 border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] md:hidden"
+        className="grid shrink-0 grid-cols-5 border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] md:hidden"
       >
         {NAV.map(({ to, label, icon: Icon }) => (
           <NavLink
@@ -71,7 +76,7 @@ export function AppShell() {
             to={`/${termId}/${to}`}
             className={({ isActive }) =>
               `relative flex h-14 flex-col items-center justify-center gap-0.5 text-[11px] font-medium ${
-                isActive ? 'text-ink after:absolute after:inset-x-4 after:top-0 after:h-[3px] after:rounded-b after:bg-accent' : 'text-muted'
+                navActive(to, isActive, pathname) ? 'text-ink after:absolute after:inset-x-4 after:top-0 after:h-[3px] after:rounded-b after:bg-accent' : 'text-muted'
               }`
             }
           >

@@ -2,10 +2,9 @@
 
 A CMU course explorer, instructor directory, schedule planner and degree planner. Everything runs in the browser: course data is static JSON, and your schedules, record and plans are saved in local storage.
 
-- **Courses**: search and filter every course in a semester, with sections (lectures and their recitations), FCE workload against units, an hours-vs-units chart, descriptions and requisites.
+- **Courses**: search and filter every course in a semester, with sections (lectures and their recitations), FCE workload against units, an hours-vs-units chart, descriptions and requisites. Each course links to its prerequisite tree and everything it unlocks.
 - **Instructors**: who teaches what, weekly timetables and evaluation history.
 - **Schedule**: plan several versions of a semester; lecture + recitation choices, conflicts (mini-aware), a schedule generator, factorable vs pass/fail units, workload, requisite warnings, `.ics` export and share links.
-- **Requisites**: a course's prerequisite tree and everything it unlocks.
 - **Record**: courses taken, AP/IB/A-Level and transfer credit, placements and requisite waivers.
 - **Degree**: semester-by-semester plans audited against CMU's degree requirements (majors, minors, concentrations, college gen-eds).
 
