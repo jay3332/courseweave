@@ -6,6 +6,7 @@ import { codeOf } from '../../lib/requisite-format'
 import { isFactorableGrade, termOrdinal } from '../../lib/requisites'
 import { entryUnits, useRecord, type RecordEntry } from '../../state/record'
 import { useTerm } from '../../state/term'
+import { parsePastedCourses, takenEntry, unitsError } from './forms'
 import { termLabel, useCourseLookup, useTermOptions, type CourseInfo } from './hooks'
 import { CoursePicker, Empty, Field, Section, Select, TextInput } from './shared'
 
@@ -65,26 +66,19 @@ export function TakenSection() {
   const picked = courseId ? lookup(courseId) : null
   const duplicate = courseId ? taken.find((e) => e.courseId === courseId && (e.term ?? '') === termCode) : undefined
 
+  const draft = takenEntry({ courseId, term: termCode, grade, units, catalogUnits: picked?.units })
+  const unitsMessage = unitsError(units)
+
   const add = () => {
-    if (!courseId) return
-    const u = units.trim() === '' ? undefined : Number(units)
-    addEntry({
-      courseId,
-      source: 'taken',
-      ...(termCode ? { term: termCode } : {}),
-      ...(grade ? { grade } : {}),
-      ...(u !== undefined && Number.isFinite(u) && u >= 0 && u !== picked?.units ? { units: u } : {}),
-    })
-    setMessage(`Added ${codeOf(courseId)}${termCode ? ` for ${termLabel(termCode)}` : ''}.`)
+    if (!draft || !draft.courseId) return
+    addEntry(draft)
+    setMessage(`Added ${codeOf(draft.courseId)}${termCode ? ` for ${termLabel(termCode)}` : ''}.`)
     setCourseId(null)
     setGrade('')
     setUnits('')
   }
 
-  const pasted = useMemo(() => {
-    const ids = [...paste.matchAll(/\b(\d{2})-?(\d{3})\b/g)].map((m) => m[1] + m[2])
-    return [...new Set(ids)]
-  }, [paste])
+  const pasted = useMemo(() => parsePastedCourses(paste), [paste])
 
   const addPasted = () => {
     const fresh = pasted.filter((id) => !taken.some((e) => e.courseId === id && (e.term ?? '') === termCode))
@@ -102,7 +96,7 @@ export function TakenSection() {
     >
       <div className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-3 md:p-4">
         <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_150px_150px_90px]">
-          <Field label="Course">
+          <Field label="Course" group>
             <CoursePicker
               label="Course taken"
               value={courseId}
@@ -115,7 +109,7 @@ export function TakenSection() {
           </Field>
           <Field label="Semester">
             <Select value={termCode} onChange={(e) => setTermCode(e.target.value)}>
-              {termOptions.map((t) => (
+              {(termCode && !termOptions.includes(termCode) ? [termCode, ...termOptions] : termOptions).map((t) => (
                 <option key={t} value={t}>
                   {termLabel(t)}
                 </option>
@@ -132,12 +126,18 @@ export function TakenSection() {
               ))}
             </Select>
           </Field>
-          <Field label="Units">
-            <TextInput inputMode="decimal" value={units} onChange={(e) => setUnits(e.target.value)} placeholder={picked?.units === null ? 'VAR' : ''} />
+          <Field label="Units" error={unitsMessage}>
+            <TextInput
+              inputMode="decimal"
+              value={units}
+              onChange={(e) => setUnits(e.target.value)}
+              placeholder={picked?.units === null ? 'VAR' : ''}
+              aria-invalid={unitsMessage ? true : undefined}
+            />
           </Field>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant="primary" disabled={!courseId} onClick={add}>
+          <Button variant="primary" disabled={!draft} onClick={add}>
             <Plus aria-hidden className="size-4" />
             Add course
           </Button>

@@ -11,6 +11,7 @@ import {
   offering,
   planColumns,
   planToAuditInput,
+  isGeneralCredit,
   suggestTerm,
   termPhase,
   termTotals,
@@ -96,6 +97,18 @@ describe('planColumns', () => {
 })
 
 describe('planToAuditInput', () => {
+  it('sends general transfer units without a CMU equivalent as credit', () => {
+    const record: RecordLike = {
+      entries: [
+        { id: 'g1', courseId: null, source: 'transfer', units: 9, institution: 'Pitt' },
+        { id: 'g2', courseId: null, source: 'transfer' },
+      ],
+      overrides: {},
+    }
+    const input = planToAuditInput(plan({ F25: [] }), record, catalog, { current: 'F26' })
+    const general = input.courses.filter((c) => isGeneralCredit(c.courseId))
+    expect(general).toEqual([{ courseId: 'credit:g1', term: null, status: 'credit', units: 9, passFail: true, source: 'Transfer: Pitt' }])
+  })
   it('maps record and plan courses to statuses', () => {
     const record: RecordLike = {
       entries: [

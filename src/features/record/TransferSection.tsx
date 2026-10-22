@@ -2,6 +2,7 @@ import { Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { Button, IconButton } from '../../components/ui'
 import { useRecord } from '../../state/record'
+import { transferEntry, unitsError } from './forms'
 import { termLabel, useCourseLookup, useTermOptions } from './hooks'
 import { CoursePicker, Empty, Field, Section, Select, TextInput } from './shared'
 
@@ -21,20 +22,14 @@ export function TransferSection() {
   const [termCode, setTermCode] = useState('')
 
   const transfers = entries.filter((e) => e.source === 'transfer')
-  const unitsNum = Number(units)
-  const unitsValid = units.trim() !== '' && Number.isFinite(unitsNum) && unitsNum >= 0
-  const canAdd = general ? label.trim() !== '' && unitsValid : !!courseId
+  const draft = transferEntry({ general, courseId, label, units, institution, term: termCode })
+  const unitsMessage = unitsError(units)
+  const [added, setAdded] = useState<string | null>(null)
 
   const add = () => {
-    if (!canAdd) return
-    addEntry({
-      courseId: general ? null : courseId,
-      source: 'transfer',
-      ...(unitsValid ? { units: unitsNum } : {}),
-      ...(general ? { label: label.trim() } : {}),
-      ...(institution.trim() ? { institution: institution.trim() } : {}),
-      ...(termCode ? { term: termCode } : {}),
-    })
+    if (!draft) return
+    addEntry(draft)
+    setAdded(draft.courseId ? `Added ${lookup(draft.courseId).code}.` : `Added ${draft.label}.`)
     setCourseId(null)
     setLabel('')
     setUnits('')
@@ -48,7 +43,15 @@ export function TransferSection() {
     >
       <div className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-3 md:p-4">
         <label className="flex min-h-9 items-center gap-2 text-[14px] text-ink">
-          <input type="checkbox" checked={general} onChange={(e) => setGeneral(e.target.checked)} className="size-4 accent-[var(--accent)]" />
+          <input
+            type="checkbox"
+            checked={general}
+            onChange={(e) => {
+              setGeneral(e.target.checked)
+              setAdded(null)
+            }}
+            className="size-4 accent-[var(--accent)]"
+          />
           No CMU equivalent (general elective units)
         </label>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_90px]">
@@ -57,19 +60,26 @@ export function TransferSection() {
               <TextInput value={label} onChange={(e) => setLabel(e.target.value)} />
             </Field>
           ) : (
-            <Field label="CMU equivalent">
+            <Field label="CMU equivalent" group>
               <CoursePicker
                 label="CMU equivalent course"
                 value={courseId}
                 onChange={(id) => {
                   setCourseId(id)
+                  setAdded(null)
                   setUnits(id ? String(lookup(id).units ?? '') : '')
                 }}
               />
             </Field>
           )}
-          <Field label="Units">
-            <TextInput inputMode="decimal" value={units} onChange={(e) => setUnits(e.target.value)} />
+          <Field label="Units" error={unitsMessage}>
+            <TextInput
+              inputMode="decimal"
+              value={units}
+              onChange={(e) => setUnits(e.target.value)}
+              placeholder={!general && courseId && lookup(courseId).units === null ? 'VAR' : ''}
+              aria-invalid={unitsMessage ? true : undefined}
+            />
           </Field>
         </div>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_200px]">
@@ -87,11 +97,18 @@ export function TransferSection() {
             </Select>
           </Field>
         </div>
-        <div>
-          <Button variant="primary" disabled={!canAdd} onClick={add}>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="primary" disabled={!draft} onClick={add}>
             <Plus aria-hidden className="size-4" />
             Add transfer credit
           </Button>
+          {added ? (
+            <span role="status" className="text-[13px] text-ok">
+              {added}
+            </span>
+          ) : !draft && !unitsMessage ? (
+            <span className="text-[13px] text-muted">{general ? 'Describe the credit and enter its units.' : 'Pick the CMU course it counts as.'}</span>
+          ) : null}
         </div>
       </div>
 

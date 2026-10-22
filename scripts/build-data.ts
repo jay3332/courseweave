@@ -99,6 +99,9 @@ async function buildTerm(config: TermConfig, passFail: Set<string>): Promise<Ter
   const sections = courses.flatMap((c) => c.sections)
   const withInstructors = sections.filter((s) => s.instructors.length).length
   if (sections.length && withInstructors / sections.length < 0.05) notes.push("Instructors and rooms aren't listed for this term.")
+  if (sections.some((s) => s.kind === 'lecture') && !sections.some((s) => s.parent !== null)) {
+    notes.push("Recitation and lab sections aren't available for this term yet; only lectures and standalone sections are listed.")
+  }
   return { term: { ...term, notes: notes.length ? notes : undefined, sources: sources.map((s) => s.type) }, generatedAt: new Date().toISOString(), courses }
 }
 

@@ -7,13 +7,51 @@ import type { Course } from '../../lib/types'
 import { useTerm } from '../../state/term'
 import { useCourseLookup } from './hooks'
 
-/** Labeled form control. */
-export function Field({ label, hint, children, className = '' }: { label: string; hint?: ReactNode; children: ReactNode; className?: string }) {
+/**
+ * Labeled form control. Wraps a single input/select in a <label>. Pass `group` for composite widgets
+ * (CoursePicker, anything with its own buttons): a <label> forwards clicks inside it to its first
+ * labelable descendant, which would be the widget's buttons (e.g. "Clear"), so those get a group instead.
+ */
+export function Field({
+  label,
+  hint,
+  error,
+  children,
+  className = '',
+  group = false,
+}: {
+  label: string
+  hint?: ReactNode
+  /** Validation message; replaces the hint while shown. */
+  error?: string | null
+  children: ReactNode
+  className?: string
+  group?: boolean
+}) {
+  const id = useId()
+  const note = error ? (
+    <span role="alert" className="text-[12px] text-danger">
+      {error}
+    </span>
+  ) : hint ? (
+    <span className="text-[12px] text-muted">{hint}</span>
+  ) : null
+  if (group) {
+    return (
+      <div role="group" aria-labelledby={`${id}-label`} className={`flex min-w-0 flex-col gap-1 ${className}`}>
+        <span id={`${id}-label`} className="text-[13px] font-medium text-ink-2">
+          {label}
+        </span>
+        {children}
+        {note}
+      </div>
+    )
+  }
   return (
     <label className={`flex min-w-0 flex-col gap-1 ${className}`}>
       <span className="text-[13px] font-medium text-ink-2">{label}</span>
       {children}
-      {hint ? <span className="text-[12px] text-muted">{hint}</span> : null}
+      {note}
     </label>
   )
 }
@@ -164,7 +202,12 @@ export function CoursePicker({ value, onChange, label, placeholder = 'Search: 15
                 aria-selected={i === active}
                 onMouseEnter={() => setActive(i)}
                 onMouseDown={(e) => e.preventDefault()}
-                onClick={() => pick(course)}
+                onClick={(e) => {
+                  // Cancels any enclosing <label>'s activation, which would otherwise click the
+                  // "Clear" button that replaces this list once the course is picked.
+                  e.preventDefault()
+                  pick(course)
+                }}
                 className={`flex min-h-11 cursor-pointer items-center gap-2.5 rounded-md px-2 py-1.5 ${i === active ? 'bg-surface-2 ring-1 ring-line-strong' : ''}`}
               >
                 <span className="course-code w-[52px] shrink-0 text-[15px] text-ink">{course.code}</span>

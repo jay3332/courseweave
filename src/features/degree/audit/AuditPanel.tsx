@@ -1,4 +1,5 @@
 import { ListChecks } from 'lucide-react'
+import { isGeneralCredit } from '../../../lib/plan'
 import { useMemo } from 'react'
 import { Link } from 'react-router'
 import { Spinner } from '../../../components/ui'
@@ -80,7 +81,14 @@ export function AuditPanel({ input, onAddCourse, termLabel = defaultTermLabel }:
             {fmt(freeUnits)} units that don't count toward a specific requirement. They still count toward your degree's unit total.
           </p>
           <ul className="mt-2 flex flex-wrap gap-1.5">
-            {result.unassigned.map((id) => (
+            {result.unassigned.map((id) =>
+              isGeneralCredit(id) ? (
+                <li key={id}>
+                  <span className="inline-flex min-h-9 items-center rounded-md border border-dashed border-line-strong bg-surface px-2 text-[13px] text-ink-2 md:min-h-7">
+                    {input.courses.find((c) => c.courseId === id)?.source ?? 'Transfer credit'}, {fmt(input.courses.find((c) => c.courseId === id)?.units ?? 0)} units
+                  </span>
+                </li>
+              ) : (
               <li key={id}>
                 <Link
                   to={courseHref({ termId: term.meta.id, offered: (x) => term.courseById.has(x) }, id)}
@@ -90,7 +98,8 @@ export function AuditPanel({ input, onAddCourse, termLabel = defaultTermLabel }:
                   {codeOf(id)}
                 </Link>
               </li>
-            ))}
+              ),
+            )}
           </ul>
         </section>
       ) : null}

@@ -4,6 +4,7 @@ import { Link } from 'react-router'
 import { Button, IconButton } from '../../components/ui'
 import { useRecord } from '../../state/record'
 import { useTerm } from '../../state/term'
+import { placementEntry } from './forms'
 import { useCourseLookup } from './hooks'
 import { CoursePicker, Empty, Field, Section, TextInput } from './shared'
 
@@ -28,9 +29,10 @@ export function WaiversSection() {
   const placements = entries.filter((e) => e.source === 'waiver' && !e.exam)
   const overrideList = Object.entries(overrides).sort((a, b) => a[0].localeCompare(b[0]))
 
+  const placement = placementEntry(placedId, placedNote)
   const addPlacement = () => {
-    if (!placedId) return
-    addEntry({ courseId: placedId, source: 'waiver', units: 0, ...(placedNote.trim() ? { note: placedNote.trim() } : {}) })
+    if (!placement) return
+    addEntry(placement)
     setPlacedId(null)
     setPlacedNote('')
   }
@@ -51,14 +53,14 @@ export function WaiversSection() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <div className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-3 md:p-4">
           <h3 className="text-[15px] font-semibold text-ink">Placed out of a course</h3>
-          <Field label="Course">
+          <Field label="Course" group>
             <CoursePicker label="Course placed out of" value={placedId} onChange={setPlacedId} />
           </Field>
           <Field label="Note (optional)" hint="For example: math placement exam, language placement">
             <TextInput value={placedNote} onChange={(e) => setPlacedNote(e.target.value)} />
           </Field>
           <div>
-            <Button variant="primary" disabled={!placedId} onClick={addPlacement}>
+            <Button variant="primary" disabled={!placement} onClick={addPlacement}>
               <Plus aria-hidden className="size-4" />
               Add placement
             </Button>
@@ -90,7 +92,7 @@ export function WaiversSection() {
 
         <div className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-3 md:p-4">
           <h3 className="text-[15px] font-semibold text-ink">Requisite override</h3>
-          <Field label="Course you have permission to take">
+          <Field label="Course you have permission to take" group>
             <CoursePicker label="Course with an override" value={overrideId} onChange={setOverrideId} />
           </Field>
           <fieldset className="flex flex-col gap-0.5">

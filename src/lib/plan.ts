@@ -230,6 +230,16 @@ export interface AuditOptions {
   examLabel?: (examId: string, score: string) => string
 }
 
+/**
+ * Audit course ids for credit without a CMU course equivalent (general transfer units). They never match a
+ * specific requirement, but count toward the degree's unit total and free electives.
+ */
+export const GENERAL_CREDIT_PREFIX = 'credit:'
+
+export function isGeneralCredit(courseId: string): boolean {
+  return courseId.startsWith(GENERAL_CREDIT_PREFIX)
+}
+
 export function planToAuditInput(plan: Plan, record: RecordLike, catalog: CatalogIndex | null, opts: AuditOptions = {}): AuditInput {
   const current = opts.current ?? currentTermCode()
   const unitsOf: UnitsOf = opts.unitsOf ?? ((id) => catalog?.courses[id]?.units)
@@ -237,7 +247,13 @@ export function planToAuditInput(plan: Plan, record: RecordLike, catalog: Catalo
   const seen = new Set<string>()
 
   for (const e of record.entries) {
-    if (!e.courseId) continue
+    if (!e.courseId) {
+      const units = e.units ?? 0
+      if (e.source === 'transfer' && units > 0 && earnsCredit(recordGrade(e))) {
+        courses.push({ courseId: `${GENERAL_CREDIT_PREFIX}${e.id}`, term: null, status: 'credit', units, passFail: true, source: creditSource(e, opts.examLabel) })
+      }
+      continue
+    }
     const grade = recordGrade(e)
     // Failing, withdrawn and incomplete grades earn nothing toward the degree.
     if (e.source !== 'waiver' && !earnsCredit(grade)) continue

@@ -191,8 +191,9 @@ function ProfileAndTotals() {
     const year = Number(term.meta.id.slice(1))
     const out: string[] = []
     for (let y = year; y <= year + 5; y++) out.push(`S${String(y).padStart(2, '0')}`, `F${String(y).padStart(2, '0')}`)
-    return out
-  }, [term])
+    return withValue(out, profile.expectedGraduation)
+  }, [term, profile.expectedGraduation])
+  const entryOptions = useMemo(() => withValue(termOptions.filter((t) => !t.startsWith('M')), profile.entryTerm), [termOptions, profile.entryTerm])
 
   const sources = [
     { label: 'CMU courses', units: totals.bySource.taken },
@@ -216,13 +217,11 @@ function ProfileAndTotals() {
         <Field label="First semester at CMU">
           <Select value={profile.entryTerm ?? ''} onChange={(e) => setProfile({ entryTerm: e.target.value || undefined })}>
             <option value="">Not set</option>
-            {termOptions
-              .filter((t) => !t.startsWith('M'))
-              .map((t) => (
-                <option key={t} value={t}>
-                  {termLabel(t)}
-                </option>
-              ))}
+            {entryOptions.map((t) => (
+              <option key={t} value={t}>
+                {termLabel(t)}
+              </option>
+            ))}
           </Select>
         </Field>
         <Field label="Expected graduation">
@@ -279,4 +278,9 @@ function ProfileAndTotals() {
       </div>
     </div>
   )
+}
+
+/** Keeps a saved value selectable even when it falls outside the generated range (e.g. an imported record). */
+function withValue(options: string[], value: string | undefined): string[] {
+  return value && !options.includes(value) ? [value, ...options] : options
 }

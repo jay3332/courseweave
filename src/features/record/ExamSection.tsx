@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react'
 import { Button, Chip, IconButton } from '../../components/ui'
 import { awardFor, EXAM_SOURCES, EXAMS, examById, type ExamBoard } from '../../lib/exam-credit'
 import { COLLEGES, useRecord, type RecordEntry } from '../../state/record'
+import { manualExamEntry, unitsError } from './forms'
 import { useCourseLookup } from './hooks'
 import { CoursePicker, Empty, Field, Section, Select, TextInput } from './shared'
 
@@ -213,17 +214,19 @@ function ManualExamForm({ onDone }: { onDone(): void }) {
   const [name, setName] = useState('')
   const [units, setUnits] = useState('')
 
+  const draft = manualExamEntry({ courseId, name, units })
+  const unitsMessage = unitsError(units)
+
   const add = () => {
-    if (!courseId) return
-    const u = Number(units)
-    addEntry({ courseId, source: 'exam', ...(units && Number.isFinite(u) ? { units: u } : {}), ...(name.trim() ? { note: name.trim() } : {}) })
+    if (!draft) return
+    addEntry(draft)
     onDone()
   }
 
   return (
     <div className="flex flex-col gap-3 border-t border-line pt-3">
       <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_90px]">
-        <Field label="CMU course awarded">
+        <Field label="CMU course awarded" group>
           <CoursePicker
             label="CMU course awarded"
             value={courseId}
@@ -236,12 +239,12 @@ function ManualExamForm({ onDone }: { onDone(): void }) {
         <Field label="Exam" hint="For example: IB Further Mathematics HL, department review">
           <TextInput value={name} onChange={(e) => setName(e.target.value)} />
         </Field>
-        <Field label="Units">
-          <TextInput inputMode="decimal" value={units} onChange={(e) => setUnits(e.target.value)} />
+        <Field label="Units" error={unitsMessage}>
+          <TextInput inputMode="decimal" value={units} onChange={(e) => setUnits(e.target.value)} aria-invalid={unitsMessage ? true : undefined} />
         </Field>
       </div>
       <div>
-        <Button variant="secondary" disabled={!courseId} onClick={add}>
+        <Button variant="secondary" disabled={!draft} onClick={add}>
           Add exam credit
         </Button>
       </div>
