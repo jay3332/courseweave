@@ -35,7 +35,7 @@
     "OIDC_ISSUER": "https://accounts.google.com",
     // Your OAuth client id. Empty = sign-in off: /auth/login returns 503, FCE stays locked and isn't deployed.
     // The client secret and SESSION_SECRET are secrets: `npx wrangler secret put OIDC_CLIENT_SECRET` etc.
-    "OIDC_CLIENT_ID": "",
+    "OIDC_CLIENT_ID": "197877729931-0b9jqhhp1h5rjipdi0lhh8oreuciso45.apps.googleusercontent.com",
     "ALLOWED_EMAIL_DOMAINS": "andrew.cmu.edu,cmu.edu",
   },
   "observability": { "enabled": true },
