@@ -1,5 +1,5 @@
 import { isRemote } from '../../lib/departments'
-import type { FceSummary } from '../../lib/fce'
+import { courseIsMini, expectedHours, type FceSummary } from '../../lib/fce'
 import { DAY_LETTERS, isScheduled } from '../../lib/time'
 import type { Course, Day, Section } from '../../lib/types'
 
@@ -29,7 +29,7 @@ export interface Filters {
   maxHours: number | null
   /** FCE overall course rating at least. */
   minRating: number | null
-  /** FCE hours no more than the course's units. */
+  /** FCE hours no more than the hours its units suggest (2 × units for minis). */
   withinUnits: boolean
 }
 
@@ -219,7 +219,10 @@ function fceMatches(course: Course, f: Filters, fce: Map<string, FceSummary> | n
   const s = fce.get(course.id)
   if (f.maxHours !== null && (s?.hours == null || s.hours > f.maxHours)) return false
   if (f.minRating !== null && (s?.courseRate == null || s.courseRate < f.minRating)) return false
-  if (f.withinUnits && (s?.hours == null || course.units === null || s.hours > course.units)) return false
+  if (f.withinUnits) {
+    const expected = expectedHours(course.units, courseIsMini(course, s))
+    if (s?.hours == null || expected === null || s.hours > expected) return false
+  }
   return true
 }
 
@@ -244,7 +247,7 @@ function fceKey(course: Course, sort: SortKey, fce: Map<string, FceSummary>): nu
     case 'hours-desc':
       return s.hours === null ? null : -s.hours
     case 'ratio':
-      return s.hours === null || !course.units ? null : s.hours / course.units
+      return s.hours === null || !course.units ? null : s.hours / expectedHours(course.units, courseIsMini(course, s))!
     case 'rating':
       return s.courseRate === null ? null : -s.courseRate
     case 'teaching':

@@ -248,8 +248,16 @@ export function TermCard({ plan, column, derived, scheduled, published, fceHours
               </span>
             ) : null}
             {totals.fceUnits > 0 ? (
-              <span className="ml-auto" title={`FCE hours a week for the ${totals.fceUnits} units with evaluations${totals.missingFce ? `; ${totals.missingFce} course${totals.missingFce === 1 ? ' has' : 's have'} no FCEs` : ''}`}>
-                <span className="font-semibold text-ink">{Math.round(totals.fceHours)}</span> FCE hrs/wk
+              <span
+                className="ml-auto"
+                title={
+                  (totals.peakHalf
+                    ? `Busier half of the term (${totals.peakHalf} half): ${Math.round(totals.peakHours)} FCE hours a week, against ${Math.round(totals.otherHalfHours)} in the other half. Full-semester courses count in both halves; minis only in theirs, at their in-session hours. Units there suggest about ${Math.round(totals.peakExpected)} hours a week (mini units count double). Which half a mini runs in is estimated from past FCEs.`
+                    : `FCE hours a week for the ${totals.fceUnits} units with evaluations.`) +
+                  (totals.missingFce ? ` ${totals.missingFce} course${totals.missingFce === 1 ? ' has' : 's have'} no FCEs.` : '')
+                }
+              >
+                <span className="font-semibold text-ink">{Math.round(totals.peakHours)}</span> FCE hrs/wk{totals.peakHalf ? ' at peak' : ''}
               </span>
             ) : null}
           </div>

@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, type RefObject } from 'react'
 import { Link } from 'react-router'
 import { courseColorStyle } from '../../lib/colors'
 import type { Term } from '../../lib/data'
-import { FCE_HOURS_HELP, formatHours, formatRating, type FceSummary } from '../../lib/fce'
+import { FCE_HOURS_HELP, courseIsMini, formatHours, formatRating, type FceSummary } from '../../lib/fce'
 import { formatUnits } from '../../lib/time'
 import type { Course } from '../../lib/types'
 import { WorkloadCell } from '../fce/WorkloadMeter'
@@ -80,6 +80,7 @@ export function ResultsList({ term, results, activeIndex, onActiveChange, select
         const active = i === activeIndex
         const selected = course.id === selectedId
         const f = fce?.get(course.id)
+        const isMini = courseIsMini(course, f)
         return (
           <li key={course.id}>
             <Link
@@ -113,14 +114,14 @@ export function ResultsList({ term, results, activeIndex, onActiveChange, select
                     {summary.primary}
                     {summary.secondary ? <span className="text-muted">, {summary.secondary}</span> : null}
                   </span>
-                  {f ? <InlineFce summary={f} units={course.units} /> : null}
+                  {f ? <InlineFce summary={f} units={course.units} mini={isMini} /> : null}
                 </span>
               </span>
               <span className="hidden min-w-0 text-right text-[13px] @2xl:block">
                 <span className="block truncate text-ink-2">{summary.primary}</span>
                 <span className="block truncate text-[12px] text-muted">{mini ?? summary.secondary}</span>
               </span>
-              <span className="hidden pt-0.5 @lg:block">{fce ? <WorkloadCell hours={f?.hours ?? null} units={course.units} /> : null}</span>
+              <span className="hidden pt-0.5 @lg:block">{fce ? <WorkloadCell hours={f?.hours ?? null} units={course.units} mini={isMini} /> : null}</span>
               <span className="hidden pt-px text-right @2xl:block" title={f?.courseRate != null ? `Course rating ${formatRating(f.courseRate)} of 5` : undefined}>
                 {f?.courseRate != null ? <span className="course-code text-[15px] text-ink">{f.courseRate.toFixed(1)}</span> : fce ? <span className="text-[12px] text-muted">—</span> : null}
               </span>
@@ -141,9 +142,9 @@ export function ResultsList({ term, results, activeIndex, onActiveChange, select
 }
 
 /** Hours and rating in the narrow layout, where they have no columns of their own. */
-function InlineFce({ summary, units }: { summary: FceSummary; units: number | null }) {
+function InlineFce({ summary, units, mini }: { summary: FceSummary; units: number | null; mini: boolean }) {
   return (
-    <span className="ml-auto flex shrink-0 gap-2 text-muted @lg:hidden" title={workloadDescription(summary.hours, units)}>
+    <span className="ml-auto flex shrink-0 gap-2 text-muted @lg:hidden" title={workloadDescription(summary.hours, units, mini)}>
       {summary.hours !== null ? (
         <span>
           <span className="font-semibold text-ink-2 tabular-nums">{formatHours(summary.hours)}</span> h/wk

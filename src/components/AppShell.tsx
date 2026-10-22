@@ -22,7 +22,7 @@ export function AppShell() {
       <header className="flex h-14 shrink-0 items-center gap-2 border-b border-line bg-surface px-3 md:gap-5 md:px-5">
         <Link to={`/${termId}/courses`} aria-label="Courseweave home" className="flex items-center gap-2 rounded-sm">
           <span aria-hidden className="tartan size-6 rounded-[5px]" />
-          <span className="display text-[24px] text-ink md:text-[26px]">Courseweave</span>
+          <span className="display text-[21px] text-ink min-[400px]:text-[24px] md:text-[26px]">Courseweave</span>
           <span className="hidden pt-1 text-[13px] text-muted 2xl:inline">CMU course planner</span>
         </Link>
         <nav aria-label="Main" className="hidden items-center gap-1 md:flex">
@@ -91,7 +91,7 @@ function TermSelect({ termId }: { termId: string }) {
           const rest = location.pathname.split('/').slice(2, 3).join('/') || 'courses'
           navigate(`/${e.target.value}/${rest}`)
         }}
-        className="h-9 w-[124px] rounded-lg border border-line-strong bg-surface pr-7 pl-2.5 text-[13px] font-medium text-ink md:w-auto md:text-[14px]"
+        className="h-9 w-auto max-w-[9.5rem] rounded-lg border border-line-strong bg-surface pr-7 pl-2.5 text-[13px] font-medium text-ink md:max-w-none md:text-[14px]"
       >
         {!known ? <option value={termId}>{termId}</option> : null}
         {options.map((t) => (

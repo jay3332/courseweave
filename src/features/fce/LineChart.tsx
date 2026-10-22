@@ -19,8 +19,11 @@ interface LineChartProps {
   /** Accessible name; the chart's visible title lives outside. */
   label: string
   height?: number
-  /** A horizontal reference, e.g. the course's units on an hours chart. */
-  reference?: { value: number; label: string }
+  /**
+   * A reference, e.g. the hours a course's units suggest. A number draws a horizontal line; an array (one value
+   * per point) draws a stepped line, for references that change over time (a course that became a mini).
+   */
+  reference?: { value: number | (number | null)[]; label: string }
 }
 
 const M = { top: 10, right: 34, bottom: 22, left: 30 }
@@ -88,7 +91,7 @@ export function LineChart({ points, domain, format, label, height = 132, referen
               </text>
             </g>
           ))}
-          {reference && reference.value >= lo && reference.value <= hi ? (
+          {reference && typeof reference.value === 'number' && reference.value >= lo && reference.value <= hi ? (
             <g>
               <line x1={M.left} x2={M.left + innerW} y1={sy(reference.value)} y2={sy(reference.value)} stroke="var(--ink-2)" strokeWidth={1} />
               <text x={M.left + innerW + 4} y={sy(reference.value)} dy="0.32em" className="fill-ink-2 text-[10.5px]">
@@ -96,6 +99,7 @@ export function LineChart({ points, domain, format, label, height = 132, referen
               </text>
             </g>
           ) : null}
+          {reference && Array.isArray(reference.value) ? <StepReference values={reference.value} label={reference.label} sx={sx} sy={sy} n={n} innerW={innerW} /> : null}
           {n ? (
             <>
               <text x={sx(0)} y={height - 6} textAnchor={n > 1 ? 'start' : 'middle'} className="fill-muted text-[10.5px]">
@@ -149,5 +153,36 @@ export function LineChart({ points, domain, format, label, height = 132, referen
         </div>
       ) : null}
     </div>
+  )
+}
+
+/** A reference that can change between points: horizontal runs joined by vertical steps halfway between points. */
+function StepReference({ values, label, sx, sy, n, innerW }: { values: (number | null)[]; label: string; sx(i: number): number; sy(v: number): number; n: number; innerW: number }) {
+  const step = n > 1 ? innerW / (n - 1) : innerW
+  const parts: string[] = []
+  let path = ''
+  values.forEach((v, i) => {
+    if (v === null) {
+      if (path) parts.push(path)
+      path = ''
+      return
+    }
+    const x0 = i === 0 ? sx(0) : sx(i) - step / 2
+    const x1 = i === n - 1 ? sx(i) : sx(i) + step / 2
+    path += `${path ? 'L' : 'M'}${x0},${sy(v)}L${x1},${sy(v)}`
+  })
+  if (path) parts.push(path)
+  const last = [...values].reverse().find((v) => v !== null)
+  return (
+    <g>
+      {parts.map((d, i) => (
+        <path key={i} d={d} fill="none" stroke="var(--ink-2)" strokeWidth={1} />
+      ))}
+      {last != null ? (
+        <text x={sx(n - 1) + 4} y={sy(last)} dy="0.32em" className="fill-ink-2 text-[10.5px]">
+          {label}
+        </text>
+      ) : null}
+    </g>
   )
 }

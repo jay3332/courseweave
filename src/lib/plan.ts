@@ -3,6 +3,7 @@
 // The persisted store lives in src/state/plan.ts; the UI in src/features/degree.
 
 import type { CatalogIndex } from './catalog-types'
+import { fceMiniOf, isMostlyMini, splitHalves, type FceMiniInfo, type LoadItem } from './fce-minis'
 import type { AuditInput, PlannedCourse, ProgramSelection } from './plan-types'
 import {
   buildEquivalence,
@@ -302,48 +303,107 @@ export interface TermTotalsInput {
   passFail: boolean
   /** Variable-unit course counted at its minimum (or chosen) units. */
   variable?: boolean
+  /**
+   * Which half of the term the course runs in, when known (e.g. from a schedule): null for full semester.
+   * When absent, the course's FCE history decides (mostly-mini courses count as minis).
+   */
+  half?: 'first' | 'second' | 'either' | null
 }
 
 export interface TermTotals {
+  /** Official units: minis count their real units. */
   units: number
   factorable: number
   nonFactorable: number
   hasVariable: boolean
-  /** Sum of FCE hours/week for courses that have them. */
+  /** Sum of FCE hours/week for courses that have them (minis included at their in-session hours). */
   fceHours: number
   /** Units of the courses that have FCE hours (to compare like with like). */
   fceUnits: number
   /** Courses without FCE hours. */
   missingFce: number
+  /**
+   * FCE hours/week in the busier half of the term, over courses with FCE hours. Full-semester courses count in
+   * both halves and minis only in theirs, so this is the load to compare. Equals fceHours without minis.
+   */
+  peakHours: number
+  /** Hours/week the units of those courses suggest in that half: full units + 2 × mini units. */
+  peakExpected: number
+  /** Which half peaks; null when no course with FCE hours is a mini. */
+  peakHalf: 'first' | 'second' | null
+  /** FCE hours/week in the other half (equals peakHours without minis). */
+  otherHalfHours: number
+  /** Courses counted as minis (estimated from FCE history unless the input says). */
+  minis: number
   count: number
 }
 
-export function termTotals(items: TermTotalsInput[], fceHours: (courseId: string) => number | null | undefined): TermTotals {
-  const t: TermTotals = { units: 0, factorable: 0, nonFactorable: 0, hasVariable: false, fceHours: 0, fceUnits: 0, missingFce: 0, count: items.length }
+/**
+ * Totals for one plan term. `fceMini` says how each course is usually taught (defaults to the loaded FCE
+ * summary); a mostly-mini course counts as a mini in its usual half for the per-half peak.
+ */
+export function termTotals(
+  items: TermTotalsInput[],
+  fceHours: (courseId: string) => number | null | undefined,
+  fceMini: (courseId: string) => FceMiniInfo | null = fceMiniOf,
+): TermTotals {
+  const t: TermTotals = {
+    units: 0,
+    factorable: 0,
+    nonFactorable: 0,
+    hasVariable: false,
+    fceHours: 0,
+    fceUnits: 0,
+    missingFce: 0,
+    peakHours: 0,
+    peakExpected: 0,
+    peakHalf: null,
+    otherHalfHours: 0,
+    minis: 0,
+    count: items.length,
+  }
+  const loads: LoadItem[] = []
   for (const i of items) {
     t.units += i.units
     if (i.passFail) t.nonFactorable += i.units
     else t.factorable += i.units
     if (i.variable) t.hasVariable = true
+    const info = fceMini(i.courseId)
+    const half = i.half !== undefined ? i.half : isMostlyMini(info) ? (info!.half ?? 'either') : null
+    if (half !== null) t.minis++
     const h = fceHours(i.courseId)
     if (h === null || h === undefined) t.missingFce++
     else {
       t.fceHours += h
       t.fceUnits += i.units
+      loads.push({ hours: h, units: i.units, half })
     }
   }
+  const { first, second, hasMinis } = splitHalves(loads)
+  const [peak, other, peakHalf] = second.hours > first.hours ? [second, first, 'second' as const] : [first, second, 'first' as const]
+  t.peakHours = peak.hours
+  t.peakExpected = peak.expected
+  t.otherHalfHours = other.hours
+  t.peakHalf = hasMinis ? peakHalf : null
   return t
 }
 
-/** Load guidance for a semester. Not policy: colleges set their own limits and approvals. */
+/**
+ * Load guidance for a semester. Not policy: colleges set their own limits and approvals.
+ * CMU's overload limit counts factorable units only; pass/fail units never count toward it.
+ */
 export const HEAVY_UNITS = 54
 
 export function loadWarnings(t: TermTotals): string[] {
   const out: string[] = []
-  if (t.units > HEAVY_UNITS) out.push(`Over ${HEAVY_UNITS} units, which usually needs your college's approval`)
-  // Only compare hours when most of the load has FCE data.
-  if (t.fceUnits >= 24 && t.fceUnits >= t.units * 0.6 && t.fceHours > t.fceUnits * 1.2) {
-    out.push(`FCE hours (${Math.round(t.fceHours)}/week) run well above the ${t.fceUnits} units they cover`)
+  if (t.factorable > HEAVY_UNITS) out.push(`Over ${HEAVY_UNITS} factorable units, which usually needs your college's approval`)
+  // Only compare hours when most of the load has FCE data. Minis count double per week in their half.
+  if (t.fceUnits >= 24 && t.fceUnits >= t.units * 0.6 && t.peakHours > t.peakExpected * 1.2) {
+    out.push(
+      t.peakHalf
+        ? `FCE hours peak at ${Math.round(t.peakHours)}/week in the ${t.peakHalf} half, well above the ${Math.round(t.peakExpected)} its units suggest`
+        : `FCE hours (${Math.round(t.peakHours)}/week) run well above the ${t.fceUnits} units they cover`,
+    )
   }
   return out
 }
@@ -446,7 +506,8 @@ export function suggestTerm(
   /** When given, prefer the earliest semester whose prerequisites are met (or planned) by then. */
   record?: RecordLike,
 ): string | null {
-  const units = unitsOf(courseId) ?? 9
+  // The overload limit counts factorable units only, so pass/fail courses (catalog or elected) don't fill a term.
+  const units = catalog?.courses[courseId]?.passFail ? 0 : (unitsOf(courseId) ?? 9)
   const candidates = plan.terms.filter((t) => termPhase(t.term, current) !== 'past')
   const entry = catalog?.courses[courseId]
   const equivalents = record && entry?.prereqs ? buildEquivalence(catalog) : null
@@ -455,7 +516,7 @@ export function suggestTerm(
     const check = checkCourse(courseId, entry, planRequisiteContext(plan, record, catalog, t.term, equivalents))
     return !check.issues.some((i) => i.kind === 'prereq' && i.severity === 'error')
   }
-  const load = (t: PlanTerm) => t.courses.reduce((n, c) => n + planCourseUnits(c, unitsOf), 0)
+  const load = (t: PlanTerm) => t.courses.reduce((n, c) => n + (planCoursePassFail(c, catalog) ? 0 : planCourseUnits(c, unitsOf)), 0)
   const fits = (t: PlanTerm) => load(t) + units <= maxUnits
   const offered = (t: PlanTerm) => {
     const o = offering(courseId, t.term, catalog, scheduledByTerm(t.term))

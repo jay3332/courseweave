@@ -58,6 +58,7 @@ describe('explorer filters', () => {
       last: 'S26',
       hoursDelta: null,
       enrolled: 20,
+      mini: { share: 0, half: null },
     })
     // 15-122 (12u): heavy; 15-150 (12u): light; 21-127 (12u): no FCE hours.
     const fce = new Map([

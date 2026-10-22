@@ -36,7 +36,7 @@ const SORT_LABELS: Record<SortKey, string> = {
   units: 'Units',
   hours: 'Fewest FCE hours',
   'hours-desc': 'Most FCE hours',
-  ratio: 'FCE hours per unit',
+  ratio: 'FCE hours vs units',
   rating: 'Course rating',
   teaching: 'Teaching rating',
 }

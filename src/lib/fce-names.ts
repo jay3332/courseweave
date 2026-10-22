@@ -208,3 +208,25 @@ export function normalizeFceCourse(num: string): string | null {
   if (digits.length === 4) return `0${digits}`
   return null
 }
+
+// ---- Minis ----
+
+/** Mini numbers by season: fall minis 1/2, spring 3/4, summer 5/6 (odd = first half, even = second). */
+const SEASON_MINIS: Record<FceSeason, [number, number]> = { Fall: [1, 2], Spring: [3, 4], Summer: [5, 6] }
+
+/**
+ * Mini number of an FCE section name, or null for full-semester sections.
+ * Minis end in the mini digit after a letter code ("A3", "B4", "M1") or a lecture number ("13" is lecture 1 in
+ * mini 3, as the Schedule of Classes names them). Single digits ("1") are full-semester lectures.
+ */
+export function fceSectionMini(section: string, season: FceSeason): number | null {
+  const m = /^(?:[A-Z]{1,3}|\d)([1-6])$/i.exec(section.trim())
+  if (!m) return null
+  const n = Number(m[1])
+  return SEASON_MINIS[season].includes(n) ? n : null
+}
+
+/** Which half of its semester a mini runs in. */
+export function miniHalf(mini: number): 'first' | 'second' {
+  return mini % 2 === 1 ? 'first' : 'second'
+}

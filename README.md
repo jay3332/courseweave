@@ -1,46 +1,63 @@
 # Courseweave
 
-A CMU course explorer, instructor directory and schedule planner. Everything runs in the browser: course data is static JSON, and your schedules are saved in local storage.
+A CMU course explorer, instructor directory, schedule planner and degree planner. Everything runs in the browser: course data is static JSON, and your schedules, record and plans are saved in local storage.
+
+- **Courses**: search and filter every course in a semester, with sections (lectures and their recitations), FCE workload against units, an hours-vs-units chart, descriptions and requisites.
+- **Instructors**: who teaches what, weekly timetables and evaluation history.
+- **Schedule**: plan several versions of a semester; lecture + recitation choices, conflicts (mini-aware), a schedule generator, factorable vs pass/fail units, workload, requisite warnings, `.ics` export and share links.
+- **Requisites**: a course's prerequisite tree and everything it unlocks.
+- **Record**: courses taken, AP/IB/A-Level and transfer credit, placements and requisite waivers.
+- **Degree**: semester-by-semester plans audited against CMU's degree requirements (majors, minors, concentrations, college gen-eds).
 
 ## Running it
 
 ```sh
 npm install
-npm run dev      # regenerates course data, then starts Vite on :5173
+npm run dev      # rebuilds data (npm run data), then starts Vite on :5173
 npm test         # unit tests (vitest)
 npm run build    # data + typecheck + production build into dist/
 ```
 
-## Course data
+## Data
 
-Raw Schedule of Classes exports live in `data/raw/`, one CSV per term, with the columns
-`num,title,units,section,lecture,days,begin,end,bldg,room,mode,level,dept,instructors`.
-`data/terms.json` lists the terms and their academic-calendar dates (used for mini-semesters, calendar export and holidays).
+`npm run data` runs four builds in order; outputs go to `public/data/` (gitignored).
 
-`npm run data` (`scripts/build-data.ts`) turns each CSV into `public/data/<TERM>.json` and writes `public/data/terms.json`. It:
+| Script | Reads | Writes |
+| --- | --- | --- |
+| `scripts/build-catalog.ts` | Stellic catalog exports, cached SOC course details | `catalog/index.json`, `catalog/details/*`, `data/derived/pass-fail.json` |
+| `scripts/build-fce.ts` | ScottyLabs `data/fces.csv` | `fce/*` |
+| `scripts/build-programs.ts` | Stellic program exports | `programs/*` |
+| `scripts/build-data.ts` | `data/terms.json` and its sources | `<TERM>.json`, `terms.json` |
 
-- groups rows into courses → sections → meetings (a section can have several meeting rows),
-- reads `-1` units as variable units,
-- marks mini sections from the section name's last digit when it matches a mini in `terms.json` (e.g. `A3` = Mini 3 in spring), so Mini 3 and Mini 4 sections at the same time don't count as conflicts,
-- detects cross-listed courses (same times, same room, shared instructor).
+Several inputs come from a checkout of the ScottyLabs courses repo (FCE CSV, Stellic exports). Its location is `data/sources.json` (`scottylabsDir`), overridable with `SCOTTYLABS_DIR`. Missing inputs are skipped and the matching features hide.
+
+**FCE results are CMU-internal.** They stay in `public/data/fce/`, which is never committed. Don't deploy a build that includes them without CMU authentication in front of it.
+
+### Terms and sources
+
+Each entry in `data/terms.json` lists academic-calendar dates (classes, minis, breaks) and one or more `sources`. The first source is primary and defines the course list; later ones are supplements that fill in instructors, rooms and capacities, and can add missing sections.
+
+| Source | Input | Notes |
+| --- | --- | --- |
+| `csv` | `data/raw/<TERM>.csv` | Schedule CSV export (`num,title,units,section,lecture,days,...`). |
+| `soc` | `data/raw/soc/<TERM>/` | Public Schedule of Classes, cached by `npm run fetch:soc`. Has recitations, no instructors or rooms. |
+| `stellic` | Stellic `getcoursesections` exports | Instructors, rooms, capacities, recitations. `npm run fetch:stellic -- <TERM>` fetches a term read-only with your session cookie (`COOKIE_HEADER`). |
+
+Mini sections are detected from the section name's last digit when it matches one of the term's minis (A3 = Mini 3), so Mini 3 and Mini 4 sections at the same time don't conflict.
 
 ### Adding a semester
 
-1. Save the CSV as `data/raw/F27.csv`.
-2. Add an entry to `data/terms.json` with `id`, `name`, `season`, `year`, `source`, the minis (fall uses 1 and 2), `classesBegin`, `classesEnd` and `noClasses` ranges from the [official academic calendar](https://www.cmu.edu/hub/calendar/).
-3. Run `npm run data`. The newest term becomes the default; the term picker in the header switches between them.
-
-Spring 2027 dates come from the 2026-27 official calendar. That calendar doesn't list mini boundaries, so Mini 3 is taken to end the Friday before spring break and Mini 4 to start the Monday after.
+1. Run `npm run fetch:soc -- F27` once the Schedule of Classes lists it (or drop a CSV in `data/raw/`).
+2. Add the term to `data/terms.json` with dates from the [official academic calendar](https://www.cmu.edu/hub/calendar/) and its sources.
+3. Run `npm run data`.
 
 ## Layout
 
 ```
-scripts/build-data.ts      CSV → JSON pipeline
-src/lib/                   pure logic: types, time, conflicts, search, data indexing, generator, ics, share
-src/state/                 zustand store (schedules, bookmarks, theme) and term loading context
-src/components/            app shell, WeekGrid calendar, small UI primitives
-src/features/explorer/     course search, filters, course detail
-src/features/instructors/  instructor directory and timetables
-src/features/planner/      schedule page
-src/features/schedule-tools/  generator dialog, .ics export, share links
+scripts/                 data builds, source adapters (scripts/sources), fetchers
+src/lib/                 pure logic: types, time, sections, conflicts, search, generator, ics, share,
+                         catalog, requisites, exam credit, FCE, audit engine, plans
+src/state/               zustand stores (schedules, record, plans) and the routed term
+src/components/          app shell, WeekGrid calendar, settings, small UI primitives
+src/features/            explorer, instructors, planner, schedule-tools, catalog, fce, record, degree
 ```

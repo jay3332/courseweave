@@ -10,11 +10,15 @@
 //
 // Hours: the FCE question is "On average, how many hours per week have you spent on this class, including
 // attending classes, doing readings, reviewing notes, writing papers and any other course related work?",
-// so it's directly comparable to units (1 unit ≈ 1 hour of work a week). It wasn't collected before 2014.
+// so it's directly comparable to units (1 unit ≈ 1 hour of work a week over a full semester). It wasn't collected
+// before 2014. Minis run for half a semester, so their in-session hours compare with 2 × units.
+//
+// Minis are detected from FCE section names (fall A1/B2, spring A3/B4, summer A5/B6). Each history row carries
+// its mini number; the summary carries the share of recent sections that were minis and which half they ran in.
 
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { NameIndex, displayFceName, fceNameKeys, fceTermCode, normalizeFceCourse, termOrder, type FceSeason } from '../src/lib/fce-names.ts'
+import { NameIndex, displayFceName, fceNameKeys, fceSectionMini, fceTermCode, miniHalf, normalizeFceCourse, termOrder, type FceSeason } from '../src/lib/fce-names.ts'
 import type { TermData } from '../src/lib/types.ts'
 import { publicDataDir, readCsvRecords, scottylabsDir } from './lib/common.ts'
 
@@ -35,6 +39,8 @@ interface Row {
   term: string
   order: number
   section: string
+  /** Mini number from the section name, or null for full-semester sections. */
+  mini: number | null
   instructor: string
   enrolled: number
   responses: number
@@ -89,6 +95,7 @@ for (const r of readCsvRecords(csvPath)) {
     term,
     order: termOrder(term),
     section: r['Section'] ?? '',
+    mini: fceSectionMini(r['Section'] ?? '', sem),
     instructor: (r['Instructor'] ?? '').replace(/\s+/g, ' ').trim(),
     enrolled: num(r['Total # Students']) ?? 0,
     responses: num(r['# Responses']) ?? 0,
@@ -104,6 +111,7 @@ for (const r of readCsvRecords(csvPath)) {
 interface Section {
   term: string
   order: number
+  mini: number | null
   responses: number
   enrolled: number
   hours: number | null
@@ -120,6 +128,7 @@ function sectionsOf(courseRows: Row[]): Section[] {
   return [...groups.values()].map((g) => ({
     term: g[0].term,
     order: g[0].order,
+    mini: g[0].mini,
     responses: Math.max(...g.map((r) => r.responses)),
     enrolled: Math.max(...g.map((r) => r.enrolled)),
     hours: weighted(g, (r) => r.hours, (r) => r.responses),
@@ -130,8 +139,11 @@ function sectionsOf(courseRows: Row[]): Section[] {
 const byCourse = new Map<string, Row[]>()
 for (const r of rows) byCourse.set(r.course, [...(byCourse.get(r.course) ?? []), r])
 
-/** [hours, courseRate, teachingRate, responses, recentTerms, totalTerms, lastTerm, hoursDelta, enrolledPerTerm] */
-type SummaryTuple = [number | null, number | null, number | null, number, number, number, string, number | null, number | null]
+/**
+ * [hours, courseRate, teachingRate, responses, recentTerms, totalTerms, lastTerm, hoursDelta, enrolledPerTerm,
+ *  miniShare (0–1, recent sections that were minis), miniHalf (0 none, 1 first half, 2 second half, 3 both)]
+ */
+type SummaryTuple = [number | null, number | null, number | null, number, number, number, string, number | null, number | null, number, number]
 const summary: Record<string, SummaryTuple> = {}
 const chunks = new Map<string, Record<string, unknown[]>>()
 
@@ -149,6 +161,7 @@ for (const [course, courseRows] of byCourse) {
     r.teaching,
     r.courseRate,
     r.questions,
+    r.mini,
   ])
   chunks.set(course.slice(0, 2), chunk)
 
@@ -167,6 +180,9 @@ for (const [course, courseRows] of byCourse) {
     (s) => s.responses,
   )
   const enrolledPerTerm = recentSections.reduce((n, s) => n + s.enrolled, 0) / recent.size
+  const recentMinis = recentSections.filter((s) => s.mini !== null)
+  const halves = new Set(recentMinis.map((s) => miniHalf(s.mini!)))
+  const halfCode = halves.size === 2 ? 3 : halves.has('first') ? 1 : halves.has('second') ? 2 : 0
 
   summary[course] = [
     round(hours, 1),
@@ -178,6 +194,8 @@ for (const [course, courseRows] of byCourse) {
     terms[0],
     hours !== null && prevHours !== null ? round(hours - prevHours, 1) : null,
     Math.round(enrolledPerTerm),
+    Math.round((recentMinis.length / recentSections.length) * 100) / 100,
+    halfCode,
   ]
 }
 
@@ -244,6 +262,10 @@ for (const [prefix, chunk] of chunks) writeFileSync(join(outDir, 'courses', `${p
 writeFileSync(join(outDir, 'instructors.json'), JSON.stringify({ generatedAt, instructors }))
 
 const earliest = rows.reduce((best, r) => (r.order < best.order ? r : best), rows[0])
+const miniCourses = Object.values(summary).filter((t) => t[9] >= 0.5).length
+console.log(
+  `fce: ${miniCourses} courses mostly taught as minis, ${rows.filter((r) => r.mini !== null).length} mini rows`,
+)
 console.log(
   `fce: ${rows.length} rows (${dropped} unparseable), ${earliest.term}–${latest.term}, ${Object.keys(summary).length} courses with responses, ${Object.keys(instructors).length} instructors`,
 )

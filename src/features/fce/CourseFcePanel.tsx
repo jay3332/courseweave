@@ -5,6 +5,8 @@ import {
   FCE_HOURS_HELP,
   WORKLOAD_TONE_CLASS,
   WORKLOAD_TONE_LABEL,
+  courseIsMini,
+  expectedHours,
   fceByTerm,
   formatHours,
   formatRating,
@@ -13,6 +15,7 @@ import {
   termOrder,
   useCourseFce,
   useFceSummary,
+  rowsExpectedHours,
   weightedMean,
   workloadRatio,
   workloadTone,
@@ -65,7 +68,10 @@ export function CourseFcePanel({ courseId, units: unitsProp, currentInstructors:
     )
   }
 
-  const tone = workloadTone(workloadRatio(summary.hours, units))
+  // The routed term's sections decide when the course is offered there; otherwise its recent FCE sections do.
+  const mini = courseIsMini(course, summary)
+  const expected = expectedHours(units, mini)
+  const tone = workloadTone(workloadRatio(summary.hours, units, mini))
   return (
     <Section
       meta={`Last ${summary.terms} ${summary.terms === 1 ? 'term' : 'terms'} with responses, through ${termName(summary.last)}; ${summary.responses.toLocaleString()} responses`}
@@ -75,8 +81,8 @@ export function CourseFcePanel({ courseId, units: unitsProp, currentInstructors:
           <dt className="text-[12px] text-muted">Hours a week</dt>
           <dd className="mt-0.5">
             <span className="display text-[24px] text-ink">{formatHours(summary.hours)}</span>
-            {units !== null ? <span className="ml-1 text-[12px] text-muted">for {units} units</span> : null}
-            <WorkloadMeter hours={summary.hours} units={units} className="mt-1.5" />
+            {units !== null ? <span className="ml-1 text-[12px] text-muted">for {mini ? `a ${units}-unit mini` : `${units} units`}</span> : null}
+            <WorkloadMeter hours={summary.hours} units={units} mini={mini} className="mt-1.5" />
           </dd>
         </div>
         <div className="px-3 py-2.5" title="Overall course rating, 1 to 5">
@@ -99,7 +105,8 @@ export function CourseFcePanel({ courseId, units: unitsProp, currentInstructors:
           {WORKLOAD_TONE_LABEL[tone]}
           <span className="text-muted">
             {' '}
-            (about {formatHours(summary.hours)} hours a week against the {units} hours its units suggest
+            (about {formatHours(summary.hours)} hours a week against the {expected} hours its units suggest
+            {mini ? ` while it runs, since a ${units}-unit mini packs a full ${units} units into half a semester` : ''}
             {summary.hoursDelta !== null && Math.abs(summary.hoursDelta) >= 1
               ? `; ${summary.hoursDelta > 0 ? 'up' : 'down'} ${Math.abs(summary.hoursDelta).toFixed(1)} from the terms before`
               : ''}
@@ -109,7 +116,7 @@ export function CourseFcePanel({ courseId, units: unitsProp, currentInstructors:
       ) : null}
 
       <Trends rows={rows} units={units} />
-      <History rows={rows} current={current} />
+      <History rows={rows} current={current} units={units} />
     </Section>
   )
 }
@@ -129,19 +136,23 @@ function Section({ meta, children }: { meta?: string; children: ReactNode }) {
 function Trends({ rows, units }: { rows: FceRow[]; units: number | null }) {
   const terms = useMemo(() => fceByTerm(rows).reverse(), [rows])
   if (terms.filter((t) => t.responses > 0).length < 2) return null
-  const maxHours = Math.max(units ?? 0, ...terms.map((t) => t.hours ?? 0))
+  // Per term: the hours the units suggest, doubled in terms the course mostly ran as a mini.
+  const refs = terms.map((t) => expectedHours(units, t.miniShare >= 0.5))
+  const constant = refs.every((r) => r === refs[0])
+  const anyMini = refs.some((r) => r !== null && r !== units)
+  const maxHours = Math.max(...refs.map((r) => r ?? 0), ...terms.map((t) => t.hours ?? 0))
   const hoursTop = Math.max(6, Math.ceil((maxHours + 1) / 3) * 3)
   return (
     <div className="mt-4 grid gap-4 sm:grid-cols-2">
       <figure className="min-w-0">
-        <figcaption className="mb-1 text-[12.5px] font-medium text-ink-2" title={FCE_HOURS_HELP}>
+        <figcaption className="mb-1 text-[12.5px] font-medium text-ink-2" title={`${FCE_HOURS_HELP} The flat line marks the hours its units suggest${anyMini ? '; it doubles in terms the course ran as a mini' : ''}.`}>
           Hours a week by term
         </figcaption>
         <LineChart
           label="FCE hours per week by term"
           domain={[0, hoursTop]}
           format={(v) => v.toFixed(Number.isInteger(v) ? 0 : 1)}
-          reference={units ? { value: units, label: `${units}u` } : undefined}
+          reference={units && refs[0] !== null ? { value: constant ? refs[0] : refs, label: `${constant ? refs[0] : refs.at(-1)}h` } : undefined}
           points={terms.map((t) => ({ label: t.term, title: termName(t.term), value: t.hours === null ? null : Math.round(t.hours * 10) / 10, sub: `${t.responses} responses` }))}
         />
       </figure>
@@ -164,6 +175,10 @@ type Mode = 'instructor' | 'term'
 type SortDir = 'asc' | 'desc'
 
 interface InstructorRow {
+  /** Hours their sections' units suggest (2 × units in mini sections), response-weighted. */
+  expected: number | null
+  /** Response-weighted share of their sections that were minis. */
+  miniShare: number
   key: string
   name: string
   raw: string
@@ -176,7 +191,7 @@ interface InstructorRow {
   current: boolean
 }
 
-function byInstructor(rows: FceRow[], current: string[]): InstructorRow[] {
+function byInstructor(rows: FceRow[], current: string[], units: number | null): InstructorRow[] {
   const groups = new Map<string, FceRow[]>()
   for (const r of rows) {
     if (!r.instructor) continue
@@ -197,6 +212,8 @@ function byInstructor(rows: FceRow[], current: string[]): InstructorRow[] {
       teaching: weightedMean(answered, (r) => r.teachingRate, (r) => r.responses),
       courseRate: weightedMean(answered, (r) => r.courseRate, (r) => r.responses),
       hours: weightedMean(answered, (r) => r.hours, (r) => r.responses),
+      expected: rowsExpectedHours(answered, units),
+      miniShare: weightedMean(answered, (r) => (r.mini !== null ? 1 : 0), (r) => r.responses) ?? 0,
       current: Boolean(currentName),
     }
   })
@@ -209,12 +226,24 @@ function cmp(a: number | string | null, b: number | string | null): number {
 
 const PREVIEW_ROWS = 8
 
-function History({ rows, current }: { rows: FceRow[]; current: string[] }) {
+/** Hours, colored by how they compare with what the units suggest for that row (doubled for minis). */
+function HoursCell({ hours, expected, mini }: { hours: number | null; expected: number | null; mini: boolean }) {
+  const tone = hours !== null && expected ? workloadTone(hours / expected) : null
+  const title =
+    hours === null ? undefined : `${formatHours(hours)} h/wk${expected !== null ? ` against about ${formatHours(expected)} its units suggest${mini ? ' as a mini' : ''}` : ''}${tone ? `: ${WORKLOAD_TONE_LABEL[tone].toLowerCase()}` : ''}`
+  return (
+    <td className={`px-2 py-1.5 text-right ${tone && tone !== 'even' ? WORKLOAD_TONE_CLASS[tone] : 'text-ink'}`} title={title}>
+      {formatHours(hours)}
+    </td>
+  )
+}
+
+function History({ rows, current, units }: { rows: FceRow[]; current: string[]; units: number | null }) {
   const [mode, setMode] = useState<Mode>('instructor')
   const [sort, setSort] = useState<{ key: string; dir: SortDir }>({ key: 'last', dir: 'desc' })
   const [expanded, setExpanded] = useState(false)
 
-  const instructors = useMemo(() => byInstructor(rows, current), [rows, current])
+  const instructors = useMemo(() => byInstructor(rows, current, units), [rows, current, units])
 
   const sortBy = (key: string, defaultDir: SortDir = 'desc') =>
     setSort((s) => (s.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: defaultDir }))
@@ -313,7 +342,7 @@ function History({ rows, current }: { rows: FceRow[]; current: string[] }) {
                     <td className="px-2 py-1.5 text-right text-ink-2">{r.last}</td>
                     <td className="px-2 py-1.5 text-right text-ink">{formatRating(r.teaching)}</td>
                     <td className="px-2 py-1.5 text-right text-ink">{formatRating(r.courseRate)}</td>
-                    <td className="px-2 py-1.5 text-right text-ink">{formatHours(r.hours)}</td>
+                    <HoursCell hours={r.hours} expected={r.expected} mini={r.miniShare >= 0.5} />
                   </tr>
                 ))
               : sortedRows.slice(0, shown).map((r, i) => (
@@ -321,14 +350,17 @@ function History({ rows, current }: { rows: FceRow[]; current: string[] }) {
                     <td className="px-2 py-1.5 whitespace-nowrap text-ink-2" title={termName(r.term)}>
                       {r.term}
                     </td>
-                    <td className="hidden px-2 py-1.5 text-ink-2 sm:table-cell">{r.section}</td>
+                    <td className="hidden px-2 py-1.5 text-ink-2 sm:table-cell">
+                      {r.section}
+                      {r.mini !== null ? <span className="ml-1 text-[11px] text-muted">mini</span> : null}
+                    </td>
                     <td className="max-w-[10rem] truncate px-2 py-1.5 text-ink-2">{r.instructor ? displayFceName(r.instructor) : '—'}</td>
                     <td className="hidden px-2 py-1.5 text-right text-muted sm:table-cell">
                       {r.responses}/{r.enrolled}
                     </td>
                     <td className="px-2 py-1.5 text-right text-ink">{r.responses ? formatRating(r.teachingRate) : '—'}</td>
                     <td className="px-2 py-1.5 text-right text-ink">{r.responses ? formatRating(r.courseRate) : '—'}</td>
-                    <td className="px-2 py-1.5 text-right text-ink">{r.responses ? formatHours(r.hours) : '—'}</td>
+                    {r.responses ? <HoursCell hours={r.hours} expected={expectedHours(units, r.mini !== null)} mini={r.mini !== null} /> : <td className="px-2 py-1.5 text-right text-ink">—</td>}
                   </tr>
                 ))}
           </tbody>

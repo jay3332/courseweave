@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { fceByTerm, instructorCourseStats, workloadRatio, workloadTone, type FceRow } from './fce'
-import { NameIndex, displayFceName, fceNameKeys, fceTermCode, normalizeFceCourse, sameInstructor, scheduleNameCandidates, termName, termOrder } from './fce-names'
+import { courseIsMini, expectedHours, expectedHoursText, fceByTerm, instructorCourseStats, rowsExpectedHours, workloadRatio, workloadTone, type FceRow, type FceSummary } from './fce'
+import { splitHalves } from './fce-minis'
+import type { Course, Section } from './types'
+import { NameIndex, displayFceName, fceNameKeys, fceSectionMini, fceTermCode, miniHalf, normalizeFceCourse, sameInstructor, scheduleNameCandidates, termName, termOrder } from './fce-names'
 
 describe('instructor name matching', () => {
   it('keys FCE names on first given name and full last name', () => {
@@ -77,6 +79,7 @@ const row = (term: string, instructor: string, responses: number, hours: number 
   teachingRate: teaching,
   courseRate,
   questions: [],
+  mini: null,
 })
 
 describe('workload and aggregates', () => {
@@ -106,5 +109,80 @@ describe('workload and aggregates', () => {
     expect(s.last).toBe('S26')
     expect(s.teachingRate).toBeCloseTo(4.3)
     expect(instructorCourseStats(rows, 'Nobody Here')).toBeNull()
+  })
+})
+
+describe('minis', () => {
+  it('reads minis from FCE section names by season', () => {
+    expect(fceSectionMini('A3', 'Spring')).toBe(3)
+    expect(fceSectionMini('B4', 'Spring')).toBe(4)
+    expect(fceSectionMini('M1', 'Fall')).toBe(1)
+    expect(fceSectionMini('Z6', 'Summer')).toBe(6)
+    // Wrong season's digit, single-digit lectures and plain letters are full-semester.
+    expect(fceSectionMini('A3', 'Fall')).toBeNull()
+    expect(fceSectionMini('1', 'Fall')).toBeNull()
+    expect(fceSectionMini('13', 'Spring')).toBe(3)
+    expect(fceSectionMini('22', 'Fall')).toBe(2)
+    expect(fceSectionMini('13', 'Fall')).toBeNull()
+    expect(fceSectionMini('A', 'Spring')).toBeNull()
+    expect(miniHalf(3)).toBe('first')
+    expect(miniHalf(4)).toBe('second')
+  })
+
+  it('doubles the weekly hours a mini’s units suggest, without changing units', () => {
+    expect(expectedHours(6, true)).toBe(12)
+    expect(expectedHours(4.5, true)).toBe(9)
+    expect(expectedHours(12, false)).toBe(12)
+    expect(expectedHours(null, true)).toBeNull()
+    expect(workloadRatio(12, 6, true)).toBe(1)
+    expect(workloadRatio(12, 6)).toBe(2)
+    expect(workloadTone(workloadRatio(11, 6, true))).toBe('even')
+    expect(expectedHoursText(6, true)).toBe('6u mini ≈ 12 h/wk')
+    expect(expectedHoursText(4.5, true)).toBe('4.5u mini ≈ 9 h/wk')
+  })
+
+  const section = (name: string, mini: number | null): Section => ({ name, kind: 'section', parent: null, mini, mode: 'IPE', instructors: [], meetings: [] })
+  const course = (sections: Section[]): Course => ({ id: '05180', code: '05-180', title: 'x', units: 6, dept: 'HCI', level: 'U', instructors: [], sections, crossListed: [] })
+  const summary = (share: number): FceSummary => ({
+    hours: 10,
+    courseRate: 4,
+    teachingRate: 4,
+    responses: 10,
+    terms: 2,
+    totalTerms: 2,
+    last: 'S26',
+    hoursDelta: null,
+    enrolled: 10,
+    mini: { share, half: share ? 'first' : null },
+  })
+
+  it('prefers the term’s sections, falling back to FCE history', () => {
+    expect(courseIsMini(course([section('A3', 3), section('A4', 4)]), summary(0))).toBe(true)
+    expect(courseIsMini(course([section('A', null)]), summary(1))).toBe(false)
+    // Mixed or no sections: FCE history decides.
+    expect(courseIsMini(course([section('A', null), section('A3', 3)]), summary(1))).toBe(true)
+    expect(courseIsMini(null, summary(0.75))).toBe(true)
+    expect(courseIsMini(null, summary(0.25))).toBe(false)
+  })
+
+  it('weights expected hours per row and per term', () => {
+    const rows = [{ ...row('S26', 'A, B', 30, 12, 4, 4, 'A3'), mini: 3 }, { ...row('S25', 'A, B', 10, 7, 4, 4), mini: null }]
+    expect(rowsExpectedHours(rows, 6)).toBeCloseTo((12 * 30 + 6 * 10) / 40)
+    const byTerm = fceByTerm(rows)
+    expect(byTerm[0].miniShare).toBe(1)
+    expect(byTerm[1].miniShare).toBe(0)
+  })
+
+  it('splits a term into halves: full courses in both, minis in theirs', () => {
+    const halves = splitHalves([
+      { hours: 12, units: 12, half: null },
+      { hours: 10, units: 6, half: 'first' },
+      { hours: 13, units: 6, half: 'second' },
+      { hours: 8, units: 4.5, half: 'either' },
+    ])
+    expect(halves.first).toEqual({ hours: 12 + 10 + 8, expected: 12 + 12 + 9 })
+    expect(halves.second).toEqual({ hours: 12 + 13, expected: 12 + 12 })
+    expect(halves.hasMinis).toBe(true)
+    expect(splitHalves([{ hours: 9, units: 9, half: null }]).hasMinis).toBe(false)
   })
 })

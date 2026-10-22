@@ -2,12 +2,15 @@
 // FCE files aren't present, so the app still works without access to the CMU-internal export.
 import { useEffect, useState } from 'react'
 import { NameIndex, sameInstructor, termName, termOrder } from './fce-names'
+import { expectedHours, isMostlyMini, setFceMiniSource, splitHalves, type FceMiniInfo, type HalfLoad } from './fce-minis'
+import type { Course } from './types'
 
-export { sameInstructor, termName, termOrder }
+export { expectedHours, isMostlyMini, sameInstructor, splitHalves, termName, termOrder }
+export type { FceMiniInfo, HalfLoad }
 
 /** What students reported in the hours question; shown in tooltips wherever FCE hours appear. */
 export const FCE_HOURS_HELP =
-  'Average hours per week students reported spending on the course in FCEs, including class time, readings, assignments and studying. CMU expects about 1 hour of work per unit each week.'
+  'Average hours per week students reported spending on the course in FCEs, including class time, readings, assignments and studying. CMU expects about 1 hour of work per unit each week over a full semester. Minis run for half a semester, so expect about 2 hours per unit each week while one runs.'
 
 export interface FceSummary {
   /** Response-weighted hours/week over the recent terms; null when not reported. */
@@ -28,6 +31,8 @@ export interface FceSummary {
   hoursDelta: number | null
   /** Average enrollment per recent term. */
   enrolled: number | null
+  /** Share of recent sections taught as minis, and which half they ran in. */
+  mini: FceMiniInfo
 }
 
 export interface FceSummaryData {
@@ -48,6 +53,8 @@ export interface FceRow {
   courseRate: number | null
   /** The seven teaching questions, in FCE_QUESTIONS order. */
   questions: (number | null)[]
+  /** Mini number from the section name ("A3" → 3), or null for a full-semester section. */
+  mini: number | null
 }
 
 export const FCE_QUESTIONS = [
@@ -92,7 +99,8 @@ async function getJson<T>(path: string): Promise<T | null> {
   }
 }
 
-type SummaryTuple = [number | null, number | null, number | null, number, number, number, string, number | null, number | null]
+type SummaryTuple = [number | null, number | null, number | null, number, number, number, string, number | null, number | null, number?, number?]
+const HALF_CODES: FceMiniInfo['half'][] = [null, 'first', 'second', 'either']
 
 let summaryPromise: Promise<FceSummaryData | null> | null = null
 export function loadFceSummary(): Promise<FceSummaryData | null> {
@@ -110,14 +118,16 @@ export function loadFceSummary(): Promise<FceSummaryData | null> {
         last: t[6],
         hoursDelta: t[7],
         enrolled: t[8],
+        mini: { share: t[9] ?? 0, half: HALF_CODES[t[10] ?? 0] ?? null },
       })
     }
+    setFceMiniSource((id) => courses.get(id)?.mini ?? null)
     return { latest: raw.latest, recentTerms: raw.recentTerms, courses }
   })
   return summaryPromise
 }
 
-type RowTuple = [string, string, string, number, number, number | null, number | null, number | null, (number | null)[]]
+type RowTuple = [string, string, string, number, number, number | null, number | null, number | null, (number | null)[], (number | null)?]
 const chunkPromises = new Map<string, Promise<Map<string, FceRow[]>>>()
 function loadChunk(prefix: string): Promise<Map<string, FceRow[]>> {
   let p = chunkPromises.get(prefix)
@@ -137,6 +147,7 @@ function loadChunk(prefix: string): Promise<Map<string, FceRow[]>> {
             teachingRate: r[6],
             courseRate: r[7],
             questions: r[8],
+            mini: r[9] ?? null,
           })),
         )
       }
@@ -207,10 +218,34 @@ export function useInstructorFce(name: string | null): InstructorFce | null | un
 
 // ---- Derived values and formatting ----
 
-/** FCE hours per unit; null when either is unknown or units is 0. */
-export function workloadRatio(hours: number | null | undefined, units: number | null | undefined): number | null {
+/**
+ * Reported hours over the hours the units suggest (units, or 2 × units for a mini); null when either is unknown
+ * or units is 0. 1 means "about what its units suggest".
+ */
+export function workloadRatio(hours: number | null | undefined, units: number | null | undefined, mini = false): number | null {
   if (hours == null || units == null || units <= 0) return null
-  return hours / units
+  return hours / expectedHours(units, mini)!
+}
+
+/**
+ * Whether a course runs as a mini. The routed term's sections win: all top-level sections minis → mini, none →
+ * full semester. Mixed or unknown falls back to how its recent FCE sections ran.
+ */
+export function courseIsMini(course: Course | null | undefined, summary?: FceSummary | null): boolean {
+  const tops = course?.sections.filter((s) => s.parent === null) ?? []
+  if (tops.length) {
+    const minis = tops.filter((s) => s.mini !== null).length
+    if (minis === tops.length) return true
+    if (minis === 0) return false
+  }
+  return isMostlyMini(summary?.mini)
+}
+
+/** "6u mini ≈ 12 h/wk", "12u ≈ 12 h/wk": what the units mean in weekly hours. */
+export function expectedHoursText(units: number | null, mini: boolean): string {
+  if (units === null) return mini ? 'variable-unit mini' : 'variable units'
+  const e = expectedHours(units, mini)!
+  return `${units}u${mini ? ' mini' : ''} ≈ ${Number.isInteger(e) ? e : e.toFixed(1)} h/wk`
 }
 
 export type WorkloadTone = 'light' | 'even' | 'heavy' | 'very-heavy'
@@ -261,8 +296,27 @@ export function weightedMean<T>(items: T[], value: (x: T) => number | null, weig
   return w ? sum / w : null
 }
 
+/**
+ * Weekly hours the units suggest for a set of FCE rows, weighted by responses: units for full-semester rows,
+ * 2 × units for mini rows. Null when units are unknown or no row has responses.
+ */
+export function rowsExpectedHours(rows: FceRow[], units: number | null): number | null {
+  if (units === null) return null
+  return weightedMean(rows, (r) => expectedHours(units, r.mini !== null), (r) => r.responses)
+}
+
+export interface FceTerm {
+  term: string
+  hours: number | null
+  courseRate: number | null
+  teachingRate: number | null
+  responses: number
+  /** Response-weighted share of the term's rows that were mini sections. */
+  miniShare: number
+}
+
 /** Groups FCE rows by term (newest first), with response-weighted aggregates per term. */
-export function fceByTerm(rows: FceRow[]): { term: string; hours: number | null; courseRate: number | null; teachingRate: number | null; responses: number }[] {
+export function fceByTerm(rows: FceRow[]): FceTerm[] {
   const groups = new Map<string, FceRow[]>()
   for (const r of rows) groups.set(r.term, [...(groups.get(r.term) ?? []), r])
   return [...groups.entries()]
@@ -275,6 +329,8 @@ export function fceByTerm(rows: FceRow[]): { term: string; hours: number | null;
         courseRate: weightedMean(answered, (r) => r.courseRate, (r) => r.responses),
         teachingRate: weightedMean(answered, (r) => r.teachingRate, (r) => r.responses),
         responses: answered.reduce((n, r) => n + r.responses, 0),
+        miniShare:
+          weightedMean(answered.length ? answered : list, (r) => (r.mini !== null ? 1 : 0), (r) => (answered.length ? r.responses : 1)) ?? 0,
       }
     })
 }

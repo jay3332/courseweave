@@ -2,6 +2,7 @@ import { AlertTriangle, Info, WandSparkles } from 'lucide-react'
 import { useCallback, useEffect, useId, useState } from 'react'
 import { Link } from 'react-router'
 import { Button } from '../../components/ui'
+import { HEAVY_UNITS } from '../../lib/plan'
 import { childSections, topSections } from '../../lib/sections'
 import type { MiniMeta } from '../../lib/types'
 import { useScheduleView, type ResolvedEntry, type ScheduleView } from '../../state/schedule-view'
@@ -269,6 +270,14 @@ function UnitsFooter({ view, conflictCount }: { view: ScheduleView; conflictCoun
               >
                 <Info aria-hidden className="size-3.5" />
               </button>
+            </p>
+          ) : null}
+          {factorable > HEAVY_UNITS ? (
+            <p className="mt-1 flex items-start gap-1 text-[12.5px] text-warn">
+              <AlertTriangle aria-hidden className="mt-0.5 size-3.5 shrink-0" />
+              <span>
+                Over {HEAVY_UNITS} factorable units, which usually needs your college&rsquo;s approval. <span className="text-muted">Guidance, not policy.</span>
+              </span>
             </p>
           ) : null}
         </div>
