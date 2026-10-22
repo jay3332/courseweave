@@ -261,6 +261,23 @@ export function TermCard({ plan, column, derived, scheduled, published, fceHours
               ))}
             </ul>
           ) : null}
+          {column.alsoRecorded.length ? (
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-1.5 py-1 text-[12.5px] text-muted">
+              <span>
+                {column.alsoRecorded.length === 1 ? '1 planned course is' : `${column.alsoRecorded.length} planned courses are`} already on your
+                record for this semester{syncedSchedule ? ` (still in ${syncedSchedule.name})` : ''}.
+              </span>
+              {!syncedSchedule ? (
+                <button
+                  type="button"
+                  className="min-h-9 font-medium text-ink-2 underline decoration-line-strong underline-offset-2 hover:text-ink md:min-h-0"
+                  onClick={() => column.alsoRecorded.forEach((c) => removeFromPlan(plan, c.id))}
+                >
+                  Remove from plan
+                </button>
+              ) : null}
+            </div>
+          ) : null}
           {column.planned.length ? (
             <ul aria-label="Planned" className="flex flex-col">
               {column.planned.map((c) => (

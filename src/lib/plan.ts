@@ -193,25 +193,47 @@ export interface PlanColumn {
   recorded: RecordEntryLike[]
   /** True when the term isn't in the plan's own list (it only exists because of the record). */
   fromRecordOnly: boolean
+  /** Planned (or synced) courses hidden because the record already lists them for this term. */
+  alsoRecorded: PlanCourse[]
 }
 
 /** Plan terms plus any record terms, oldest first. */
 export function planColumns(plan: Plan, record: RecordLike, current: string): PlanColumn[] {
   const byTerm = new Map<string, PlanColumn>()
   for (const t of plan.terms) {
-    byTerm.set(t.term, { term: t.term, phase: termPhase(t.term, current), planned: t.courses, recorded: [], fromRecordOnly: false })
+    byTerm.set(t.term, { term: t.term, phase: termPhase(t.term, current), planned: t.courses, recorded: [], fromRecordOnly: false, alsoRecorded: [] })
   }
   for (const e of record.entries) {
     if (!isTermEntry(e)) continue
     const term = e.term!.toUpperCase()
     let col = byTerm.get(term)
     if (!col) {
-      col = { term, phase: termPhase(term, current), planned: [], recorded: [], fromRecordOnly: true }
+      col = { term, phase: termPhase(term, current), planned: [], recorded: [], fromRecordOnly: true, alsoRecorded: [] }
       byTerm.set(term, col)
     }
     col.recorded.push(e)
   }
+  // The record wins: a course recorded for a term isn't listed (or counted) again as planned there.
+  for (const col of byTerm.values()) {
+    if (!col.recorded.length) continue
+    const recorded = new Set(col.recorded.map((e) => e.courseId))
+    col.alsoRecorded = col.planned.filter((c) => recorded.has(c.courseId))
+    if (col.alsoRecorded.length) col.planned = col.planned.filter((c) => !recorded.has(c.courseId))
+  }
   return [...byTerm.values()].sort((a, b) => compareTerms(a.term, b.term))
+}
+
+/** term (upper-case) → course ids the record lists for that term. */
+function recordedByTerm(record: RecordLike): Map<string, Set<string>> {
+  const out = new Map<string, Set<string>>()
+  for (const e of record.entries) {
+    if (!isTermEntry(e) || !e.courseId) continue
+    const term = e.term!.toUpperCase()
+    const set = out.get(term) ?? new Set<string>()
+    set.add(e.courseId)
+    out.set(term, set)
+  }
+  return out
 }
 
 // ---------------------------------------------------------------------------
@@ -551,10 +573,13 @@ export function planRequisiteContext(plan: Plan, record: RecordLike, catalog: Ca
 export function checkPlan(plan: Plan, record: RecordLike, catalog: CatalogIndex | null): Map<string, PlanCheck> {
   const out = new Map<string, PlanCheck>()
   const equivalents = buildEquivalence(catalog)
+  const recorded = recordedByTerm(record)
   for (const t of plan.terms) {
     if (!t.courses.length) continue
     const ctx = planRequisiteContext(plan, record, catalog, t.term, equivalents)
     for (const c of t.courses) {
+      // Recorded for this term already: the record row stands in for it.
+      if (recorded.get(t.term)?.has(c.courseId)) continue
       // The course itself is "concurrent" in its own term; checkCourse ignores concurrent self-credits.
       const check = checkCourse(c.courseId, catalog?.courses[c.courseId], ctx)
       out.set(c.id, { planCourseId: c.id, courseId: c.courseId, term: t.term, check })

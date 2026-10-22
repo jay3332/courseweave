@@ -101,6 +101,20 @@ describe('planColumns', () => {
     expect(cols[1].recorded.map((e) => e.courseId)).toEqual(['15112'])
     expect(incomingCredit(record).map((e) => e.id)).toEqual(['c'])
   })
+
+  it("doesn't list a course twice when the record has it for the same term", () => {
+    const record: RecordLike = { entries: [{ id: 'r1', courseId: '15122', source: 'taken', term: 'F26' }], overrides: {} }
+    const p = plan({ F26: ['15122', '21127'], S27: ['15122'] })
+    const cols = planColumns(p, record, 'F26')
+    const f26 = cols.find((c) => c.term === 'F26')!
+    expect(f26.recorded.map((e) => e.courseId)).toEqual(['15122'])
+    expect(f26.planned.map((c) => c.courseId)).toEqual(['21127'])
+    expect(f26.alsoRecorded.map((c) => c.courseId)).toEqual(['15122'])
+    // A different term is unaffected (e.g. a planned retake).
+    expect(cols.find((c) => c.term === 'S27')!.planned.map((c) => c.courseId)).toEqual(['15122'])
+    // No duplicate requisite check for the hidden copy.
+    expect([...checkPlan(p, record, catalog).values()].filter((c) => c.term === 'F26').map((c) => c.courseId)).toEqual(['21127'])
+  })
 })
 
 describe('planToAuditInput', () => {
