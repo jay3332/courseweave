@@ -11,7 +11,11 @@ export function FceSignIn({ compact = false, className = '' }: { compact?: boole
   return (
     <div className={`flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-dashed border-line-strong bg-surface-2 ${compact ? 'px-3 py-2' : 'px-4 py-3'} ${className}`}>
       <LockKeyhole aria-hidden className="size-4 shrink-0 text-muted" />
-      <p className={`min-w-0 flex-1 text-ink-2 ${compact ? 'text-[12.5px]' : 'text-[13.5px]'}`}>Sign in with your CMU account to see course evaluations.</p>
+      <p className={`min-w-0 flex-1 text-ink-2 ${compact ? 'text-[12.5px]' : 'text-[13.5px]'}`}>
+        {status === 'unavailable'
+          ? 'Course evaluations need CMU sign-in, which isn’t set up on this site yet.'
+          : 'Sign in with your CMU account to see course evaluations.'}
+      </p>
       {canSignIn ? (
         <Button size="sm" variant="secondary" onClick={startSignIn}>
           <LogIn className="size-4" />

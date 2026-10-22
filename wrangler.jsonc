@@ -20,9 +20,8 @@
     {
       "binding": "DB",
       "database_name": "courseweave",
-      // REPLACE with the id printed by `npx wrangler d1 create courseweave`. `npm run deploy` refuses to deploy
-      // while this placeholder is here; local dev (`npm run dev:worker`) works with it.
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      // Created with `npx wrangler d1 create courseweave`; tables via `npm run db:migrate:remote`.
+      "database_id": "02810954-8da5-4f1c-a05f-64d31048fc81",
       "migrations_dir": "migrations",
     },
   ],

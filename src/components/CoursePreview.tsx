@@ -14,6 +14,7 @@ import { formatUnits } from '../lib/time'
 import { meetingSummary } from '../features/explorer/summary'
 import { LEVEL_STYLE, summarizeCheck } from '../features/record/check-summary'
 import { useRequisiteContext } from '../features/record/context'
+import { useSession } from '../state/session'
 import { useTerm } from '../state/term'
 
 const ATTR = 'data-course-preview'
@@ -187,6 +188,7 @@ function PreviewBody({ id }: { id: string }) {
   const details = useCatalogDetails(id)
   const fce = useFceSummary()
   const access = useFceAccess()
+  const session = useSession((s) => s.status)
   const requisites = useRequisiteContext(term.meta.id)
 
   const course = term.courseById.get(id) ?? null
@@ -253,7 +255,7 @@ function PreviewBody({ id }: { id: string }) {
             <span className={tone === 'heavy' ? 'text-warn' : tone === 'light' ? 'text-ok' : ''}>{formatHours(summary.hours)} h/wk</span>
             {summary.courseRate != null ? `, rated ${formatRating(summary.courseRate)}` : ''}
           </span>
-        ) : access === 'locked' ? (
+        ) : access === 'locked' && session !== 'unavailable' ? (
           <span className="text-muted">Sign in to see FCEs</span>
         ) : null}
       </div>
