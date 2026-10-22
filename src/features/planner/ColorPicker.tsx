@@ -26,7 +26,8 @@ export function ColorPicker({ color, onChange, courseCode }: { color: number; on
         <div
           role="group"
           aria-label={`Colors for ${courseCode}`}
-          className="absolute top-7 left-0 z-40 grid grid-cols-5 gap-1 rounded-lg border border-line bg-surface p-2 shadow-lg"
+          // Fixed-size columns: the popover sits in the 24px button, and shrinkable (1fr) columns collapse to that width.
+          className="absolute top-7 left-0 z-40 grid w-max grid-cols-[repeat(5,--spacing(7))] gap-1 rounded-lg border border-line bg-surface p-2 shadow-lg"
         >
           {COURSE_COLOR_NAMES.map((name, i) => (
             <button
