@@ -1,4 +1,6 @@
 # Cloudflare static asset headers (read by Wrangler at deploy; not served as a file).
+# script-src/connect-src allow Cloudflare Web Analytics (cookie-free; Cloudflare injects its beacon when Web Analytics is
+# on for the zone). Remove those two sources if analytics is turned off.
 # The Worker sets the same security headers on its own responses (worker/http.ts).
 
 # Vite's hashed bundles never change.
@@ -10,7 +12,7 @@
   Cache-Control: public, max-age=0, must-revalidate
 
 /*
-  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://static.cloudflareinsights.com; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://cloudflareinsights.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests
   Strict-Transport-Security: max-age=31536000; includeSubDomains
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY
