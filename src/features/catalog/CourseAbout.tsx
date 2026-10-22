@@ -17,6 +17,9 @@ const PROFILE_FIELDS: { key: keyof NonNullable<CatalogDetails['profile']>; label
   { key: 'relevance', label: 'Who it’s for' },
 ]
 
+const TREE_LINK =
+  'inline-flex min-h-9 items-center gap-1.5 text-[13px] font-medium text-ink-2 underline decoration-line-strong underline-offset-2 hover:text-ink hover:decoration-accent md:min-h-0'
+
 function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
     <>
@@ -54,7 +57,7 @@ function Description({ text }: { text: string }) {
  * Catalog information for the course detail pane: description, requisites, grading and offering pattern.
  * `status` (optional) colors requisite courses as met/planned/missing for the student.
  */
-export function CourseAbout({ courseId, status }: { courseId: string; status?: StatusFn }) {
+export function CourseAbout({ courseId, status, onShowTree }: { courseId: string; status?: StatusFn; /** The tree is on this page: scroll to it instead of opening the explorer. */ onShowTree?: () => void }) {
   const term = useTerm()
   const entry = useCatalogEntry(courseId)
   const details = useCatalogDetails(courseId)
@@ -93,13 +96,17 @@ export function CourseAbout({ courseId, status }: { courseId: string; status?: S
           <Row label="Prerequisites">
             {e.prereqs ? <RequisiteExpression req={e.prereqs} status={status} /> : <span className="text-ink-2">None listed</span>}
             {e.prereqText ? <p className="mt-1 text-[12.5px] text-muted">Schedule of Classes: {e.prereqText}</p> : null}
-            <Link
-              to={`/${termId}/requisites/${codeOf(courseId)}`}
-              className="mt-1 inline-flex min-h-9 items-center gap-1.5 text-[13px] font-medium text-ink-2 underline decoration-line-strong underline-offset-2 hover:text-ink hover:decoration-accent md:min-h-0"
-            >
-              <GitFork aria-hidden className="size-3.5" />
-              Prerequisite tree and what it unlocks
-            </Link>
+            {onShowTree ? (
+              <button type="button" onClick={onShowTree} className={`mt-1 ${TREE_LINK}`}>
+                <GitFork aria-hidden className="size-3.5" />
+                Prerequisite tree and what it unlocks
+              </button>
+            ) : (
+              <Link to={`/${termId}/requisites/${codeOf(courseId)}`} className={`mt-1 ${TREE_LINK}`}>
+                <GitFork aria-hidden className="size-3.5" />
+                Prerequisite tree and what it unlocks
+              </Link>
+            )}
           </Row>
           {e.coreqs.length ? (
             <Row label="Corequisites">

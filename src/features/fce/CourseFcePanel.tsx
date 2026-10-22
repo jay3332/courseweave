@@ -34,10 +34,12 @@ interface CourseFcePanelProps {
   units?: number | null
   /** Defaults to the routed term's instructors for the course; they're marked in the tables. */
   currentInstructors?: string[]
+  /** Full-width layout: history by instructor and by term side by side instead of behind a toggle. */
+  wide?: boolean
 }
 
 /** FCE summary, trends and history for one course. Renders a short note when there's no data. */
-export function CourseFcePanel({ courseId, units: unitsProp, currentInstructors: currentProp }: CourseFcePanelProps) {
+export function CourseFcePanel({ courseId, units: unitsProp, currentInstructors: currentProp, wide = false }: CourseFcePanelProps) {
   const term = useTerm()
   const course = term.courseById.get(courseId)
   const units = unitsProp !== undefined ? unitsProp : (course?.units ?? null)
@@ -127,7 +129,14 @@ export function CourseFcePanel({ courseId, units: unitsProp, currentInstructors:
       ) : null}
 
       <Trends rows={rows} units={units} />
-      <History rows={rows} current={current} units={units} />
+      {wide ? (
+        <div className="grid min-w-0 gap-x-6 xl:grid-cols-2">
+          <History rows={rows} current={current} units={units} fixedMode="instructor" />
+          <History rows={rows} current={current} units={units} fixedMode="term" />
+        </div>
+      ) : (
+        <History rows={rows} current={current} units={units} />
+      )}
     </Section>
   )
 }
@@ -249,8 +258,9 @@ function HoursCell({ hours, expected, mini }: { hours: number | null; expected: 
   )
 }
 
-function History({ rows, current, units }: { rows: FceRow[]; current: string[]; units: number | null }) {
-  const [mode, setMode] = useState<Mode>('instructor')
+function History({ rows, current, units, fixedMode }: { rows: FceRow[]; current: string[]; units: number | null; fixedMode?: Mode }) {
+  const [chosenMode, setMode] = useState<Mode>('instructor')
+  const mode = fixedMode ?? chosenMode
   const [sort, setSort] = useState<{ key: string; dir: SortDir }>({ key: 'last', dir: 'desc' })
   const [expanded, setExpanded] = useState(false)
 
@@ -288,8 +298,8 @@ function History({ rows, current, units }: { rows: FceRow[]; current: string[]; 
   return (
     <div className="mt-5">
       <div className="mb-2 flex items-center justify-between gap-3">
-        <h3 className="text-[14px] font-semibold text-ink">History</h3>
-        <div role="radiogroup" aria-label="Group history" className="flex rounded-md border border-line-strong p-0.5 text-[12.5px]">
+        <h3 className="text-[14px] font-semibold text-ink">{fixedMode ? `History by ${fixedMode}` : 'History'}</h3>
+        <div role="radiogroup" aria-label="Group history" className={`flex rounded-md border border-line-strong p-0.5 text-[12.5px] ${fixedMode ? 'hidden' : ''}`}>
           {(
             [
               ['instructor', 'By instructor'],

@@ -1,6 +1,6 @@
 import { coursePreview } from '../../components/CoursePreview'
-import { AlertTriangle, ArrowLeft, ArrowLeftRight, Check, ChevronDown, Info, Plus, Star, X } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { AlertTriangle, ArrowLeft, ArrowLeftRight, Check, ChevronDown, Info, Maximize2, Plus, Star, X } from 'lucide-react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import { Button } from '../../components/ui'
 import { WeekGrid, type CalendarBlock } from '../../components/WeekGrid'
@@ -31,20 +31,14 @@ function codeOf(id: string) {
 /** Recitation lists longer than this start collapsed. */
 const COLLAPSE_AFTER = 6
 
-export function CourseDetail({ course, closeHref, search }: { course: Course; closeHref: string; search: string }) {
-  const term = useTerm()
-  const termId = term.meta.id
+/** Schedule state for one course: its entry, add/switch/remove, and the calendar with a preview of the hovered row. */
+export function useCourseSchedule(course: Course) {
   const view = useScheduleView()
   const scheduleId = useActiveScheduleId()
   const addCourse = useStore((s) => s.addCourse)
   const setSection = useStore((s) => s.setSection)
   const removeCourse = useStore((s) => s.removeCourse)
-  const toggleBookmark = useStore((s) => s.toggleBookmark)
-  const saved = useBookmarks(termId).includes(course.id)
   const [hovered, setHovered] = useState<Section | null>(null)
-  const slugByName = useMemo(() => new Map(term.instructors.map((i) => [i.name, i.slug])), [term])
-  const requisites = useRequisiteContext(termId)
-  const chipStatus = useMemo(() => (requisites.ctx ? statusFnFor(requisites.ctx, false) : undefined), [requisites.ctx])
 
   const entry = view.entries.find((e) => e.course.id === course.id) ?? null
   const others = view.placed.filter((e) => e.course.id !== course.id)
@@ -89,23 +83,41 @@ export function CourseDetail({ course, closeHref, search }: { course: Course; cl
   else if (placedParts.length) caption = `${placedParts.map(partLabel).join(' and ')} ${placedParts.length > 1 ? 'are' : 'is'} in your schedule.`
   else caption = ''
 
-  const addDefault = () => {
-    if (!scheduleId) return
-    const choice = initialChoice(course, view)
-    addCourse(scheduleId, course.id, choice.section, choice.child)
+  return {
+    view,
+    scheduleId,
+    entry,
+    blocks,
+    caption,
+    captionIsConflict: showingPreview && previewConflicts.size > 0,
+    setHovered,
+    conflictsFor: (s: Section) => conflictsWith(selectionParts(resultFor(s))).map((o) => o.course.code),
+    addDefault: () => {
+      if (!scheduleId) return
+      const choice = initialChoice(course, view)
+      addCourse(scheduleId, course.id, choice.section, choice.child)
+    },
+    act: (s: Section) => {
+      if (!scheduleId) return
+      const result = resultFor(s)
+      if (!result.section) return
+      if (entry) setSection(scheduleId, course.id, result.section.name, result.child?.name ?? null)
+      else addCourse(scheduleId, course.id, result.section.name, result.child?.name ?? null)
+    },
+    remove: () => scheduleId && removeCourse(scheduleId, course.id),
   }
+}
 
-  const act = (s: Section) => {
-    if (!scheduleId) return
-    const result = resultFor(s)
-    if (!result.section) return
-    if (entry) setSection(scheduleId, course.id, result.section.name, result.child?.name ?? null)
-    else addCourse(scheduleId, course.id, result.section.name, result.child?.name ?? null)
-  }
+export type CourseSchedule = ReturnType<typeof useCourseSchedule>
 
-  const crossListed = course.crossListed.filter((id) => term.courseById.has(id))
-  const mini = courseMini(course, term.meta)
-  const notes = term.meta.notes ?? []
+export function CourseDetail({ course, closeHref, search }: { course: Course; closeHref: string; search: string }) {
+  const term = useTerm()
+  const termId = term.meta.id
+  const toggleBookmark = useStore((s) => s.toggleBookmark)
+  const saved = useBookmarks(termId).includes(course.id)
+  const requisites = useRequisiteContext(termId)
+  const chipStatus = useMemo(() => (requisites.ctx ? statusFnFor(requisites.ctx, false) : undefined), [requisites.ctx])
+  const sched = useCourseSchedule(course)
 
   return (
     <article className="flex min-h-full flex-col">
@@ -116,6 +128,14 @@ export function CourseDetail({ course, closeHref, search }: { course: Course; cl
         </Link>
         <span className="course-code hidden text-[15px] text-muted md:inline">{course.code}</span>
         <div className="ml-auto flex items-center gap-1.5">
+          <Link
+            to={`/${termId}/courses/${course.code}/full${search}`}
+            title="Open the full course page"
+            className="inline-flex h-7 items-center gap-1.5 rounded-md px-2.5 text-[13px] font-medium text-ink-2 hover:bg-[color-mix(in_oklab,var(--ink)_7%,transparent)] hover:text-ink"
+          >
+            <Maximize2 aria-hidden className="size-3.5" />
+            Expand
+          </Link>
           <Button size="sm" variant="ghost" aria-pressed={saved} onClick={() => toggleBookmark(termId, course.id)}>
             <Star className={`size-4 ${saved ? 'fill-current text-warn' : ''}`} />
             {saved ? 'Saved' : 'Save'}
@@ -135,90 +155,8 @@ export function CourseDetail({ course, closeHref, search }: { course: Course; cl
         <header>
           <div className="course-code text-[44px] leading-none text-ink">{course.code}</div>
           <h1 className="display mt-1.5 text-[26px] text-ink">{course.title}</h1>
-
-          <dl className="mt-4 grid grid-cols-[6.5rem_minmax(0,1fr)] gap-x-3 gap-y-1.5 text-[13.5px]">
-            <dt className="text-muted">Units</dt>
-            <dd className="text-ink">
-              {unitsText(course.units)}
-              {course.passFail ? <span className="text-muted">, not factorable</span> : null}
-            </dd>
-            {course.passFail ? (
-              <>
-                <dt className="text-muted">Grading</dt>
-                <dd className="text-ink">
-                  <span className="inline-flex items-center gap-1.5 rounded border border-line px-1.5 text-[12.5px] font-medium">Pass/fail only</span>
-                  <span className="mt-0.5 block text-[12.5px] text-muted">{PASS_FAIL_ONLY_HELP}</span>
-                </dd>
-              </>
-            ) : null}
-            <dt className="text-muted">Department</dt>
-            <dd className="text-ink">
-              {departmentName(course.dept)} <span className="text-muted">({course.dept})</span>
-            </dd>
-            <dt className="text-muted">Level</dt>
-            <dd className="text-ink">{course.level === 'G' ? 'Graduate' : 'Undergraduate'}</dd>
-            {mini ? (
-              <>
-                <dt className="text-muted">Session</dt>
-                <dd className="text-ink">{mini}</dd>
-              </>
-            ) : null}
-            {course.instructors.length ? (
-              <>
-                <dt className="text-muted">{course.instructors.length === 1 ? 'Instructor' : 'Instructors'}</dt>
-                <dd className="flex flex-wrap gap-x-3 gap-y-0.5">
-                  {course.instructors.map((name) => (
-                    <Link
-                      key={name}
-                      to={`/${termId}/instructors/${slugByName.get(name) ?? instructorSlug(name)}`}
-                      className="text-ink underline decoration-line-strong underline-offset-2 hover:decoration-accent"
-                    >
-                      {name}
-                    </Link>
-                  ))}
-                </dd>
-              </>
-            ) : null}
-            {crossListed.length ? (
-              <>
-                <dt className="text-muted">Also listed as</dt>
-                <dd className="flex flex-wrap gap-x-3">
-                  {crossListed.map((id) => (
-                    <Link
-                      key={id}
-                      to={`/${termId}/courses/${codeOf(id)}${search}`}
-                      {...coursePreview(id)}
-                      className="course-code text-[14.5px] text-ink underline decoration-line-strong underline-offset-2 hover:decoration-accent"
-                    >
-                      {codeOf(id)}
-                    </Link>
-                  ))}
-                </dd>
-              </>
-            ) : null}
-          </dl>
-
-          <div className="mt-5 flex flex-wrap items-center gap-2">
-            {entry ? (
-              <>
-                <span className="inline-flex min-h-9 items-center gap-1.5 text-[14px] font-medium text-ok">
-                  <Check className="size-4 shrink-0" />
-                  In {view.schedule?.name ?? 'your schedule'}
-                  {entry.entry.hidden ? <span className="font-normal text-muted">(hidden)</span> : null}
-                  {entry.entry.passFail && !course.passFail ? <span className="font-normal text-muted">(pass/fail)</span> : null}
-                </span>
-                <Button variant="ghost" size="sm" onClick={() => scheduleId && removeCourse(scheduleId, course.id)}>
-                  Remove
-                </Button>
-              </>
-            ) : (
-              <Button variant="primary" onClick={addDefault} disabled={!scheduleId}>
-                <Plus className="size-4" />
-                Add to {view.schedule?.name ?? 'schedule'}
-              </Button>
-            )}
-          </div>
-          {entry?.needsChild ? <p className="mt-1 text-[13px] text-warn">Pick a recitation below to finish this course's schedule.</p> : null}
+          <CourseFacts course={course} search={search} className="mt-4" />
+          <ScheduleActions course={course} sched={sched} className="mt-5" />
           <RequisiteStatus courseId={course.id} termId={termId} context={requisites.ctx ?? undefined} className="mt-3" />
         </header>
 
@@ -226,56 +164,204 @@ export function CourseDetail({ course, closeHref, search }: { course: Course; cl
 
         <CountsToward courseId={course.id} termId={termId} />
 
-        <section aria-labelledby="detail-calendar">
-          <div className="mb-2 flex items-baseline justify-between gap-3">
-            <h2 id="detail-calendar" className="display text-[17px]">
-              {view.schedule?.name ?? 'Your schedule'}
-            </h2>
-            <Link
-              to={`/${termId}/schedule`}
-              className="text-[13px] font-medium text-ink-2 underline decoration-line-strong underline-offset-2 hover:text-ink hover:decoration-accent"
-            >
-              Open schedule
-            </Link>
-          </div>
-          <div className="rounded-lg border border-line bg-surface p-1.5">
-            <WeekGrid blocks={blocks} compact hourHeight={26} />
-          </div>
-          {caption ? (
-            <p className={`mt-1.5 text-[12.5px] ${showingPreview && previewConflicts.size ? 'text-danger' : 'text-muted'}`} aria-live="polite">
-              {caption}
-            </p>
-          ) : null}
-        </section>
+        <ScheduleCalendar sched={sched} />
 
-        <section aria-labelledby="detail-sections">
-          <h2 id="detail-sections" className="display mb-2 text-[17px]">
-            {course.sections.length === 1 ? 'Section' : sectionCounts(course)}
-          </h2>
-          {notes.length ? (
-            <div className="mb-2 flex gap-1.5 text-[12.5px] text-muted">
-              <Info aria-hidden className="mt-0.5 size-3.5 shrink-0" />
-              <div>
-                {notes.map((n) => (
-                  <p key={n}>{n}</p>
-                ))}
-              </div>
-            </div>
-          ) : null}
-          <SectionsList
-            course={course}
-            entry={entry}
-            canEdit={Boolean(scheduleId)}
-            conflictsFor={(s) => conflictsWith(selectionParts(resultFor(s))).map((o) => o.course.code)}
-            onHover={setHovered}
-            onAct={act}
-            onRemove={() => scheduleId && removeCourse(scheduleId, course.id)}
-          />
-        </section>
+        <CourseSections course={course} sched={sched} />
 
         <CourseFcePanel courseId={course.id} units={course.units} currentInstructors={course.instructors} />
       </div>
     </article>
+  )
+}
+
+/** Units, grading, department, level, session, instructors and cross-listings. `row` lays them out side by side. */
+export function CourseFacts({ course, search, layout = 'list', className = '' }: { course: Course; search: string; layout?: 'list' | 'row'; className?: string }) {
+  const term = useTerm()
+  const termId = term.meta.id
+  const slugByName = useMemo(() => new Map(term.instructors.map((i) => [i.name, i.slug])), [term])
+  const crossListed = course.crossListed.filter((id) => term.courseById.has(id))
+  const mini = courseMini(course, term.meta)
+
+  const facts: { label: string; value: ReactNode }[] = [
+    {
+      label: 'Units',
+      value: (
+        <>
+          {unitsText(course.units)}
+          {course.passFail ? <span className="text-muted">, not factorable</span> : null}
+        </>
+      ),
+    },
+  ]
+  if (course.passFail)
+    facts.push({
+      label: 'Grading',
+      value: (
+        <>
+          <span className="inline-flex items-center gap-1.5 rounded border border-line px-1.5 text-[12.5px] font-medium">Pass/fail only</span>
+          <span className="mt-0.5 block text-[12.5px] text-muted">{PASS_FAIL_ONLY_HELP}</span>
+        </>
+      ),
+    })
+  facts.push(
+    {
+      label: 'Department',
+      value: (
+        <>
+          {departmentName(course.dept)} <span className="text-muted">({course.dept})</span>
+        </>
+      ),
+    },
+    { label: 'Level', value: course.level === 'G' ? 'Graduate' : 'Undergraduate' },
+  )
+  if (mini) facts.push({ label: 'Session', value: mini })
+  if (course.instructors.length)
+    facts.push({
+      label: course.instructors.length === 1 ? 'Instructor' : 'Instructors',
+      value: (
+        <span className="flex flex-wrap gap-x-3 gap-y-0.5">
+          {course.instructors.map((name) => (
+            <Link
+              key={name}
+              to={`/${termId}/instructors/${slugByName.get(name) ?? instructorSlug(name)}`}
+              className="text-ink underline decoration-line-strong underline-offset-2 hover:decoration-accent"
+            >
+              {name}
+            </Link>
+          ))}
+        </span>
+      ),
+    })
+  if (crossListed.length)
+    facts.push({
+      label: 'Also listed as',
+      value: (
+        <span className="flex flex-wrap gap-x-3">
+          {crossListed.map((id) => (
+            <Link
+              key={id}
+              to={`/${termId}/courses/${codeOf(id)}${layout === 'row' ? '/full' : ''}${search}`}
+              {...coursePreview(id)}
+              className="course-code text-[14.5px] text-ink underline decoration-line-strong underline-offset-2 hover:decoration-accent"
+            >
+              {codeOf(id)}
+            </Link>
+          ))}
+        </span>
+      ),
+    })
+
+  if (layout === 'row') {
+    return (
+      <dl className={`flex flex-wrap gap-x-10 gap-y-3 text-[14px] ${className}`}>
+        {facts.map((f) => (
+          <div key={f.label} className="min-w-0 max-w-[26rem]">
+            <dt className="text-[12.5px] text-muted">{f.label}</dt>
+            <dd className="mt-0.5 text-ink">{f.value}</dd>
+          </div>
+        ))}
+      </dl>
+    )
+  }
+  return (
+    <dl className={`grid grid-cols-[6.5rem_minmax(0,1fr)] gap-x-3 gap-y-1.5 text-[13.5px] ${className}`}>
+      {facts.map((f) => (
+        <div key={f.label} className="contents">
+          <dt className="text-muted">{f.label}</dt>
+          <dd className="text-ink">{f.value}</dd>
+        </div>
+      ))}
+    </dl>
+  )
+}
+
+/** "Add to …", or "In …" with Remove, and a nudge to pick a recitation. */
+export function ScheduleActions({ course, sched, className = '' }: { course: Course; sched: CourseSchedule; className?: string }) {
+  const { view, entry, scheduleId } = sched
+  return (
+    <>
+      <div className={`flex flex-wrap items-center gap-2 ${className}`}>
+        {entry ? (
+          <>
+            <span className="inline-flex min-h-9 items-center gap-1.5 text-[14px] font-medium text-ok">
+              <Check className="size-4 shrink-0" />
+              In {view.schedule?.name ?? 'your schedule'}
+              {entry.entry.hidden ? <span className="font-normal text-muted">(hidden)</span> : null}
+              {entry.entry.passFail && !course.passFail ? <span className="font-normal text-muted">(pass/fail)</span> : null}
+            </span>
+            <Button variant="ghost" size="sm" onClick={sched.remove}>
+              Remove
+            </Button>
+          </>
+        ) : (
+          <Button variant="primary" onClick={sched.addDefault} disabled={!scheduleId}>
+            <Plus className="size-4" />
+            Add to {view.schedule?.name ?? 'schedule'}
+          </Button>
+        )}
+      </div>
+      {entry?.needsChild ? <p className="mt-1 text-[13px] text-warn">Pick a recitation below to finish this course's schedule.</p> : null}
+    </>
+  )
+}
+
+/** The active schedule's week, with this course placed or previewed. */
+export function ScheduleCalendar({ sched, hourHeight = 26, headingId = 'detail-calendar' }: { sched: CourseSchedule; hourHeight?: number; headingId?: string }) {
+  const term = useTerm()
+  return (
+    <section aria-labelledby={headingId}>
+      <div className="mb-2 flex items-baseline justify-between gap-3">
+        <h2 id={headingId} className="display text-[17px]">
+          {sched.view.schedule?.name ?? 'Your schedule'}
+        </h2>
+        <Link
+          to={`/${term.meta.id}/schedule`}
+          className="text-[13px] font-medium text-ink-2 underline decoration-line-strong underline-offset-2 hover:text-ink hover:decoration-accent"
+        >
+          Open schedule
+        </Link>
+      </div>
+      <div className="rounded-lg border border-line bg-surface p-1.5">
+        <WeekGrid blocks={sched.blocks} compact hourHeight={hourHeight} />
+      </div>
+      {sched.caption ? (
+        <p className={`mt-1.5 text-[12.5px] ${sched.captionIsConflict ? 'text-danger' : 'text-muted'}`} aria-live="polite">
+          {sched.caption}
+        </p>
+      ) : null}
+    </section>
+  )
+}
+
+/** Section heading, term notes and the sections list. `table` adds Instructor and Seats columns in wide layouts. */
+export function CourseSections({ course, sched, layout = 'stack' }: { course: Course; sched: CourseSchedule; layout?: 'stack' | 'table' }) {
+  const notes = useTerm().meta.notes ?? []
+  return (
+    <section aria-labelledby="detail-sections">
+      <h2 id="detail-sections" className="display mb-2 text-[17px]">
+        {course.sections.length === 1 ? 'Section' : sectionCounts(course)}
+      </h2>
+      {notes.length ? (
+        <div className="mb-2 flex gap-1.5 text-[12.5px] text-muted">
+          <Info aria-hidden className="mt-0.5 size-3.5 shrink-0" />
+          <div>
+            {notes.map((n) => (
+              <p key={n}>{n}</p>
+            ))}
+          </div>
+        </div>
+      ) : null}
+      <SectionsList
+        course={course}
+        entry={sched.entry}
+        canEdit={Boolean(sched.scheduleId)}
+        conflictsFor={sched.conflictsFor}
+        onHover={sched.setHovered}
+        onAct={sched.act}
+        onRemove={sched.remove}
+        layout={layout}
+      />
+    </section>
   )
 }
 
@@ -288,26 +374,41 @@ interface SectionsListProps {
   onHover(s: Section | null): void
   onAct(s: Section): void
   onRemove(): void
+  layout?: 'stack' | 'table'
 }
+
+/** Wide-table columns: section, meetings (days/time/room), instructor and details, seats, action. */
+const TABLE_COLS = '@3xl:grid-cols-[5rem_19.5rem_minmax(0,1fr)_4.5rem_5.75rem] @3xl:gap-x-3'
 
 /**
  * Lectures (or standalone sections) with their recitations nested underneath. Rows lay out as columns when the
  * pane is wide enough and stack otherwise (container query), so it works both in the side pane and on phones.
  */
 function SectionsList(props: SectionsListProps) {
-  const { course, entry } = props
-  const [expanded, setExpanded] = useState<Set<string>>(() => new Set())
+  const { course, entry, layout = 'stack' } = props
+  const table = layout === 'table'
+  // The full page has room for every recitation; the side panel starts long lists collapsed.
+  const [expanded, setExpanded] = useState<Set<string>>(() => new Set(table ? topSections(course).map((t) => t.name) : []))
 
   return (
     <div className="@container">
       {/* Column headings only once there's room for the Days / Time / Room columns (the meeting lines switch at @lg too). */}
-      <div aria-hidden className="hidden border-b border-line-strong pb-1.5 text-[12px] text-muted @lg:grid @lg:grid-cols-[3.75rem_minmax(0,1fr)_5.75rem] @lg:gap-x-2">
+      <div
+        aria-hidden
+        className={`hidden border-b border-line-strong pb-1.5 text-[12px] text-muted @lg:grid @lg:grid-cols-[3.75rem_minmax(0,1fr)_5.75rem] @lg:gap-x-2 ${table ? `${TABLE_COLS}` : ''}`}
+      >
         <span>Section</span>
         <span className="grid grid-cols-[3rem_8.5rem_minmax(0,1fr)] gap-x-2">
           <span>Days</span>
           <span>Time</span>
           <span>Room</span>
         </span>
+        {table ? (
+          <>
+            <span className="hidden @3xl:block">Instructor</span>
+            <span className="hidden text-right @3xl:block">Seats</span>
+          </>
+        ) : null}
       </div>
       <ul aria-label={`Sections of ${course.code}`}>
         {topSections(course).map((top) => {
@@ -318,7 +419,7 @@ function SectionsList(props: SectionsListProps) {
             <li key={top.name} className="border-b border-line">
               <SectionRow {...props} section={top} />
               {children.length ? (
-                <div className="mb-2 ml-3 border-l-2 border-line pl-2 @md:ml-6">
+                <div className={`mb-2 ml-3 border-l-2 border-line pl-2 @md:ml-6 ${table ? '@3xl:mb-0 @3xl:ml-0 @3xl:border-l-0 @3xl:pl-0' : ''}`}>
                   {children.length > COLLAPSE_AFTER && !holdsChoice ? (
                     <button
                       type="button"
@@ -340,7 +441,7 @@ function SectionsList(props: SectionsListProps) {
                   {open ? (
                     <ul aria-label={`Recitations of ${partLabel(top)}`}>
                       {children.map((child) => (
-                        <li key={child.name} className="border-t border-line first:border-t-0">
+                        <li key={child.name} className={`border-t border-line first:border-t-0 ${table ? '@3xl:first:border-t' : ''}`}>
                           <SectionRow {...props} section={child} />
                         </li>
                       ))}
@@ -356,7 +457,8 @@ function SectionsList(props: SectionsListProps) {
   )
 }
 
-function SectionRow({ course, entry, canEdit, conflictsFor, onHover, onAct, onRemove, section: s }: SectionsListProps & { section: Section }) {
+function SectionRow({ course, entry, canEdit, conflictsFor, onHover, onAct, onRemove, layout = 'stack', section: s }: SectionsListProps & { section: Section }) {
+  const table = layout === 'table'
   const term = useTerm()
   const isChild = s.parent !== null
   const isChosen = isChild ? entry?.child?.name === s.name && entry.section?.name === s.parent : entry?.section?.name === s.name
@@ -371,16 +473,17 @@ function SectionRow({ course, entry, canEdit, conflictsFor, onHover, onAct, onRe
       onMouseLeave={() => onHover(null)}
       onFocus={() => onHover(s)}
       onBlur={() => onHover(null)}
-      className={`grid grid-cols-[3.25rem_minmax(0,1fr)_auto] gap-x-2 py-2 transition-colors hover:bg-surface-2 @md:grid-cols-[3.75rem_minmax(0,1fr)_5.75rem] ${
+      className={`grid grid-cols-[3.25rem_minmax(0,1fr)_auto] gap-x-2 py-2 transition-colors hover:bg-surface-2 @md:grid-cols-[3.75rem_minmax(0,1fr)_5.75rem] ${table ? TABLE_COLS : ''} ${
         isChosen ? 'bg-[color-mix(in_oklab,var(--ok)_7%,transparent)]' : ''
       }`}
     >
-      <div>
+      <div className={table && isChild ? '@3xl:border-l-2 @3xl:border-line @3xl:pl-2' : ''}>
         <span className={`course-code block leading-tight text-ink ${isChild ? 'text-[15px]' : 'text-[17px]'}`}>{s.name}</span>
         <span className="block text-[11.5px] text-muted">{kind}</span>
       </div>
 
-      <div className="min-w-0 text-[13px]">
+      {/* In the wide table this wrapper dissolves, so meetings and details become their own columns. */}
+      <div className={`min-w-0 text-[13px] ${table ? '@3xl:contents' : ''}`}>
         <ul className="space-y-0.5">
           {s.meetings.map((m, i) => (
             <li key={i} className="flex flex-wrap gap-x-2 @lg:grid @lg:grid-cols-[3rem_8.5rem_minmax(0,1fr)]">
@@ -393,21 +496,25 @@ function SectionRow({ course, entry, canEdit, conflictsFor, onHover, onAct, onRe
             </li>
           ))}
         </ul>
-        {s.title ? <div className="mt-0.5 font-medium text-ink">{s.title}</div> : null}
-        <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[12.5px] text-muted">
-          {s.instructors.length || !isChild ? <span className="text-ink-2">{s.instructors.length ? s.instructors.join(', ') : 'Instructor TBA'}</span> : null}
-          {!isChild ? s.instructors.map((name) => <InstructorFceBadge key={name} courseId={course.id} instructor={name} />) : null}
-          <span title={`Delivery mode ${s.mode}`}>{modeLabel(s.mode)}</span>
-          {s.mini !== null ? <span className="font-medium text-ink-2">{miniName(s.mini, term.meta)}</span> : null}
-          {s.capacity ? <span>{s.capacity} seats</span> : null}
-        </div>
-        {conflicts.length ? (
-          <div className="mt-1 flex items-center gap-1 text-[12.5px] font-medium text-danger">
-            <AlertTriangle className="size-3.5 shrink-0" />
-            Conflicts with {joinList(conflicts)}
+        <div className="min-w-0">
+          {s.title ? <div className="mt-0.5 font-medium text-ink">{s.title}</div> : null}
+          <div className={`mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[12.5px] text-muted ${table ? '@3xl:mt-0' : ''}`}>
+            {s.instructors.length || !isChild ? <span className="text-ink-2">{s.instructors.length ? s.instructors.join(', ') : 'Instructor TBA'}</span> : null}
+            {!isChild ? s.instructors.map((name) => <InstructorFceBadge key={name} courseId={course.id} instructor={name} />) : null}
+            <span title={`Delivery mode ${s.mode}`}>{modeLabel(s.mode)}</span>
+            {s.mini !== null ? <span className="font-medium text-ink-2">{miniName(s.mini, term.meta)}</span> : null}
+            {s.capacity ? <span className={table ? '@3xl:hidden' : ''}>{s.capacity} seats</span> : null}
           </div>
-        ) : null}
+          {conflicts.length ? (
+            <div className="mt-1 flex items-center gap-1 text-[12.5px] font-medium text-danger">
+              <AlertTriangle className="size-3.5 shrink-0" />
+              Conflicts with {joinList(conflicts)}
+            </div>
+          ) : null}
+        </div>
       </div>
+
+      {table ? <div className="hidden text-right text-[13px] text-ink-2 tabular-nums @3xl:block">{s.capacity ?? '—'}</div> : null}
 
       <div className="flex flex-col items-end gap-0.5">
         {isChosen ? (

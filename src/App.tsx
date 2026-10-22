@@ -11,6 +11,7 @@ import { TermProvider, useTerms } from './state/term'
 // Each page is its own chunk, so the first visit only downloads the page it opens.
 const RequisitesPage = lazy(() => import('./features/catalog/RequisitesPage').then((m) => ({ default: m.RequisitesPage })))
 const CoursesPage = lazy(() => import('./features/explorer/CoursesPage').then((m) => ({ default: m.CoursesPage })))
+const CourseFullPage = lazy(() => import('./features/explorer/CourseFullPage').then((m) => ({ default: m.CourseFullPage })))
 const InstructorsPage = lazy(() => import('./features/instructors/InstructorsPage').then((m) => ({ default: m.InstructorsPage })))
 const SchedulePage = lazy(() => import('./features/planner/SchedulePage').then((m) => ({ default: m.SchedulePage })))
 const RecordPage = lazy(() => import('./features/record/RecordPage').then((m) => ({ default: m.RecordPage })))
@@ -28,6 +29,7 @@ export default function App() {
             <Route index element={<Navigate to="courses" replace />} />
             <Route path="courses" element={<CoursesPage />} />
             <Route path="courses/:courseCode" element={<CoursesPage />} />
+            <Route path="courses/:courseCode/full" element={<CourseFullPage />} />
             <Route path="instructors" element={<InstructorsPage />} />
             <Route path="instructors/:slug" element={<InstructorsPage />} />
             <Route path="schedule" element={<SchedulePage />} />
