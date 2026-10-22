@@ -73,7 +73,7 @@ Andrew accounts are CMU's Google Workspace accounts, so "Sign in with Google" go
    - **Branding**: app name "Courseweave", your support email.
    - **Audience**: user type **External**, then **Publish app**. Only the `openid`, `email` and `profile` scopes are used, which need no Google verification. (In "Testing" mode only the test users you list can sign in.)
 3. **Clients** → **Create client** → **Web application**. Under **Authorized redirect URIs** add:
-   - `https://courseweave.<your-subdomain>.workers.dev/auth/callback` (and `https://<custom-domain>/auth/callback` if you add one)
+   - `https://courseweave.jay3332.tech/auth/callback` (your deployed domain)
    - `http://localhost:8787/auth/callback` and `http://localhost:5173/auth/callback` for local development
 4. Put the client ID in `wrangler.jsonc` under `vars.OIDC_CLIENT_ID`.
 5. Store the secrets with Cloudflare (Wrangler offers to create the Worker if it doesn't exist yet):
@@ -88,7 +88,7 @@ Without `OIDC_CLIENT_ID`, the site still deploys: sign-in reports that accounts 
 npm run deploy
 ```
 
-This rebuilds the data, builds the site, decides what ships, and uploads. Wrangler prints the URL, e.g. `https://courseweave.<your-subdomain>.workers.dev`.
+This rebuilds the data, builds the site, decides what ships, and uploads. The site is at <https://courseweave.jay3332.tech> (see "Custom domain").
 
 - FCE data ships only when sign-in is configured, and the Worker serves it only to signed-in CMU users (`Cache-Control: private`). `INCLUDE_FCE=0` / `INCLUDE_FCE=1` override the default.
 - `npm run deploy` refuses to run while `wrangler.jsonc` still has the placeholder database id.
@@ -114,7 +114,14 @@ Requests to `/api`, `/auth` and `/data/fce` run the Worker (100,000 a day on the
 
 ### Custom domain
 
-Workers & Pages → courseweave → **Domains** → add a custom domain (the domain must be on Cloudflare), then add its `/auth/callback` URL to the Google client.
+The site is served at `courseweave.jay3332.tech`, set in `wrangler.jsonc`:
+
+```jsonc
+"routes": [{ "pattern": "courseweave.jay3332.tech", "custom_domain": true }],
+"workers_dev": false,
+```
+
+The domain's zone must be on the same Cloudflare account; `npm run deploy` creates the DNS record and certificate. To use another domain, change the pattern (or set `"workers_dev": true` to get a `*.workers.dev` address back), and add `https://<domain>/auth/callback` to the Google client's redirect URIs.
 
 ## Layout
 

@@ -6,6 +6,11 @@
   "name": "courseweave",
   "main": "worker/index.ts",
   "compatibility_date": "2026-10-21",
+  // Served at courseweave.jay3332.tech (the zone is on this Cloudflare account; deploy creates the DNS record and
+  // certificate). The workers.dev address is off so there's one canonical URL for sign-in redirects.
+  "routes": [{ "pattern": "courseweave.jay3332.tech", "custom_domain": true }],
+  "workers_dev": false,
+  "preview_urls": false,
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",
