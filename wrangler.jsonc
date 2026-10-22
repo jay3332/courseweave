@@ -10,6 +10,9 @@
   // certificate). The workers.dev address is off so there's one canonical URL for sign-in redirects.
   "routes": [{ "pattern": "courseweave.jay3332.tech", "custom_domain": true }],
   "workers_dev": false,
+  // `wrangler dev` would otherwise present requests as coming from the custom domain above, breaking local sign-in
+  // (redirect URI), cookie names and the dev-origin check. Locally the Worker sees http://localhost:8787.
+  "dev": { "host": "localhost:8787" },
   "preview_urls": false,
   "assets": {
     "directory": "./dist",
@@ -38,5 +41,19 @@
     "OIDC_CLIENT_ID": "197877729931-0b9jqhhp1h5rjipdi0lhh8oreuciso45.apps.googleusercontent.com",
     "ALLOWED_EMAIL_DOMAINS": "andrew.cmu.edu,cmu.edu",
   },
-  "observability": { "enabled": true },
+  // Per-location burst limits (Workers Rate Limiting; period must be 10 or 60 s). They protect D1 and Google from
+  // floods; requests over a limit get 429 with Retry-After. Daily totals are capped by the per-document write cap
+  // in D1 and by the zone WAF rule in the README. namespace_ids are account-wide, so keep them unique.
+  "ratelimits": [
+    // Every /api, /auth and /data/fce request, per client IP.
+    { "name": "RL_IP", "namespace_id": "1001", "simple": { "limit": 120, "period": 60 } },
+    // Sign-in start and callback (each calls Google), per client IP.
+    { "name": "RL_AUTH", "namespace_id": "1002", "simple": { "limit": 10, "period": 60 } },
+    // Sync writes and account deletion, per signed-in account.
+    { "name": "RL_WRITE", "namespace_id": "1003", "simple": { "limit": 20, "period": 60 } },
+  ],
+  // Daily at 04:17 UTC: delete expired sessions (worker/index.ts `scheduled`).
+  "triggers": { "crons": ["17 4 * * *"] },
+  // Query strings (the OAuth code/state on /auth/callback) are kept out of logs and traces.
+  "observability": { "enabled": true, "redact_query_string": true },
 }

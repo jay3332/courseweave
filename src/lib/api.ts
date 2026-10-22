@@ -9,7 +9,7 @@ export type ApiResult<T> =
   | { kind: 'auth' }
   /** The Worker or the endpoint isn't there (network error, 404, HTML instead of JSON, 503 unavailable). */
   | { kind: 'unavailable' }
-  | { kind: 'error'; status: number; error: ApiError | null }
+  | { kind: 'error'; status: number; error: ApiError | null; /** Seconds, from Retry-After on 429s. */ retryAfter?: number }
 
 const base = import.meta.env.BASE_URL
 
@@ -54,7 +54,14 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   }
   const error = await readError(r)
   if (r.status === 503 || error?.code === 'unavailable') return { kind: 'unavailable' }
-  return { kind: 'error', status: r.status, error }
+  const retryAfter = r.status === 429 ? retryAfterSeconds(r.headers.get('Retry-After')) : undefined
+  return { kind: 'error', status: r.status, error, ...(retryAfter !== undefined ? { retryAfter } : {}) }
+}
+
+/** Retry-After in seconds (delta form; dates fall back to a minute). */
+function retryAfterSeconds(value: string | null): number {
+  const n = Number(value)
+  return Number.isFinite(n) && n > 0 ? n : 60
 }
 
 /** Where "Sign in" goes: the Worker starts the provider login and comes back to `returnTo`. */
@@ -76,7 +83,12 @@ export function getSync(): Promise<ApiResult<SyncState>> {
   return request<SyncState>('GET', '/api/sync')
 }
 
-export type PutResult = ApiResult<SyncDoc> | { kind: 'conflict'; current: SyncDoc } | { kind: 'too-large' }
+export type PutResult =
+  | ApiResult<SyncDoc>
+  | { kind: 'conflict'; current: SyncDoc }
+  | { kind: 'too-large' }
+  /** Too many writes (per-minute limit or the document's daily cap); try again after `retryAfter` seconds. */
+  | { kind: 'rate-limited'; retryAfter: number }
 
 export async function putSync(key: SyncKey, put: SyncPut): Promise<PutResult> {
   const res = await request<SyncDoc>('PUT', `/api/sync/${key}`, put)
@@ -85,6 +97,7 @@ export async function putSync(key: SyncKey, put: SyncPut): Promise<PutResult> {
     if (conflict?.current) return { kind: 'conflict', current: conflict.current }
   }
   if (res.kind === 'error' && res.status === 413) return { kind: 'too-large' }
+  if (res.kind === 'error' && res.status === 429) return { kind: 'rate-limited', retryAfter: res.retryAfter ?? 60 }
   return res
 }
 

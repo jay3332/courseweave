@@ -1,8 +1,9 @@
-import { Copy, GraduationCap, MoreHorizontal, Pencil, Plus, Trash2, X } from 'lucide-react'
+import { Copy, GraduationCap, MoreHorizontal, Pencil, Plus, RefreshCw, Trash2, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button, Dialog, IconButton } from '../../components/ui'
 import { useActiveScheduleId } from '../../state/schedule-view'
-import { usePlanList } from '../../state/plan'
+import { effectiveTermCourses } from '../../lib/plan'
+import { usePlanList, usePlans } from '../../state/plan'
 import { useStore, useTermSchedules, type Schedule } from '../../state/store'
 import { useTerm } from '../../state/term'
 import { plural, scheduleUnits } from './format'
@@ -16,6 +17,10 @@ export function ScheduleTabs() {
   const schedules = useTermSchedules(termId)
   const activeId = useActiveScheduleId()
   const setActiveSchedule = useStore((s) => s.setActiveSchedule)
+  const allSchedules = useStore((s) => s.schedules)
+  // Schedules a semester of the active degree plan is synced with.
+  const activePlan = usePlans((s) => (s.activePlanId ? s.plans[s.activePlanId] : undefined))
+  const syncedIds = new Set(activePlan?.terms.filter((t) => t.term === termId && t.link).map((t) => t.link!.scheduleId) ?? [])
   const createSchedule = useStore((s) => s.createSchedule)
   const duplicateSchedule = useStore((s) => s.duplicateSchedule)
   const renameSchedule = useStore((s) => s.renameSchedule)
@@ -32,7 +37,7 @@ export function ScheduleTabs() {
   // Degree plans with courses in this semester can seed a new schedule.
   const plans = usePlanList()
   const plansForTerm = plans
-    .map((plan) => ({ plan, courses: plan.terms.find((t) => t.term === termId)?.courses ?? [] }))
+    .map((plan) => ({ plan, courses: effectiveTermCourses(plan, allSchedules).get(termId)?.courses ?? [] }))
     .filter((p) => p.courses.length)
   const [newOpen, setNewOpen] = useState(false)
   const newRef = useRef<HTMLDivElement>(null)
@@ -86,6 +91,12 @@ export function ScheduleTabs() {
               }`}
             >
               <span className="max-w-44 truncate">{s.name}</span>
+              {syncedIds.has(s.id) ? (
+                <span title={`Synced with ${activePlan!.name}`} className="inline-flex text-ok">
+                  <RefreshCw aria-hidden className="size-3.5" />
+                  <span className="sr-only">, synced with {activePlan!.name}</span>
+                </span>
+              ) : null}
               <span className={`text-[12px] font-normal ${isActive ? 'text-muted' : ''}`}>{plural(scheduleUnits(s, term), 'unit')}</span>
             </button>
           )

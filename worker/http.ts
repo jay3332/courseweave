@@ -22,6 +22,25 @@ export function redirect(location: string, cookies: string[] = []): Response {
 }
 
 // ---------------------------------------------------------------------------
+// Security headers
+
+/**
+ * Adds security headers to a Worker response (API JSON, redirects, errors, FCE files). Static pages get theirs from
+ * public/_headers. HSTS only over https; a deny-all CSP on anything that isn't HTML, since these responses are data.
+ */
+export function withSecurityHeaders(response: Response, url: URL): Response {
+  const out = new Response(response.body, response)
+  const h = out.headers
+  h.set('X-Content-Type-Options', 'nosniff')
+  h.set('X-Frame-Options', 'DENY')
+  h.set('Referrer-Policy', 'strict-origin-when-cross-origin')
+  if (url.protocol === 'https:') h.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
+  const type = h.get('Content-Type') ?? ''
+  if (!type.includes('text/html') && !h.has('Content-Security-Policy')) h.set('Content-Security-Policy', "default-src 'none'; frame-ancestors 'none'")
+  return out
+}
+
+// ---------------------------------------------------------------------------
 // Cookies
 
 export function parseCookies(header: string | null): Map<string, string> {
@@ -86,7 +105,10 @@ export function safeReturnTo(value: string | null | undefined): string {
   }
   if (parsed.origin !== 'https://courseweave.invalid') return '/'
   if (parsed.pathname === '/auth' || parsed.pathname.startsWith('/auth/')) return '/'
-  return `${parsed.pathname}${parsed.search}${parsed.hash}`
+  const out = `${parsed.pathname}${parsed.search}${parsed.hash}`
+  // Dot segments can collapse into a protocol-relative URL ("/.//evil.com" → "//evil.com"); check the result too.
+  if (!out.startsWith('/') || out.startsWith('//') || out.startsWith('/\\')) return '/'
+  return out
 }
 
 /** `path` with `?key=value` added (or replaced), keeping the rest of its query and hash. */

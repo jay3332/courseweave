@@ -12,6 +12,7 @@ import { AuditColumn, ProgramsField, useAuditResult } from './AuditArea'
 import { entryYearOf, useCurrentTerm, usePlanDerived, useRecordLike, useScheduledCourses, useStartTermOptions } from './hooks'
 import { PlanHeader } from './PlanHeader'
 import { RequisiteProblems } from './RequisiteProblems'
+import { addToTerm } from './linkActions'
 import { SemesterGrid } from './SemesterGrid'
 
 export function PlanPage() {
@@ -53,7 +54,6 @@ function PlanView({ plan }: { plan: Plan }) {
   const isPhone = useMediaQuery('(max-width: 767px)')
   const isWide = useMediaQuery('(min-width: 1180px)')
   const finePointer = useMediaQuery('(pointer: fine)')
-  const addCourse = usePlans((s) => s.addCourse)
   const [tab, setTab] = useState<'semesters' | 'requirements'>('semesters')
   const [openTerms, setOpenTerms] = useState<Record<string, boolean>>({})
   const audit = useAuditResult(derived?.auditInput ?? null)
@@ -80,12 +80,12 @@ function PlanView({ plan }: { plan: Plan }) {
   const addFromAudit = useCallback(
     (courseId: string) => {
       if (!derived) return
-      const target = suggestTerm(plan, courseId, derived.catalog, derived.current, derived.unitsOf, (t) => scheduled.get(t), undefined, record)
+      const target = suggestTerm(derived.resolved, courseId, derived.catalog, derived.current, derived.unitsOf, (t) => scheduled.get(t), undefined, record)
       if (!target) return
-      const id = addCourse(plan.id, target, courseId)
+      const id = addToTerm(plan, target, courseId)
       jumpTo(id, target)
     },
-    [derived, plan, scheduled, addCourse, jumpTo, record],
+    [derived, plan, scheduled, jumpTo, record],
   )
 
   if (!derived) return null

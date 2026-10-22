@@ -83,7 +83,10 @@ const planAdapter: Adapter<PlanDoc> = {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const ADAPTERS: Adapter<any>[] = [schedulesAdapter, recordAdapter, planAdapter]
 
-const DEBOUNCE_MS = 1500
+/** Quiet time before pushing a change; batches bursts of edits into one write (each write costs the server). */
+const DEBOUNCE_MS = 4000
+/** Longest wait honoured from a 429's Retry-After (the daily cap can ask for up to a day). */
+const MAX_BACKOFF_MS = 6 * 60 * 60 * 1000
 const MAX_CONFLICT_RETRIES = 3
 
 interface KeyState {
@@ -95,7 +98,14 @@ interface KeyState {
   inFlight: Promise<void> | null
   /** Changed while a push was in flight; push again afterwards. */
   dirty: boolean
+  /** No pushes before this time (ms): set by 429s and server errors so clients back off instead of retrying hot. */
+  pausedUntil: number
+  /** Next backoff after a server error (ms); doubles up to a cap, resets on success. */
+  errorBackoff: number
 }
+
+const FIRST_ERROR_BACKOFF_MS = 30_000
+const MAX_ERROR_BACKOFF_MS = 10 * 60 * 1000
 
 let running = false
 /** Bumped on every start/stop so stale async work from a previous session bails out. */
@@ -150,6 +160,7 @@ async function push<T>(adapter: Adapter<T>, myEpoch: number): Promise<void> {
     if (res.kind === 'ok') {
       k.rev = res.data.rev
       k.uploaded = body
+      k.errorBackoff = FIRST_ERROR_BACKOFF_MS
       // The store may have changed while the request was out; the loop pushes again if so.
       continue
     }
@@ -170,12 +181,36 @@ async function push<T>(adapter: Adapter<T>, myEpoch: number): Promise<void> {
       setStatus('error', 'Your saved data is too large to sync. Remove some schedules or plans and try again.')
       return
     }
-    // Network trouble or a server error: keep the change and try again when back online / on the next change.
-    k.dirty = true
-    if (isOffline() || res.kind === 'unavailable') setStatus('offline')
-    else setStatus('error', 'Couldn’t reach the sync server. Your changes are saved on this device.')
+    if (res.kind === 'rate-limited') {
+      // Keep the change (it's still in the store) and push it once the server is ready again.
+      const waitMs = Math.min(res.retryAfter * 1000, MAX_BACKOFF_MS)
+      setStatus('error', `Sync paused, retrying ${waitMs >= 60 * 60 * 1000 ? 'in a few hours' : waitMs >= 2 * 60 * 1000 ? `in ${Math.round(waitMs / 60_000)} minutes` : 'in a minute'}. Your changes are saved on this device.`)
+      pauseAndRetry(adapter, k, myEpoch, waitMs)
+      return
+    }
+    if (isOffline() || res.kind === 'unavailable') {
+      // Pushed again by the `online` handler or the next change.
+      k.dirty = true
+      setStatus('offline')
+      return
+    }
+    // A server error: retry later with growing gaps, never in a tight loop.
+    setStatus('error', 'Couldn’t reach the sync server. Your changes are saved on this device.')
+    pauseAndRetry(adapter, k, myEpoch, k.errorBackoff)
+    k.errorBackoff = Math.min(k.errorBackoff * 2, MAX_ERROR_BACKOFF_MS)
     return
   }
+}
+
+/** Holds pushes for `waitMs`, then pushes whatever the store holds by then. */
+function pauseAndRetry<T>(adapter: Adapter<T>, k: KeyState, myEpoch: number, waitMs: number) {
+  k.dirty = false
+  k.pausedUntil = Date.now() + waitMs
+  if (k.timer) clearTimeout(k.timer)
+  k.timer = setTimeout(() => {
+    k.timer = null
+    flush(adapter, myEpoch)
+  }, waitMs)
 }
 
 /** Folds a server copy into this device's state and records its rev. */
@@ -195,10 +230,12 @@ function schedulePush<T>(adapter: Adapter<T>) {
   const k = keys.get(adapter.key)!
   if (k.timer) clearTimeout(k.timer)
   const myEpoch = epoch
+  // While paused (rate limit or server trouble), edits wait for the pause to end rather than pushing early.
+  const delay = Math.max(DEBOUNCE_MS, k.pausedUntil - Date.now())
   k.timer = setTimeout(() => {
     k.timer = null
     flush(adapter, myEpoch)
-  }, DEBOUNCE_MS)
+  }, delay)
   if (useSync.getState().status === 'synced') setStatus('syncing')
 }
 
@@ -233,7 +270,7 @@ export async function startSync(): Promise<void> {
   if (running) return
   running = true
   const myEpoch = ++epoch
-  for (const a of ADAPTERS) keys.set(a.key, { rev: 0, uploaded: null, timer: null, inFlight: null, dirty: false })
+  for (const a of ADAPTERS) keys.set(a.key, { rev: 0, uploaded: null, timer: null, inFlight: null, dirty: false, pausedUntil: 0, errorBackoff: FIRST_ERROR_BACKOFF_MS })
   window.addEventListener('online', onOnline)
   window.addEventListener('offline', onOffline)
   // Collect edits made during the initial pull; they're pushed once the merge is in.
@@ -256,6 +293,17 @@ export async function startSync(): Promise<void> {
   if (res.kind === 'auth') {
     stopSync()
     useSession.getState().expired()
+    return
+  }
+  if (res.kind === 'error' && res.status === 429) {
+    // Too many requests from this network right now: try the whole pull again after the server's wait.
+    setStatus('error', 'Sync paused, retrying in a minute. Your changes are saved on this device.')
+    setTimeout(() => {
+      if (myEpoch === epoch) {
+        stopSync()
+        void startSync()
+      }
+    }, Math.min((res.retryAfter ?? 60) * 1000, MAX_BACKOFF_MS))
     return
   }
   if (res.kind !== 'ok') {

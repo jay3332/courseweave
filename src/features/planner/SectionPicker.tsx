@@ -2,7 +2,7 @@ import { AlertTriangle, Check, ChevronDown } from 'lucide-react'
 import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
 import type { Section } from '../../lib/types'
 import { InstructorFceBadge } from '../fce/InstructorFceBadge'
-import { joinList, locationSummary, meetingSummary, partLabel } from './format'
+import { joinList, locationSummary, meetingSummary, partLabel, timesAndRoom } from './format'
 import { useDismiss } from './hooks'
 
 interface SectionPickerProps {
@@ -107,7 +107,8 @@ export function SectionPicker({ noun, listLabel, options, current, conflictsFor,
         {current ? (
           <>
             <span className="shrink-0 font-semibold text-ink">{partLabel(current)}</span>
-            <span className="min-w-0 truncate">{meetingSummary(current)}</span>
+            <span className="min-w-0 truncate">{timesAndRoom(current).times}</span>
+            {timesAndRoom(current).room ? <span className="shrink-0 text-muted">{timesAndRoom(current).room}</span> : null}
           </>
         ) : (
           <span className="font-medium">{placeholder ?? `Choose a ${noun}`}</span>

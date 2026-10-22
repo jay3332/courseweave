@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import type { CatalogEntry, CatalogIndex } from './catalog-types'
 import {
+  coursesMissingFrom,
+  effectiveTermCourses,
+  linkedCourseId,
+  linkedScheduleId,
+  parseLinkedCourseId,
+  resolvePlan,
+  type ScheduleLike,
   academicYearLabel,
   checkPlan,
   currentTermCode,
@@ -195,5 +202,72 @@ describe('offering and suggestTerm', () => {
     // Without the record it takes the first term with room; with it, the term after 15-122.
     expect(suggestTerm(p, '15213', catalog, 'F26', unitsOf)).toBe('F26')
     expect(suggestTerm(p, '15213', catalog, 'F26', unitsOf, undefined, undefined, emptyRecord)).toBe('S27')
+  })
+})
+
+describe('semesters synced with a schedule', () => {
+  const schedule: ScheduleLike = {
+    id: 'sch1',
+    termId: 'S27',
+    name: 'Schedule 1',
+    entries: [
+      { courseId: '15213', hidden: false, passFail: false },
+      { courseId: '99101', hidden: false, passFail: true },
+      { courseId: '21127', hidden: true, passFail: false },
+    ],
+  }
+  const linked = (): Plan => {
+    const p = plan({ F26: ['15122'], S27: ['15213', '76101'] })
+    p.terms[1] = { ...p.terms[1], link: { scheduleId: 'sch1' }, courses: [{ id: 'snap', courseId: '15213', units: 9 }, { id: 'snap2', courseId: '76101' }] }
+    return p
+  }
+
+  it('takes a linked term from its schedule, skipping hidden entries and keeping unit overrides', () => {
+    const eff = effectiveTermCourses(linked(), { sch1: schedule })
+    const s27 = eff.get('S27')!
+    expect(s27.schedule?.id).toBe('sch1')
+    expect(s27.courses).toEqual([
+      { id: linkedCourseId('sch1', '15213'), courseId: '15213', units: 9 },
+      { id: linkedCourseId('sch1', '99101'), courseId: '99101', passFail: true },
+    ])
+    expect(eff.get('F26')!.courses.map((c) => c.courseId)).toEqual(['15122'])
+  })
+
+  it('falls back to the snapshot when the schedule is gone', () => {
+    const s27 = effectiveTermCourses(linked(), {}).get('S27')!
+    expect(s27.missing).toBe(true)
+    expect(s27.courses.map((c) => c.courseId)).toEqual(['15213', '76101'])
+    expect(linkedScheduleId(linked(), 'S27', {})).toBeNull()
+    expect(linkedScheduleId(linked(), 'S27', { sch1: schedule })).toBe('sch1')
+  })
+
+  it('feeds the schedule into the audit and requisite checks', () => {
+    const resolved = resolvePlan(linked(), { sch1: schedule })
+    const input = planToAuditInput(resolved, emptyRecord, catalog, { current: 'F26' })
+    const s27 = input.courses.filter((c) => c.term === 'S27')
+    expect(s27.map((c) => [c.courseId, c.status, c.passFail])).toEqual([
+      ['15213', 'planned', false],
+      ['99101', 'planned', true],
+    ])
+    // 15-213 in S27 is checked against 15-122 planned in F26.
+    const check = checkPlan(resolved, emptyRecord, catalog).get(linkedCourseId('sch1', '15213'))!
+    expect(check.term).toBe('S27')
+    expect(check.check.level).not.toBe('problem')
+  })
+
+  it('round-trips linked course ids and finds courses a schedule lacks', () => {
+    expect(parseLinkedCourseId(linkedCourseId('a:b', '15122'))).toEqual({ scheduleId: 'a:b', courseId: '15122' })
+    expect(parseLinkedCourseId('F25-0')).toBeNull()
+    const own = [
+      { id: 'x', courseId: '15213' },
+      { id: 'y', courseId: '76101' },
+      { id: 'z', courseId: '76101' },
+    ]
+    expect(coursesMissingFrom(own, schedule).map((c) => c.courseId)).toEqual(['76101'])
+  })
+
+  it('leaves plans without links untouched', () => {
+    const p = plan({ F25: ['15112'] })
+    expect(resolvePlan(p, {})).toBe(p)
   })
 })

@@ -33,9 +33,36 @@ interface PlanState {
   updateCourse(planId: string, planCourseId: string, patch: Partial<Pick<PlanCourse, 'passFail' | 'units'>>): void
   /** Replaces a semester's courses, e.g. with a schedule from the schedule planner. */
   setTermCourses(planId: string, term: string, courses: { courseId: string; passFail?: boolean }[]): void
+
+  /**
+   * Syncs a semester with a schedule: its courses then come from the schedule. `snapshot` (the courses at link
+   * time) is kept as the fallback should the schedule be deleted.
+   */
+  linkTerm(planId: string, term: string, scheduleId: string, snapshot: SnapshotCourse[]): void
+  /** Stops syncing; the semester keeps `courses` (normally the schedule's current courses) as planned courses. */
+  unlinkTerm(planId: string, term: string, courses?: SnapshotCourse[]): void
+  /** Units override for a course in a semester (variable-unit courses), creating its snapshot row if needed. */
+  setCourseUnits(planId: string, term: string, courseId: string, units: number | undefined): void
+  /** Drops a course from a semester's own list by course id (keeps a synced semester's snapshot current). */
+  removeCourseFromTerm(planId: string, term: string, courseId: string): void
 }
 
-const uid = () => Math.random().toString(36).slice(2, 10)
+export interface SnapshotCourse {
+  courseId: string
+  passFail?: boolean
+  units?: number
+}
+
+const toPlanCourse = (c: SnapshotCourse): PlanCourse => ({
+  id: uid(),
+  courseId: c.courseId,
+  ...(c.passFail ? { passFail: true } : {}),
+  ...(c.units !== undefined ? { units: c.units } : {}),
+})
+
+function uid() {
+  return Math.random().toString(36).slice(2, 10)
+}
 
 function sortTerms(terms: PlanTerm[]): PlanTerm[] {
   return [...terms].sort((a, b) => compareTerms(a.term, b.term))
@@ -88,7 +115,9 @@ export const usePlans = create<PlanState>()(
           const p = get().plans[id]
           if (!p) return id
           const copy = get().createPlan({ name: `${p.name} copy`, startTerm: p.startTerm, programs: p.programs.map((x) => ({ ...x })), terms: [] })
-          update(copy, () => ({ terms: p.terms.map((t) => ({ term: t.term, courses: t.courses.map((c) => ({ ...c, id: uid() })) })) }))
+          update(copy, () => ({
+            terms: p.terms.map((t) => ({ term: t.term, courses: t.courses.map((c) => ({ ...c, id: uid() })), ...(t.link ? { link: { ...t.link } } : {}) })),
+          }))
           return copy
         },
 
@@ -184,9 +213,47 @@ export const usePlans = create<PlanState>()(
             ),
           }))
         },
+
+        linkTerm(planId, term, scheduleId, snapshot) {
+          update(planId, (p) => ({
+            terms: withTerm(p.terms, term).map((t) => (t.term === term ? { ...t, link: { scheduleId }, courses: snapshot.map(toPlanCourse) } : t)),
+          }))
+        },
+
+        unlinkTerm(planId, term, courses) {
+          update(planId, (p) => ({
+            terms: p.terms.map((t) => (t.term === term ? { ...t, link: null, ...(courses ? { courses: courses.map(toPlanCourse) } : {}) } : t)),
+          }))
+        },
+
+        setCourseUnits(planId, term, courseId, units) {
+          update(planId, (p) => ({
+            terms: withTerm(p.terms, term).map((t) => {
+              if (t.term !== term) return t
+              const existing = t.courses.some((c) => c.courseId === courseId)
+              const courses = existing
+                ? t.courses.map((c) => {
+                    if (c.courseId !== courseId) return c
+                    const next = { ...c, units }
+                    if (units === undefined) delete next.units
+                    return next
+                  })
+                : [...t.courses, toPlanCourse({ courseId, units })]
+              return { ...t, courses }
+            }),
+          }))
+        },
+
+        removeCourseFromTerm(planId, term, courseId) {
+          update(planId, (p) => ({ terms: p.terms.map((t) => (t.term === term ? { ...t, courses: t.courses.filter((c) => c.courseId !== courseId) } : t)) }))
+        },
       }
     },
-    { name: 'courseweave-plan', version: 1 },
+    {
+      name: 'courseweave-plan',
+      version: 2,
+      migrate: migratePlans,
+    },
   ),
 )
 
@@ -194,4 +261,13 @@ export const usePlans = create<PlanState>()(
 export function usePlanList(): Plan[] {
   const plans = usePlans((s) => s.plans)
   return Object.values(plans).sort((a, b) => a.createdAt - b.createdAt)
+}
+
+/** v1 → v2: semesters gained an optional `link` to a schedule (none by default). */
+export function migratePlans(persisted: unknown, version: number): PlanState {
+  const state = (persisted ?? {}) as { plans?: Record<string, Plan>; activePlanId?: string | null }
+  if (version < 2) {
+    for (const p of Object.values(state.plans ?? {})) p.terms = (p.terms ?? []).map((t) => ({ ...t, link: t.link ?? null }))
+  }
+  return state as PlanState
 }

@@ -13,13 +13,7 @@
       rel="stylesheet"
     />
     <title>Courseweave</title>
-    <script>
-      try {
-        // Storage key predates the rename; kept so saved schedules survive.
-        const t = JSON.parse(localStorage.getItem('plaid') || '{}')?.state?.theme
-        if (t === 'dark' || t === 'light') document.documentElement.dataset.theme = t
-      } catch {}
-    </script>
+    <script src="/theme-init.js"></script>
   </head>
   <body>
     <div id="root"></div>

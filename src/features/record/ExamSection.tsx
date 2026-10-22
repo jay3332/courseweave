@@ -48,7 +48,8 @@ export function ExamSection() {
   const grouped = useMemo(() => {
     const out = new Map<string, RecordEntry[]>()
     for (const e of examEntries) {
-      const key = e.exam?.id ?? `manual:${e.id}`
+      // Known exams group by exam; entries sharing a note (e.g. everything imported from SIO) group together.
+      const key = e.exam?.id ?? (e.note ? `note:${e.note}` : `manual:${e.id}`)
       out.set(key, [...(out.get(key) ?? []), e])
     }
     return [...out.entries()]
@@ -187,7 +188,7 @@ function ExamRow({ entries }: { entries: RecordEntry[] }) {
       <div className="min-w-0 flex-1">
         <p className="text-[14.5px] font-medium text-ink">
           {title}
-          {first.exam ? <span className="font-normal text-muted">, {exam?.board === 'A-Level' ? 'grade' : 'score'} {first.exam.score}</span> : null}
+          {first.exam && exam ? <span className="font-normal text-muted">, {exam.board === 'A-Level' ? 'grade' : 'score'} {first.exam.score}</span> : null}
         </p>
         <p className="text-[13.5px] text-ink-2">
           {entries.map((e, i) => (

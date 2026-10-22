@@ -9,8 +9,12 @@
 // API (JSON; state-changing requests must send Content-Type: application/json and a same-origin Origin header):
 //   GET    /api/me                     200 Me | 401 ApiError
 //   GET    /api/sync                   200 SyncState | 401
-//   PUT    /api/sync/:key              body SyncPut → 200 SyncDoc | 409 SyncConflict | 401 | 413 (over SYNC_MAX_BYTES)
+//   PUT    /api/sync/:key              body SyncPut → 200 SyncDoc | 409 SyncConflict | 401 | 411 (no Content-Length)
+//                                      | 413 (over SYNC_MAX_BYTES) | 429 too_many (rate limit or daily write cap)
 //   DELETE /api/account                204; deletes the user, their sessions and synced data | 401
+//
+// Any /api, /auth or /data/fce request may get 429 too_many with a Retry-After header (seconds) when a client
+// sends too much; clients should back off and retry later.
 //
 // Gated data:
 //   GET /data/fce/*                    200 file when signed in | 401 ApiError (code "auth") | 404 when not deployed
@@ -26,7 +30,7 @@ export interface Me {
 }
 
 export interface ApiError {
-  code: 'auth' | 'forbidden' | 'not_found' | 'conflict' | 'too_large' | 'bad_request' | 'unavailable'
+  code: 'auth' | 'forbidden' | 'not_found' | 'conflict' | 'too_large' | 'too_many' | 'bad_request' | 'unavailable'
   message: string
 }
 
@@ -35,8 +39,11 @@ export type SyncKey = 'schedules' | 'record' | 'plan'
 
 export const SYNC_KEYS: readonly SyncKey[] = ['schedules', 'record', 'plan'] as const
 
-/** Largest accepted document body, in bytes of JSON. */
-export const SYNC_MAX_BYTES = 512 * 1024
+/** Largest accepted document body, in bytes of JSON. Real documents are a few KB; this leaves ample room. */
+export const SYNC_MAX_BYTES = 128 * 1024
+
+/** Most writes one synced document accepts per UTC day (client pushes are debounced, so normal use is far below). */
+export const SYNC_DAILY_WRITES = 500
 
 export interface SyncDoc {
   /** The store's persisted state (whatever the app stores; the server treats it as opaque JSON). */

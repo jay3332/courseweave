@@ -16,7 +16,10 @@ import {
   planCourseUnits,
   planCoursePassFail,
   planToAuditInput,
+  resolvePlan,
+  effectiveTermCourses,
   termTotals,
+  type EffectiveTerm,
   type Plan,
   type PlanCheck,
   type PlanColumn,
@@ -28,6 +31,7 @@ import {
 import type { AuditInput } from '../../lib/plan-types'
 import { isFactorableGrade, normalizeGrade } from '../../lib/requisites'
 import { useRecord } from '../../state/record'
+import { useStore } from '../../state/store'
 import { useTerm, useTerms } from '../../state/term'
 
 /** The term in progress today. */
@@ -91,6 +95,10 @@ export interface ColumnView extends PlanColumn {
 }
 
 export interface PlanDerived {
+  /** The plan with synced semesters' courses taken from their schedules: what every view and check uses. */
+  resolved: Plan
+  /** Per semester: its effective courses and, when synced, the schedule (or that the schedule is gone). */
+  terms: Map<string, EffectiveTerm>
   catalog: CatalogIndex | null
   current: string
   columns: ColumnView[]
@@ -116,12 +124,15 @@ export function usePlanDerived(plan: Plan | null): PlanDerived | null {
   const record = useRecordLike()
   const fceHours = useFceHours()
   const current = useCurrentTerm()
+  const schedules = useStore((s) => s.schedules)
 
   const unitsOf = useMemo<UnitsOf>(() => (id) => catalog?.courses[id]?.units ?? term.courseById.get(id)?.units ?? null, [catalog, term])
 
   return useMemo(() => {
     if (!plan) return null
-    const columns: ColumnView[] = planColumns(plan, record, current).map((col) => {
+    const terms = effectiveTermCourses(plan, schedules)
+    const resolved = resolvePlan(plan, schedules)
+    const columns: ColumnView[] = planColumns(resolved, record, current).map((col) => {
       const recordUnits = new Map<string, number>()
       const items = [
         ...col.recorded.map((e) => {
@@ -143,11 +154,13 @@ export function usePlanDerived(plan: Plan | null): PlanDerived | null {
       ]
       return { ...col, totals: termTotals(items, fceHours), recordUnits }
     })
-    const auditInput = planToAuditInput(plan, record, catalog, { current, unitsOf, examLabel: examSource })
-    const checks = checkPlan(plan, record, catalog)
+    const auditInput = planToAuditInput(resolved, record, catalog, { current, unitsOf, examLabel: examSource })
+    const checks = checkPlan(resolved, record, catalog)
+    // The audit input already includes general transfer credit (as credit: rows), so it isn't added again.
     const completedUnits = auditInput.courses.filter((c) => c.status === 'completed' || c.status === 'credit').reduce((n, c) => n + c.units, 0)
-    const generalTransfer = record.entries.filter((e) => !e.courseId && e.source === 'transfer').reduce((n, e) => n + (e.units ?? 0), 0)
     return {
+      resolved,
+      terms,
       catalog,
       current,
       columns,
@@ -155,10 +168,10 @@ export function usePlanDerived(plan: Plan | null): PlanDerived | null {
       checks,
       auditInput,
       unitsOf,
-      totalUnits: auditInput.courses.reduce((n, c) => n + c.units, 0) + generalTransfer,
-      completedUnits: completedUnits + generalTransfer,
+      totalUnits: auditInput.courses.reduce((n, c) => n + c.units, 0),
+      completedUnits,
     }
-  }, [plan, record, catalog, current, unitsOf, fceHours])
+  }, [plan, schedules, record, catalog, current, unitsOf, fceHours])
 }
 
 /** Fall and spring terms from six years back to next fall, for start-term pickers. */

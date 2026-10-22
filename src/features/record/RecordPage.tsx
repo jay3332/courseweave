@@ -9,6 +9,7 @@ import { termLabel, useCourseLookup, useTermOptions } from './hooks'
 import { Field, Select } from './shared'
 import { TakenSection } from './TakenSection'
 import { TransferSection } from './TransferSection'
+import { SioImportButton } from './SioImport'
 import { WaiversSection } from './WaiversSection'
 
 export function RecordPage() {
@@ -83,6 +84,12 @@ function Header() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <SioImportButton
+            onImported={(message) => {
+              setError(null)
+              setNotice(message)
+            }}
+          />
           <Button onClick={download} disabled={empty}>
             <Download aria-hidden className="size-4" />
             Export

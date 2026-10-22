@@ -34,11 +34,19 @@ export async function createSession(store: Store, url: URL, userId: string, now 
   return sessionCookie(url, token, SESSION_TTL)
 }
 
+let touchFailureLogged = false
+
+/** The session token in a request's cookie, if any (not validated). */
+export function sessionToken(request: Request): string | null {
+  const token = parseCookies(request.headers.get('Cookie')).get(sessionCookieName(new URL(request.url)))
+  return token && token.length <= 128 ? token : null
+}
+
 /** The signed-in user for a request, or null. Expired sessions are deleted. */
 export async function readSession(store: Store, request: Request, now = Date.now()): Promise<Session | null> {
   const url = new URL(request.url)
-  const token = parseCookies(request.headers.get('Cookie')).get(sessionCookieName(url))
-  if (!token || token.length > 128) return null
+  const token = sessionToken(request)
+  if (!token) return null
   const idHash = await sha256(token)
   const found = await store.findSession(idHash)
   if (!found) return null
@@ -48,8 +56,17 @@ export async function readSession(store: Store, request: Request, now = Date.now
   }
   const session: Session = { user: found.user, idHash }
   if (found.expiresAt - now < SESSION_TTL - SESSION_REFRESH_AFTER) {
-    await store.touchSession(idHash, now + SESSION_TTL)
-    session.setCookie = sessionCookie(url, token, SESSION_TTL)
+    // Extending the session is a nicety: if the write fails (e.g. the database's daily write limit), the session
+    // is still valid, so the request goes ahead.
+    try {
+      await store.touchSession(idHash, now + SESSION_TTL)
+      session.setCookie = sessionCookie(url, token, SESSION_TTL)
+    } catch (e) {
+      if (!touchFailureLogged) {
+        touchFailureLogged = true
+        console.error('Could not extend a session:', e instanceof Error ? e.message : e)
+      }
+    }
   }
   return session
 }

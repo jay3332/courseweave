@@ -6,7 +6,7 @@ import type { Section } from '../../lib/types'
 import type { ResolvedEntry, ScheduleView } from '../../state/schedule-view'
 import { useStore } from '../../state/store'
 import { ColorPicker } from './ColorPicker'
-import { childForSection, conflictingCodes, joinList, meetingSummary, PASS_FAIL_ONLY_HELP, partLabel, unitsText } from './format'
+import { childForSection, conflictingCodes, joinList, PASS_FAIL_ONLY_HELP, partLabel, timesAndRoom, unitsText } from './format'
 import type { Preview } from './types'
 import { SectionPicker } from './SectionPicker'
 
@@ -140,10 +140,12 @@ export function CourseEntryRow({ resolved, view, scheduleId, termId, selected, o
 }
 
 function PartLine({ section }: { section: Section }) {
+  const { times, room } = timesAndRoom(section)
   return (
     <p className="flex min-w-0 gap-2 text-[13px] text-ink-2">
       <span className="shrink-0 font-semibold text-ink">{partLabel(section)}</span>
-      <span className="truncate">{meetingSummary(section)}</span>
+      <span className="min-w-0 truncate">{times}</span>
+      {room ? <span className="shrink-0 text-muted">{room}</span> : null}
     </p>
   )
 }

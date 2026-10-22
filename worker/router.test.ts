@@ -36,8 +36,15 @@ function setup(configured = true) {
     if (init.cookie) headers.set('Cookie', init.cookie)
     return handle(new Request(`${ORIGIN}${path}`, { ...init, headers }), env, { store })
   }
-  const write = (path: string, method: string, body: unknown, cookie?: string) =>
-    call(path, { method, cookie, headers: { 'Content-Type': 'application/json', Origin: ORIGIN }, body: JSON.stringify(body) })
+  const write = (path: string, method: string, body: unknown, cookie?: string) => {
+    const text = JSON.stringify(body)
+    return call(path, {
+      method,
+      cookie,
+      headers: { 'Content-Type': 'application/json', Origin: ORIGIN, 'Content-Length': String(new TextEncoder().encode(text).length) },
+      body: text,
+    })
+  }
   return { store, env, signIn, call, write }
 }
 

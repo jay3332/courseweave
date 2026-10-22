@@ -57,15 +57,26 @@ function normalizeSchedule(id: string, v: unknown): Schedule | null {
   }
 }
 
+/**
+ * Keys that would reach Object.prototype machinery when assigned with `obj[key] = …` ("__proto__" changes the
+ * object's prototype). Server data is untrusted input, so these are dropped wherever it's read.
+ */
+const UNSAFE_KEYS = new Set(['__proto__', 'constructor', 'prototype'])
+
+/** Own entries of a server object, minus prototype-polluting keys. */
+function safeEntries(v: Record<string, unknown>): [string, unknown][] {
+  return Object.entries(v).filter(([k]) => !UNSAFE_KEYS.has(k))
+}
+
 function stringMap(v: unknown): Record<string, string> {
   const out: Record<string, string> = {}
-  if (isObj(v)) for (const [k, x] of Object.entries(v)) if (isStr(x)) out[k] = x
+  if (isObj(v)) for (const [k, x] of safeEntries(v)) if (isStr(x)) out[k] = x
   return out
 }
 
 function stringListMap(v: unknown): Record<string, string[]> {
   const out: Record<string, string[]> = {}
-  if (isObj(v)) for (const [k, x] of Object.entries(v)) if (Array.isArray(x)) out[k] = x.filter(isStr)
+  if (isObj(v)) for (const [k, x] of safeEntries(v)) if (Array.isArray(x)) out[k] = x.filter(isStr)
   return out
 }
 
@@ -73,7 +84,7 @@ export function normalizeSchedulesDoc(v: unknown): SchedulesDoc | null {
   if (!isObj(v)) return null
   const schedules: Record<string, Schedule> = {}
   if (isObj(v.schedules)) {
-    for (const [id, s] of Object.entries(v.schedules)) {
+    for (const [id, s] of safeEntries(v.schedules)) {
       const n = normalizeSchedule(id, s)
       if (n) schedules[id] = n
     }
@@ -123,7 +134,7 @@ export function normalizeRecordDoc(v: unknown): RecordDoc | null {
   const entries = Array.isArray(v.entries) ? v.entries.map(normalizeRecordEntry).filter((e): e is RecordEntry => e !== null) : []
   const overrides: Record<string, StoredOverride> = {}
   if (isObj(v.overrides)) {
-    for (const [id, o] of Object.entries(v.overrides)) {
+    for (const [id, o] of safeEntries(v.overrides)) {
       const n = normalizeOverride(o)
       if (n) overrides[id] = n
     }
@@ -170,7 +181,7 @@ export function normalizePlanDoc(v: unknown): PlanDoc | null {
   if (!isObj(v)) return null
   const plans: Record<string, Plan> = {}
   if (isObj(v.plans)) {
-    for (const [id, p] of Object.entries(v.plans)) {
+    for (const [id, p] of safeEntries(v.plans)) {
       const n = normalizePlan(id, p)
       if (n) plans[id] = n
     }
@@ -280,7 +291,7 @@ function sortKeys(v: unknown): unknown {
   if (Array.isArray(v)) return v.map(sortKeys)
   if (isObj(v)) {
     const out: Record<string, unknown> = {}
-    for (const k of Object.keys(v).sort()) if (v[k] !== undefined) out[k] = sortKeys(v[k])
+    for (const k of Object.keys(v).sort()) if (v[k] !== undefined && !UNSAFE_KEYS.has(k)) out[k] = sortKeys(v[k])
     return out
   }
   return v

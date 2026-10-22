@@ -154,3 +154,18 @@ describe('stableStringify', () => {
     expect(stableStringify({ b: 1, a: { d: 2, c: undefined } })).toBe(stableStringify({ a: { d: 2 }, b: 1 }))
   })
 })
+
+describe('untrusted server data', () => {
+  it('drops prototype-polluting keys', async () => {
+    const { normalizeSchedulesDoc, normalizePlanDoc } = await import('./sync-merge')
+    const doc = JSON.parse('{"schedules":{"__proto__":{"id":"x"},"constructor":{"id":"y"}},"activeSchedule":{"__proto__":"x","S27":"a"},"bookmarks":{"prototype":["1"]}}')
+    const out = normalizeSchedulesDoc(doc)!
+    expect(Object.keys(out.schedules)).toEqual([])
+    expect(out.activeSchedule).toEqual({ S27: 'a' })
+    expect(Object.getPrototypeOf(out.activeSchedule)).toBe(Object.prototype)
+    expect(out.bookmarks).toEqual({})
+    const plans = normalizePlanDoc(JSON.parse('{"plans":{"__proto__":{"id":"p"}},"activePlanId":null}'))!
+    expect(Object.keys(plans.plans)).toEqual([])
+    expect(({} as Record<string, unknown>).id).toBeUndefined()
+  })
+})

@@ -34,6 +34,18 @@ export function meetingSummary(section: Section): string {
   return scheduled.map((m) => `${formatDays(m.days)} ${formatTimeRange(m.start, m.end)}`).join(', ')
 }
 
+/**
+ * Meeting times plus where: one shared room is returned separately (shown after the times); when meetings are in
+ * different rooms, each time carries its own ("TR 9:30–10:50 AM (DH 2210), W 7:00–8:20 PM (GHC 4401)").
+ */
+export function timesAndRoom(section: Section): { times: string; room: string | null } {
+  const scheduled = section.meetings.filter(isScheduled)
+  if (!scheduled.length) return { times: 'Time TBA', room: null }
+  const rooms = [...new Set(scheduled.map(formatLocation))]
+  if (rooms.length === 1) return { times: meetingSummary(section), room: rooms[0] === 'TBA' ? 'Room TBA' : rooms[0] }
+  return { times: scheduled.map((m) => `${formatDays(m.days)} ${formatTimeRange(m.start, m.end)} (${formatLocation(m)})`).join(', '), room: null }
+}
+
 export function locationSummary(section: Section): string {
   const places = [...new Set(section.meetings.map(formatLocation))]
   return places.join(', ')

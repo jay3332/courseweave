@@ -43,6 +43,8 @@ export async function discover(issuer: string, fetcher: Fetcher = fetch, now = D
   if (!isHttpsUrl(doc.authorization_endpoint) || !isHttpsUrl(doc.token_endpoint) || !isHttpsUrl(doc.jwks_uri) || typeof doc.issuer !== 'string') {
     throw new Error('OIDC discovery document is missing endpoints')
   }
+  // The document must describe the issuer it was fetched for (OIDC Discovery §4.3).
+  if (doc.issuer.replace(/\/+$/, '') !== issuer.replace(/\/+$/, '')) throw new Error('OIDC discovery issuer mismatch')
   const value: Discovery = { issuer: doc.issuer, authorization_endpoint: doc.authorization_endpoint, token_endpoint: doc.token_endpoint, jwks_uri: doc.jwks_uri }
   discoveryCache.set(issuer, { value, expires: now + HOUR })
   return value
@@ -194,12 +196,25 @@ export async function verifyIdToken(token: string, opts: VerifyOptions): Promise
   return claims as IdTokenClaims
 }
 
-/** The verified, allowed email (lowercase), or why it isn't acceptable. */
-export function allowedEmail(claims: Pick<IdTokenClaims, 'email' | 'email_verified'>, domains: string[]): { email: string } | { reason: 'unverified' | 'domain' } {
+/**
+ * The verified, allowed email (lowercase), or why it isn't acceptable.
+ * `requireHostedDomain` (Google): the account must belong to an allowed Google Workspace (`hd` claim). Google only
+ * vouches for a non-Gmail address when `hd` is present; a personal Google account registered with a CMU address
+ * keeps `email_verified` even after the CMU mailbox is gone, but has no `hd`.
+ */
+export function allowedEmail(
+  claims: Pick<IdTokenClaims, 'email' | 'email_verified' | 'hd'>,
+  domains: string[],
+  opts: { requireHostedDomain?: boolean } = {},
+): { email: string } | { reason: 'unverified' | 'domain' } {
   const email = typeof claims.email === 'string' ? claims.email.trim().toLowerCase() : ''
   if (!email || claims.email_verified !== true) return { reason: 'unverified' }
   const at = email.lastIndexOf('@')
   const domain = at > 0 ? email.slice(at + 1) : ''
   if (!domain || !domains.includes(domain)) return { reason: 'domain' }
+  if (opts.requireHostedDomain) {
+    const hd = typeof claims.hd === 'string' ? claims.hd.trim().toLowerCase() : ''
+    if (!hd || !domains.includes(hd)) return { reason: 'domain' }
+  }
   return { email }
 }

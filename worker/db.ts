@@ -28,11 +28,21 @@ export interface StoredDoc {
   data: string
   rev: number
   updatedAt: number
+  /** UTC day number of the last write, and how many writes happened that day (daily cap). */
+  day: number
+  dayWrites: number
 }
+
+/** UTC day number for a timestamp, as stored in docs.day. */
+export const utcDay = (now: number) => Math.floor(now / 86_400_000)
+
+/** Sessions kept per user; signing in again beyond this drops the oldest. */
+export const MAX_SESSIONS_PER_USER = 10
 
 export interface Store {
   /** Creates the user or refreshes their profile, by email. */
   upsertUser(profile: { email: string; name: string | null; picture: string | null }, now: number): Promise<User>
+  /** Creates a session and drops the user's oldest beyond MAX_SESSIONS_PER_USER, in one batch. */
   createSession(idHash: string, userId: string, now: number, expiresAt: number): Promise<void>
   findSession(idHash: string): Promise<{ user: User; expiresAt: number } | null>
   touchSession(idHash: string, expiresAt: number): Promise<void>
@@ -42,8 +52,11 @@ export interface Store {
   getDoc(userId: string, key: SyncKey): Promise<StoredDoc | null>
   /** Creates the doc at rev 1. False when it already exists. */
   insertDoc(userId: string, key: SyncKey, data: string, now: number): Promise<boolean>
-  /** Writes rev + 1 only if the stored rev is `baseRev`. False otherwise (or when the doc doesn't exist). */
-  updateDoc(userId: string, key: SyncKey, data: string, baseRev: number, now: number): Promise<boolean>
+  /**
+   * Writes rev + 1 only if the stored rev is `baseRev` and the doc has had fewer than `dailyCap` writes today.
+   * False otherwise (or when the doc doesn't exist); the caller tells conflicts from the cap by reading the doc.
+   */
+  updateDoc(userId: string, key: SyncKey, data: string, baseRev: number, now: number, dailyCap: number): Promise<boolean>
   /** Removes the user, their sessions and their docs. */
   deleteUser(userId: string): Promise<void>
 }
@@ -60,9 +73,12 @@ interface DocRow {
   data: string
   rev: number
   updated_at: number
+  day: number
+  day_writes: number
 }
 
-const docFrom = (r: DocRow): StoredDoc => ({ key: r.key, data: r.data, rev: r.rev, updatedAt: r.updated_at })
+const docFrom = (r: DocRow): StoredDoc => ({ key: r.key, data: r.data, rev: r.rev, updatedAt: r.updated_at, day: r.day, dayWrites: r.day_writes })
+const DOC_COLUMNS = 'key, data, rev, updated_at, day, day_writes'
 
 export function d1Store(db: D1Like): Store {
   return {
@@ -80,7 +96,15 @@ export function d1Store(db: D1Like): Store {
     },
 
     async createSession(idHash, userId, now, expiresAt) {
-      await db.prepare('INSERT INTO sessions (id_hash, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)').bind(idHash, userId, now, expiresAt).run()
+      await db.batch([
+        db.prepare('INSERT INTO sessions (id_hash, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)').bind(idHash, userId, now, expiresAt),
+        db
+          .prepare(
+            `DELETE FROM sessions WHERE user_id = ? AND id_hash NOT IN
+             (SELECT id_hash FROM sessions WHERE user_id = ? ORDER BY created_at DESC LIMIT ?)`,
+          )
+          .bind(userId, userId, MAX_SESSIONS_PER_USER),
+      ])
     },
 
     async findSession(idHash) {
@@ -108,27 +132,34 @@ export function d1Store(db: D1Like): Store {
     },
 
     async getDocs(userId) {
-      const { results } = await db.prepare('SELECT key, data, rev, updated_at FROM docs WHERE user_id = ?').bind(userId).all<DocRow>()
+      const { results } = await db.prepare(`SELECT ${DOC_COLUMNS} FROM docs WHERE user_id = ?`).bind(userId).all<DocRow>()
       return results.map(docFrom)
     },
 
     async getDoc(userId, key) {
-      const row = await db.prepare('SELECT key, data, rev, updated_at FROM docs WHERE user_id = ? AND key = ?').bind(userId, key).first<DocRow>()
+      const row = await db.prepare(`SELECT ${DOC_COLUMNS} FROM docs WHERE user_id = ? AND key = ?`).bind(userId, key).first<DocRow>()
       return row ? docFrom(row) : null
     },
 
     async insertDoc(userId, key, data, now) {
       const res = await db
-        .prepare('INSERT INTO docs (user_id, key, data, rev, updated_at) VALUES (?, ?, ?, 1, ?) ON CONFLICT (user_id, key) DO NOTHING')
-        .bind(userId, key, data, now)
+        .prepare(
+          'INSERT INTO docs (user_id, key, data, rev, updated_at, day, day_writes) VALUES (?, ?, ?, 1, ?, ?, 1) ON CONFLICT (user_id, key) DO NOTHING',
+        )
+        .bind(userId, key, data, now, utcDay(now))
         .run()
       return res.meta.changes === 1
     },
 
-    async updateDoc(userId, key, data, baseRev, now) {
+    async updateDoc(userId, key, data, baseRev, now, dailyCap) {
+      const day = utcDay(now)
       const res = await db
-        .prepare('UPDATE docs SET data = ?, rev = rev + 1, updated_at = ? WHERE user_id = ? AND key = ? AND rev = ?')
-        .bind(data, now, userId, key, baseRev)
+        .prepare(
+          `UPDATE docs SET data = ?, rev = rev + 1, updated_at = ?,
+             day_writes = CASE WHEN day = ? THEN day_writes + 1 ELSE 1 END, day = ?
+           WHERE user_id = ? AND key = ? AND rev = ? AND (day <> ? OR day_writes < ?)`,
+        )
+        .bind(data, now, day, day, userId, key, baseRev, day, dailyCap)
         .run()
       return res.meta.changes === 1
     },

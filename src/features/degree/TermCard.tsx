@@ -1,11 +1,13 @@
-import { CalendarDays, ChevronDown, MoreHorizontal, Plus, Trash2 } from 'lucide-react'
+import { CalendarDays, ChevronDown, Copy, MoreHorizontal, Plus, RefreshCw, Trash2, Unlink } from 'lucide-react'
 import { useMemo, useState, type DragEvent } from 'react'
-import { Link } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { Button, Dialog } from '../../components/ui'
-import { loadWarnings, termPhase, type Plan, type PlanCheck } from '../../lib/plan'
+import { coursesMissingFrom, loadWarnings, termPhase, type Plan, type PlanCheck, type PlanCourse } from '../../lib/plan'
+import { codeOf } from '../../lib/requisite-format'
 import { termLabel } from '../../lib/requisites'
 import { usePlans } from '../../state/plan'
 import { useStore, type Schedule } from '../../state/store'
+import { addToTerm, linkTermToSchedule, moveInPlan, removeFromPlan, setPlanPassFail, setPlanUnits, unlinkTerm } from './linkActions'
 import { useCourseLookup } from '../record/hooks'
 import { AddCourseInput } from './AddCourseInput'
 import { PlanCourseRow, RecordCourseRow } from './CourseRows'
@@ -32,23 +34,36 @@ interface TermCardProps {
 export function TermCard({ plan, column, derived, scheduled, published, fceHours, open, onToggle, collapsible, dragEnabled }: TermCardProps) {
   const { term, totals } = column
   const lookup = useCourseLookup()
-  const addCourse = usePlans((s) => s.addCourse)
-  const removeCourse = usePlans((s) => s.removeCourse)
-  const moveCourse = usePlans((s) => s.moveCourse)
-  const updateCourse = usePlans((s) => s.updateCourse)
+  const navigate = useNavigate()
   const removeTerm = usePlans((s) => s.removeTerm)
   const setTermCourses = usePlans((s) => s.setTermCourses)
   const allSchedules = useStore((s) => s.schedules)
-  const schedules = useMemo(() => Object.values(allSchedules).filter((s) => s.termId === term && s.entries.length > 0).sort((a, b) => a.createdAt - b.createdAt), [allSchedules, term])
+  const setActiveSchedule = useStore((s) => s.setActiveSchedule)
+  const termSchedules = useMemo(() => Object.values(allSchedules).filter((s) => s.termId === term).sort((a, b) => a.createdAt - b.createdAt), [allSchedules, term])
+  const schedules = termSchedules.filter((s) => s.entries.length > 0)
 
   const [adding, setAdding] = useState(false)
   const [dragOver, setDragOver] = useState(false)
   const [pendingImport, setPendingImport] = useState<Schedule | null>(null)
+  const [pendingLink, setPendingLink] = useState<{ schedule: Schedule; missing: PlanCourse[] } | null>(null)
   const [confirmRemove, setConfirmRemove] = useState(false)
 
   const phase = termPhase(term, derived.current)
   const tag = PHASE_TAG[phase]
-  const inPlan = useMemo(() => new Set(plan.terms.flatMap((t) => t.courses.map((c) => c.courseId))), [plan])
+  const synced = derived.terms.get(term)
+  const syncedSchedule = synced?.schedule ? allSchedules[synced.schedule.id] : undefined
+  const inPlan = useMemo(() => new Set(derived.resolved.terms.flatMap((t) => t.courses.map((c) => c.courseId))), [derived.resolved])
+
+  const startSync = (s: Schedule) => {
+    const own = plan.terms.find((t) => t.term === term)?.courses ?? []
+    const missing = coursesMissingFrom(own, s)
+    if (missing.length) setPendingLink({ schedule: s, missing })
+    else linkTermToSchedule(plan, term, s, 'as-is')
+  }
+  const openSchedule = (scheduleId: string) => {
+    setActiveSchedule(term, scheduleId)
+    navigate(`/${term}/schedule`)
+  }
   const moveTargets = plan.terms.map((t) => t.term).filter((t) => t !== term)
   const warnings = loadWarnings(totals)
   const problems = column.planned.filter((c) => derived.checks.get(c.id)?.check.level === 'problem').length
@@ -68,7 +83,7 @@ export function TermCard({ plan, column, derived, scheduled, published, fceHours
     setDragOver(false)
     if (!id) return
     e.preventDefault()
-    moveCourse(plan.id, id, term)
+    moveInPlan(plan, id, term)
   }
 
   const headingId = `term-${term}-heading`
@@ -134,9 +149,42 @@ export function TermCard({ plan, column, derived, scheduled, published, fceHours
         <Popover label={`Options for ${termLabel(term)}`} button={<MoreHorizontal />}>
           {(close) => (
             <>
-              {published ? (
+              {published && syncedSchedule ? (
                 <>
-                  <MenuLabel>{schedules.length ? 'Use a schedule for this semester' : 'No schedules for this semester yet'}</MenuLabel>
+                  <MenuItem
+                    onClick={() => {
+                      close()
+                      unlinkTerm(plan, term)
+                    }}
+                  >
+                    <Unlink aria-hidden />
+                    <span className="min-w-0 flex-1 truncate">Stop syncing with {syncedSchedule.name}</span>
+                  </MenuItem>
+                  <div className="my-1 border-t border-line" />
+                </>
+              ) : null}
+              {published && !syncedSchedule && termSchedules.length ? (
+                <>
+                  <MenuLabel>Sync with a schedule</MenuLabel>
+                  {termSchedules.map((s) => (
+                    <MenuItem
+                      key={s.id}
+                      onClick={() => {
+                        close()
+                        startSync(s)
+                      }}
+                    >
+                      <RefreshCw aria-hidden />
+                      <span className="min-w-0 flex-1 truncate">{s.name}</span>
+                      <span className="text-[12px] text-muted">{s.entries.filter((e) => !e.hidden).length} courses</span>
+                    </MenuItem>
+                  ))}
+                  <div className="my-1 border-t border-line" />
+                </>
+              ) : null}
+              {published && !syncedSchedule ? (
+                <>
+                  <MenuLabel>{schedules.length ? 'Copy courses from a schedule' : 'No schedules for this semester yet'}</MenuLabel>
                   {schedules.map((s) => (
                     <MenuItem
                       key={s.id}
@@ -146,11 +194,15 @@ export function TermCard({ plan, column, derived, scheduled, published, fceHours
                         else importSchedule(s)
                       }}
                     >
-                      <CalendarDays aria-hidden />
+                      <Copy aria-hidden />
                       <span className="min-w-0 flex-1 truncate">{s.name}</span>
                       <span className="text-[12px] text-muted">{s.entries.filter((e) => !e.hidden).length} courses</span>
                     </MenuItem>
                   ))}
+                </>
+              ) : null}
+              {published ? (
+                <>
                   <Link
                     to={`/${term}/schedule`}
                     className="flex min-h-10 items-center gap-2 rounded-md px-2.5 text-[14px] text-ink hover:bg-surface-2 md:min-h-8 md:text-[13.5px]"
@@ -178,6 +230,27 @@ export function TermCard({ plan, column, derived, scheduled, published, fceHours
         </Popover>
       </header>
 
+      {syncedSchedule ? (
+        <div className="flex flex-wrap items-center gap-2 border-b border-line px-3 py-1.5">
+          <button
+            type="button"
+            onClick={() => openSchedule(syncedSchedule.id)}
+            title={`This semester's courses come from “${syncedSchedule.name}”; changes here update that schedule.`}
+            className="inline-flex min-h-8 items-center gap-1.5 rounded-full border border-line-strong px-2.5 text-[12.5px] font-medium text-ink-2 hover:border-ink-2 hover:text-ink md:min-h-6"
+          >
+            <RefreshCw aria-hidden className="size-3.5 text-ok" />
+            Synced with {syncedSchedule.name}
+          </button>
+        </div>
+      ) : synced?.missing ? (
+        <div role="status" className="flex flex-wrap items-center gap-2 border-b border-line px-3 py-1.5 text-[12.5px] text-warn">
+          <span className="min-w-0 flex-1">The synced schedule was deleted; showing your planned courses.</span>
+          <button type="button" onClick={() => unlinkTerm(plan, term)} className="min-h-8 rounded px-1 font-medium text-ink-2 underline decoration-line-strong underline-offset-2 hover:text-ink">
+            Stop syncing
+          </button>
+        </div>
+      ) : null}
+
       {open || !collapsible ? (
         <div id={`term-${term}-body`} className="flex flex-1 flex-col gap-1 px-1.5 py-1.5">
           {empty && !adding ? <p className="px-1.5 py-2 text-[13px] text-muted">{phase === 'past' ? 'Nothing recorded for this semester.' : 'Nothing planned yet.'}</p> : null}
@@ -204,9 +277,13 @@ export function TermCard({ plan, column, derived, scheduled, published, fceHours
                   scheduled={scheduled}
                   moveTargets={moveTargets}
                   draggable={dragEnabled}
-                  onMove={(t) => moveCourse(plan.id, c.id, t)}
-                  onRemove={() => removeCourse(plan.id, c.id)}
-                  onUpdate={(patch) => updateCourse(plan.id, c.id, patch)}
+                  removeLabel={syncedSchedule ? `Remove from ${syncedSchedule.name}` : undefined}
+                  onMove={(t) => moveInPlan(plan, c.id, t)}
+                  onRemove={() => removeFromPlan(plan, c.id)}
+                  onUpdate={(patch) => {
+                    if ('passFail' in patch) setPlanPassFail(plan, c.id, !!patch.passFail)
+                    if ('units' in patch) setPlanUnits(plan, c.id, patch.units)
+                  }}
                 />
               ))}
             </ul>
@@ -219,7 +296,7 @@ export function TermCard({ plan, column, derived, scheduled, published, fceHours
                 scheduled={scheduled}
                 inPlan={inPlan}
                 autoFocus
-                onAdd={(id) => addCourse(plan.id, term, id)}
+                onAdd={(id) => addToTerm(plan, term, id)}
                 onClose={() => setAdding(false)}
               />
             </div>
@@ -284,6 +361,41 @@ export function TermCard({ plan, column, derived, scheduled, published, fceHours
             </Button>
           </div>
         </div>
+      </Dialog>
+
+      <Dialog open={pendingLink !== null} onClose={() => setPendingLink(null)} title={`Sync ${termLabel(term)} with a schedule`}>
+        {pendingLink ? (
+          <div className="flex flex-col gap-4 p-5">
+            <p className="text-[15px] text-ink-2">
+              {pendingLink.missing.length} course{pendingLink.missing.length === 1 ? '' : 's'} planned for {termLabel(term)}{' '}
+              {pendingLink.missing.length === 1 ? "isn't" : "aren't"} in “{pendingLink.schedule.name}”:{' '}
+              <span className="course-code text-ink">{pendingLink.missing.map((c) => codeOf(c.courseId)).join(', ')}</span>.
+            </p>
+            <p className="text-[13.5px] text-muted">Once synced, this semester shows the schedule's courses, and changes in either place update both.</p>
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button variant="ghost" onClick={() => setPendingLink(null)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  linkTermToSchedule(plan, term, pendingLink.schedule, 'as-is')
+                  setPendingLink(null)
+                }}
+              >
+                Use the schedule as is
+              </Button>
+              <Button
+                variant="primary"
+                onClick={() => {
+                  linkTermToSchedule(plan, term, pendingLink.schedule, 'merge')
+                  setPendingLink(null)
+                }}
+              >
+                Add {pendingLink.missing.length === 1 ? 'it' : `these ${pendingLink.missing.length}`} to the schedule
+              </Button>
+            </div>
+          </div>
+        ) : null}
       </Dialog>
 
       <Dialog open={confirmRemove} onClose={() => setConfirmRemove(false)} title="Remove semester">

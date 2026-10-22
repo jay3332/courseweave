@@ -93,6 +93,7 @@ This rebuilds the data, builds the site, decides what ships, and uploads. The si
 - FCE data ships only when sign-in is configured, and the Worker serves it only to signed-in CMU users (`Cache-Control: private`). `INCLUDE_FCE=0` / `INCLUDE_FCE=1` override the default.
 - `npm run deploy` refuses to run while `wrangler.jsonc` still has the placeholder database id.
 - `npm run deploy:dry-run` checks everything without uploading.
+- When `migrations/` has a new file, run `npm run db:migrate:remote` **before** `npm run deploy` (the Worker expects the new columns). `0002_write_caps.sql` is one of these.
 
 Redeploy the same way after updating data (`npm run fetch:stellic -- S27`, a new term, …).
 
@@ -101,7 +102,7 @@ Course schedules, catalog data and degree requirements stay public. Some of that
 ### Local development
 
 - `npm run dev` runs the app alone; account features report themselves unavailable.
-- For the full loop with sign-in and sync: copy `.dev.vars.example` to `.dev.vars` and fill it in, build once (`npm run build`), then run `npm run dev:worker` (applies migrations to a local database and starts `wrangler dev` on :8787) next to `npm run dev`. Vite forwards `/api` and `/auth` to the Worker.
+- For the full loop with sign-in and sync: copy `.dev.vars.example` to `.dev.vars` and fill it in, build once (`npm run build`), then run `npm run dev:worker` (applies migrations to a local database and starts `wrangler dev` on :8787) next to `npm run dev`. Vite forwards `/api` and `/auth` to the Worker. Locally the Worker sees every request as `http://localhost:8787` (`dev.host` in `wrangler.jsonc`), so signing in from :5173 comes back on :8787; the session cookie works on both ports.
 - `npm run preview:worker` serves the exact production build on :8787.
 
 ### Other sign-in providers
@@ -110,7 +111,36 @@ Any OpenID Connect provider works: set `OIDC_ISSUER` to its issuer URL and use i
 
 ### Limits on the free plan
 
-Requests to `/api`, `/auth` and `/data/fce` run the Worker (100,000 a day on the free plan); pages, scripts, styles and the other data files are served without it. D1's free tier covers 5 GB and millions of reads a day, far beyond a few hundred users' plans.
+Requests to `/api`, `/auth` and `/data/fce` run the Worker (100,000 a day on the free plan); pages, scripts, styles and the other data files are served without it. D1's free tier allows 100,000 row writes and 5 million row reads a day and 5 GB of storage, far beyond a few hundred users' plans. When a daily limit runs out, Cloudflare refuses further requests until 00:00 UTC; nothing is billed on the free plan.
+
+### Abuse protection
+
+The Worker keeps one visitor (or a script) from using up those daily limits:
+
+- **Rate limits** (Workers Rate Limiting, `ratelimits` in `wrangler.jsonc`), counted per Cloudflare location:
+  - 120 requests a minute per IP across `/api`, `/auth` and `/data/fce`, checked before any database read
+  - 10 sign-in starts or callbacks a minute per IP (each one calls Google)
+  - 20 sync writes a minute per account
+  - Over a limit, requests get `429` with `Retry-After`; the app pauses syncing and retries on its own, keeping changes on the device.
+- **Daily write cap**: each synced document (schedules, record, plan) accepts 500 writes per UTC day. Edits are batched for 4 seconds, so normal use stays far below that. Documents are capped at 128 KiB.
+- **Sessions**: at most 10 per account, the oldest dropped first; signing in again replaces the browser's previous session, and a daily Cron Trigger (`triggers` in `wrangler.jsonc`) deletes expired ones.
+- **Sign-in**: Google accounts must belong to CMU's Workspace (the ID token's `hd` claim, not just an `@andrew.cmu.edu` address), and the provider's discovery document must name the configured issuer.
+- **Responses** from the Worker carry `nosniff`, `X-Frame-Options: DENY`, HSTS and a deny-all CSP; logs drop query strings so sign-in codes never reach them (`observability.redact_query_string`).
+
+Requests the Worker turns away still count toward its 100,000 a day. To stop a flood before it reaches the Worker, add one free WAF rule in the dashboard (once):
+
+1. Cloudflare dashboard → the `jay3332.tech` zone → **Security** → **WAF** → **Rate limiting rules** → **Create rule**.
+2. Name it "Courseweave API". Choose **Edit expression** and paste:
+
+   ```
+   (http.request.uri.path wildcard "/api/*") or (http.request.uri.path wildcard "/auth/*") or (http.request.uri.path wildcard "/data/fce/*")
+   ```
+
+   (The free plan matches on path only; this rule also covers any other site on the zone using those paths.)
+3. **With the same characteristics**: IP. **When rate exceeds**: 20 requests per 10 seconds. **Then take action**: Block, **for duration** 10 seconds.
+4. Deploy the rule.
+
+The app makes a handful of these requests per page, so 20 per 10 seconds is only reached by scripts.
 
 ### Custom domain
 

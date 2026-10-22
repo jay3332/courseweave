@@ -35,7 +35,13 @@ export interface PlanCourse {
 export interface PlanTerm {
   /** Term code, e.g. "F25". */
   term: string
+  /**
+   * The plan's own courses. While the term is synced with a schedule (`link`), this is a snapshot used as the
+   * fallback if that schedule is deleted, and it keeps unit overrides for variable-unit courses.
+   */
   courses: PlanCourse[]
+  /** Optional: the term's courses come from (and edits go to) this schedule in the schedule planner. */
+  link?: { scheduleId: string } | null
 }
 
 export interface Plan {
@@ -48,6 +54,14 @@ export interface Plan {
   terms: PlanTerm[]
   createdAt: number
   updatedAt: number
+}
+
+/** The slice of a schedule the plan needs (structurally matches state/store Schedule). */
+export interface ScheduleLike {
+  id: string
+  termId: string
+  name: string
+  entries: { courseId: string; hidden: boolean; passFail: boolean }[]
 }
 
 /** The slice of a record entry the plan needs (structurally matches state/record RecordEntry). */
@@ -201,6 +215,80 @@ export function planColumns(plan: Plan, record: RecordLike, current: string): Pl
 }
 
 // ---------------------------------------------------------------------------
+// Terms synced with a schedule
+
+const LINKED_PREFIX = 'sched:'
+
+/** Stable plan-course id for a course that comes from a linked schedule. */
+export function linkedCourseId(scheduleId: string, courseId: string): string {
+  return `${LINKED_PREFIX}${scheduleId}:${courseId}`
+}
+
+export function parseLinkedCourseId(id: string): { scheduleId: string; courseId: string } | null {
+  if (!id.startsWith(LINKED_PREFIX)) return null
+  const rest = id.slice(LINKED_PREFIX.length)
+  const i = rest.lastIndexOf(':')
+  return i > 0 ? { scheduleId: rest.slice(0, i), courseId: rest.slice(i + 1) } : null
+}
+
+export interface EffectiveTerm {
+  courses: PlanCourse[]
+  /** The schedule the courses come from, when the term is linked and the schedule exists. */
+  schedule: ScheduleLike | null
+  /** The term is linked but its schedule no longer exists (courses fall back to the plan's snapshot). */
+  missing: boolean
+}
+
+/**
+ * Each term's courses as the plan should treat them: from the linked schedule when there is one (visible
+ * entries, pass/fail from the schedule, units overrides from the plan's snapshot), else the plan's own.
+ */
+export function effectiveTermCourses(plan: Plan, schedulesById: Record<string, ScheduleLike | undefined>): Map<string, EffectiveTerm> {
+  const out = new Map<string, EffectiveTerm>()
+  for (const t of plan.terms) {
+    if (!t.link) {
+      out.set(t.term, { courses: t.courses, schedule: null, missing: false })
+      continue
+    }
+    const schedule = schedulesById[t.link.scheduleId]
+    if (!schedule) {
+      out.set(t.term, { courses: t.courses, schedule: null, missing: true })
+      continue
+    }
+    const courses: PlanCourse[] = []
+    const seen = new Set<string>()
+    for (const e of schedule.entries) {
+      if (e.hidden || seen.has(e.courseId)) continue
+      seen.add(e.courseId)
+      const units = t.courses.find((c) => c.courseId === e.courseId)?.units
+      courses.push({ id: linkedCourseId(schedule.id, e.courseId), courseId: e.courseId, ...(e.passFail ? { passFail: true } : {}), ...(units !== undefined ? { units } : {}) })
+    }
+    out.set(t.term, { courses, schedule, missing: false })
+  }
+  return out
+}
+
+/** The plan with every linked term's courses taken from its schedule; what all plan views and checks use. */
+export function resolvePlan(plan: Plan, schedulesById: Record<string, ScheduleLike | undefined>): Plan {
+  if (!plan.terms.some((t) => t.link)) return plan
+  const eff = effectiveTermCourses(plan, schedulesById)
+  return { ...plan, terms: plan.terms.map((t) => ({ ...t, courses: eff.get(t.term)?.courses ?? t.courses })) }
+}
+
+/** The schedule a term's edits go to: its linked schedule when that still exists, else null (edit the plan). */
+export function linkedScheduleId(plan: Plan, term: string, schedulesById: Record<string, ScheduleLike | undefined>): string | null {
+  const id = plan.terms.find((t) => t.term === term)?.link?.scheduleId
+  return id && schedulesById[id] ? id : null
+}
+
+/** Plan courses of an unlinked term that a schedule doesn't have (asked about before linking). */
+export function coursesMissingFrom(courses: PlanCourse[], schedule: ScheduleLike): PlanCourse[] {
+  const inSchedule = new Set(schedule.entries.map((e) => e.courseId))
+  const seen = new Set<string>()
+  return courses.filter((c) => !inSchedule.has(c.courseId) && !seen.has(c.courseId) && seen.add(c.courseId))
+}
+
+// ---------------------------------------------------------------------------
 // Units
 
 /** Catalog (then fallback) units for a course; variable-unit courses use their minimum. */
@@ -305,6 +393,8 @@ export function planToAuditInput(plan: Plan, record: RecordLike, catalog: Catalo
 
 function creditSource(e: RecordEntryLike, examLabel?: (examId: string, score: string) => string): string {
   if (e.source === 'exam' && e.exam) return examLabel ? examLabel(e.exam.id, e.exam.score) : `Exam credit (${e.exam.score})`
+  // Imported from SIO: course credit with no exam name or score.
+  if (e.source === 'exam') return 'AP / exam credit'
   if (e.source === 'transfer') return e.institution ? `Transfer: ${e.institution}` : 'Transfer credit'
   if (e.source === 'waiver') return 'Placement (no units)'
   return e.label ?? 'Credit'

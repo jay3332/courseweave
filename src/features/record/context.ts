@@ -1,3 +1,4 @@
+import { resolvePlan } from '../../lib/plan'
 import { useMemo } from 'react'
 import { useCatalogIndex } from '../../lib/catalog'
 import type { CatalogIndex } from '../../lib/catalog-types'
@@ -96,7 +97,8 @@ export function usePlannedElsewhere(termId: string): PlannedCourse[] {
       seen.add(key)
       out.push({ courseId, term })
     }
-    for (const t of plan?.terms ?? []) for (const c of t.courses) add(c.courseId, t.term)
+    // Synced semesters count their schedule's courses (resolvePlan), like the degree plan itself.
+    for (const t of plan ? resolvePlan(plan, schedules).terms : []) for (const c of t.courses) add(c.courseId, t.term)
     for (const [term, id] of Object.entries(active)) {
       for (const e of schedules[id]?.entries ?? []) if (!e.hidden) add(e.courseId, term)
     }

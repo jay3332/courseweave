@@ -15,11 +15,14 @@ beforeAll(() => {
 const server = new Map<SyncKey, SyncDoc>()
 const puts: { key: SyncKey; put: SyncPut }[] = []
 let conflictOnce: SyncKey | null = null
+/** Responses to return instead of writing, one per PUT. */
+const failures: unknown[] = []
 
 vi.mock('../lib/api', () => ({
   getSync: async () => ({ kind: 'ok', data: { docs: Object.fromEntries(server) } }),
   putSync: async (key: SyncKey, put: SyncPut) => {
     puts.push({ key, put })
+    if (failures.length) return failures.shift()
     const current = server.get(key)
     if (conflictOnce === key && current) {
       conflictOnce = null
@@ -51,6 +54,7 @@ beforeEach(() => {
   server.clear()
   puts.length = 0
   conflictOnce = null
+  failures.length = 0
   useStore.setState({ schedules: {}, activeSchedule: {}, bookmarks: {} })
   useRecord.setState({ entries: [], overrides: {}, profile: {} })
   usePlans.setState({ plans: {}, activePlanId: null })
@@ -104,11 +108,52 @@ describe('sync engine', () => {
     vi.useFakeTimers()
     useRecord.setState({ entries: [{ id: 'x', courseId: '15122', source: 'taken', addedAt: 1 }] })
     expect(puts.length).toBe(before)
-    await vi.advanceTimersByTimeAsync(2000)
+    await vi.advanceTimersByTimeAsync(4500)
     vi.useRealTimers()
     await settle()
     const last = puts.at(-1)!
     expect(last.key).toBe('record')
     expect((last.put.data as { entries: unknown[] }).entries).toHaveLength(1)
+  })
+
+  it('backs off on 429s instead of retrying immediately, then pushes', async () => {
+    await startSync()
+    await settle()
+    vi.useFakeTimers()
+    failures.push({ kind: 'rate-limited', retryAfter: 60 })
+    useRecord.setState({ entries: [{ id: 'y', courseId: '15150', source: 'taken', addedAt: 1 }] })
+    await vi.advanceTimersByTimeAsync(4500)
+    const afterFirst = puts.length
+    expect(useSync.getState().error).toMatch(/Sync paused/)
+    // More edits during the pause wait for it to end.
+    useRecord.setState({ entries: [{ id: 'y', courseId: '15150', source: 'taken', addedAt: 1 }, { id: 'z', courseId: '15210', source: 'taken', addedAt: 2 }] })
+    await vi.advanceTimersByTimeAsync(30_000)
+    expect(puts.length).toBe(afterFirst)
+    await vi.advanceTimersByTimeAsync(31_000)
+    vi.useRealTimers()
+    await settle()
+    expect(puts.length).toBe(afterFirst + 1)
+    expect((puts.at(-1)!.put.data as { entries: unknown[] }).entries).toHaveLength(2)
+    expect(useSync.getState().status).toBe('synced')
+  })
+
+  it('retries server errors with growing gaps, not in a tight loop', async () => {
+    await startSync()
+    await settle()
+    vi.useFakeTimers()
+    const serverError = { kind: 'error', status: 500, error: null }
+    failures.push(serverError, serverError, serverError)
+    useRecord.setState({ entries: [{ id: 'q', courseId: '21127', source: 'taken', addedAt: 1 }] })
+    await vi.advanceTimersByTimeAsync(4500)
+    const n = puts.length
+    await vi.advanceTimersByTimeAsync(29_000)
+    expect(puts.length).toBe(n) // first backoff is 30 s
+    await vi.advanceTimersByTimeAsync(2_000)
+    expect(puts.length).toBe(n + 1)
+    await vi.advanceTimersByTimeAsync(57_000)
+    expect(puts.length).toBe(n + 1) // then 60 s
+    await vi.advanceTimersByTimeAsync(3_000)
+    expect(puts.length).toBe(n + 2)
+    vi.useRealTimers()
   })
 })

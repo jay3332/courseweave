@@ -31,12 +31,14 @@ interface PlanCourseRowProps {
   /** Other semesters it can move to. */
   moveTargets: string[]
   draggable: boolean
+  /** Label for the remove action (synced semesters remove from their schedule). */
+  removeLabel?: string
   onMove(toTerm: string): void
   onRemove(): void
   onUpdate(patch: { passFail?: boolean; units?: number }): void
 }
 
-export function PlanCourseRow({ course, term, current, catalog, unitsOf, title, fceHours, check, scheduled, moveTargets, draggable, onMove, onRemove, onUpdate }: PlanCourseRowProps) {
+export function PlanCourseRow({ course, term, current, catalog, unitsOf, title, fceHours, check, scheduled, moveTargets, draggable, removeLabel, onMove, onRemove, onUpdate }: PlanCourseRowProps) {
   const href = useCourseHref()
   const setOverride = useRecord((s) => s.setOverride)
   const [showIssues, setShowIssues] = useState(false)
@@ -153,7 +155,7 @@ export function PlanCourseRow({ course, term, current, catalog, unitsOf, title, 
                 }}
               >
                 <Trash2 aria-hidden />
-                Remove from plan
+                {removeLabel ?? 'Remove from plan'}
               </MenuItem>
             </>
           )}
