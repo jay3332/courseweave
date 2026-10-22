@@ -21,6 +21,15 @@ const STATUS_TEXT: Record<ImportItem['status'], string> = {
   credit: '',
 }
 
+/** pdf.js names for errors caused by the file itself (corrupt, encrypted, empty), not by the browser. */
+const BAD_FILE_ERRORS = new Set(['InvalidPDFException', 'PasswordException', 'FormatError'])
+
+function importErrorMessage(e: unknown): string {
+  if (e instanceof NotSioRecordError) return e.message
+  if (e instanceof Error && BAD_FILE_ERRORS.has(e.name)) return "That PDF couldn't be read. Download it from SIO again and retry."
+  return "This browser couldn't read the PDF. Update it, or try again in another browser such as Chrome or Firefox."
+}
+
 export function SioImportButton({ onImported }: { onImported(message: string): void }) {
   const term = useTerm()
   const lookup = useCourseLookup()
@@ -47,10 +56,8 @@ export function SioImportButton({ onImported }: { onImported(message: string): v
       setUseProfile(true)
       setState({ kind: 'review', record, plan })
     } catch (e) {
-      setState({
-        kind: 'error',
-        message: e instanceof NotSioRecordError ? e.message : "That PDF couldn't be read. Download it from SIO again and retry.",
-      })
+      console.error('SIO import failed', e)
+      setState({ kind: 'error', message: importErrorMessage(e) })
     }
   }
 
