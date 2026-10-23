@@ -90,7 +90,8 @@ function CourseFull({ course, search }: { course: Course; search: string }) {
         </div>
       </div>
 
-      <header className="-mt-4 flex flex-col gap-6 border-b border-line pb-8 lg:flex-row lg:items-end lg:justify-between lg:gap-12">
+      {/* Top-aligned, so opening the requisite details grows the header downward rather than pushing it up. */}
+      <header className="-mt-4 flex flex-col gap-6 border-b border-line pb-8 lg:flex-row lg:items-start lg:justify-between lg:gap-12">
         <div className="min-w-0">
           <div className="course-code text-[56px] leading-none text-ink md:text-[76px]">{course.code}</div>
           <h1 className="display mt-2 max-w-[30ch] text-[28px] leading-tight text-ink md:text-[38px]">{course.title}</h1>
