@@ -122,6 +122,32 @@ export function parseDetailsGrouping(html: string): DetailSection[] {
   return out
 }
 
+/** What a course's detail page adds beyond the search listing: per-section reservations and special permission. */
+export interface DetailExtras {
+  /** Section name → its reservation lines ("Some reservations are for First-Year in M00"). */
+  reservations: Record<string, string[]>
+  /** "Special Permission Required"; null when the page doesn't say. */
+  permission: boolean | null
+}
+
+export function parseDetailsExtras(html: string): DetailExtras {
+  const reservations: Record<string, string[]> = {}
+  const heading = html.search(/<h4[^>]*>\s*Reservations\s*<\/h4>/i)
+  if (heading !== -1) {
+    const end = html.indexOf('</table>', heading)
+    const table = end === -1 ? '' : html.slice(heading, end)
+    for (const [section, restriction] of tableRows(table)) {
+      if (!section || !restriction || /^none$/i.test(restriction)) continue
+      const list = (reservations[section] ??= [])
+      if (!list.includes(restriction)) list.push(restriction)
+    }
+    // The page's order varies between sections and fetches; sorted, unchanged reservations don't show up as changes.
+    for (const list of Object.values(reservations)) list.sort()
+  }
+  const permission = /<dt>\s*Special Permission Required\s*<\/dt>\s*<dd>\s*(Yes|No)\b/i.exec(html)?.[1]
+  return { reservations, permission: permission ? permission.toLowerCase() === 'yes' : null }
+}
+
 /**
  * SOC title cells: "Course Title", "Course Title : Topic" (first row of a topics course), ": Topic"
  * (later sections), each optionally suffixed with "This Section Cancelled".

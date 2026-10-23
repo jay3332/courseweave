@@ -70,6 +70,8 @@ export interface Section {
   meetings: Meeting[]
   /** Enrollment cap, when the source has it. */
   capacity?: number
+  /** Who the section's reserved seats are for, as the Schedule of Classes words it ("Some reservations are for …"). */
+  reservations?: string[]
 }
 
 export interface Course {
@@ -89,6 +91,8 @@ export interface Course {
   crossListed: string[]
   /** Graded pass/fail only, so its units are never factorable (don't count toward QPA). */
   passFail?: boolean
+  /** Registering needs the department's special permission (Schedule of Classes). */
+  permissionRequired?: boolean
 }
 
 export interface TermData {

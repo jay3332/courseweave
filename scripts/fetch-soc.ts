@@ -3,6 +3,7 @@
 //   node scripts/fetch-soc.ts                 every semester the SOC search offers
 //   node scripts/fetch-soc.ts F26 S26         just these
 //   node scripts/fetch-soc.ts --details=all   also cache every course's detail page (slow: ~1 request per course)
+//   node scripts/fetch-soc.ts --extras=all    read every course's reservations now (default: a rotating slice)
 //
 // Per term it saves (gzipped):
 //   search-U.html.gz, search-G.html.gz   POST /SOCServlet/search for undergrad and grad courses (the two
@@ -10,13 +11,19 @@
 //   details.json.gz                      { courseId: courseDetails HTML } for courses whose lecture → section
 //                                        grouping is ambiguous in the flat search listing (several lectures
 //                                        plus lettered sections). --details=all fetches every course.
+//   extras.json                          { courseId: { reservations?: { section: [lines] }, permission?: true } }
+//                                        from each course's detail page. For the current and upcoming semesters a
+//                                        run reads courses it hasn't yet plus a rotating slice of the rest, so the
+//                                        twice-weekly workflow stays short and each course is re-read every few runs.
+//                                        Past semesters don't change: their courses are read once (a backfill spread
+//                                        over a few runs) and then left alone.
 //   meta.json                            fetch time, semester label, department code map
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { gunzipSync, gzipSync } from 'node:zlib'
 import { dataDir } from './lib/common.ts'
-import { isLecture, parseSearchPage, selectOptions } from './lib/soc-parse.ts'
+import { isLecture, parseDetailsExtras, parseSearchPage, selectOptions } from './lib/soc-parse.ts'
 
 const BASE = 'https://enr-apps.as.cmu.edu/open/SOC/SOCServlet'
 const DELAY_MS = 150
@@ -75,8 +82,34 @@ function ambiguousCourses(html: string): string[] {
   return out
 }
 
+type Extras = { reservations?: Record<string, string[]>; permission?: true }
+
+/** Courses re-read per term and run, besides ones never read (~5 minutes at ~3 requests a second). */
+const EXTRAS_SLICE = 900
+/** At most this many per term and run, never-read ones first, so a newly published term fits the workflow's time limit. */
+const EXTRAS_MAX = 1500
+/** Past semesters' backfill per term and run. */
+const EXTRAS_BACKFILL = 1200
+const RUN_SPACING_MS = 3.5 * 24 * 60 * 60 * 1000 // the workflow runs twice a week
+
+const ordinal = (term: string) => Number(term.slice(1)) * 3 + ({ S: 0, M: 1, F: 2 } as Record<string, number>)[term[0]]
+/** The semester under way (or next to start) today: spring through May, summer through August, then fall. */
+function currentTerm(now = new Date()): string {
+  const m = now.getMonth()
+  return `${m <= 4 ? 'S' : m <= 7 ? 'M' : 'F'}${String(now.getFullYear() % 100).padStart(2, '0')}`
+}
+
+/** One course per line, sorted, so a refresh's diff shows exactly which courses' reservations changed. */
+function writeExtras(path: string, extras: Record<string, Extras>) {
+  const lines = Object.keys(extras)
+    .sort()
+    .map((id) => `  ${JSON.stringify(id)}: ${JSON.stringify(extras[id])}`)
+  writeFileSync(path, `{\n${lines.join(',\n')}\n}\n`)
+}
+
 const args = process.argv.slice(2)
 const detailsMode = (args.find((a) => a.startsWith('--details='))?.split('=')[1] ?? 'ambiguous') as 'ambiguous' | 'all' | 'none'
+const extrasMode = (args.find((a) => a.startsWith('--extras='))?.split('=')[1] ?? 'rotate') as 'rotate' | 'all' | 'none'
 const requested = args.filter((a) => !a.startsWith('--'))
 
 const landing = await get(`${BASE}/search`)
@@ -101,13 +134,15 @@ for (const term of terms) {
 
   const detailsPath = join(dir, 'details.json.gz')
   const details: Record<string, string> = existsSync(detailsPath) ? JSON.parse(gunzipSync(readFileSync(detailsPath)).toString('utf8')) : {}
+  const all = [...new Set([...parseSearchPage(pages.U), ...parseSearchPage(pages.G)].map((r) => r.course).filter(Boolean))].sort()
+  const fresh = new Set<string>()
   if (detailsMode !== 'none') {
-    const all = [...new Set([...parseSearchPage(pages.U), ...parseSearchPage(pages.G)].map((r) => r.course).filter(Boolean))]
     const wanted = detailsMode === 'all' ? all : [...ambiguousCourses(pages.U), ...ambiguousCourses(pages.G)]
     let n = 0
     for (const course of wanted) {
       try {
         details[course] = await get(`${BASE}/courseDetails?COURSE=${course}&SEMESTER=${term}`)
+        fresh.add(course)
       } catch (e) {
         console.warn(`${term} ${course}: ${(e as Error).message}`)
       }
@@ -117,6 +152,37 @@ for (const term of terms) {
     console.log(`${term} details: ${wanted.length} courses`)
   }
   writeFileSync(detailsPath, gzipSync(JSON.stringify(details)))
+
+  if (extrasMode !== 'none') {
+    const past = ordinal(term) < ordinal(currentTerm())
+    const extrasPath = join(dir, 'extras.json')
+    const old: Record<string, Extras> = existsSync(extrasPath) ? JSON.parse(readFileSync(extrasPath, 'utf8')) : {}
+    const extras: Record<string, Extras> = {}
+    for (const id of all) if (old[id]) extras[id] = old[id]
+    const unread = all.filter((id) => !old[id])
+    let wanted = all
+    if (extrasMode === 'rotate' && past) {
+      wanted = unread.slice(0, EXTRAS_BACKFILL)
+    } else if (extrasMode === 'rotate') {
+      const slices = Math.max(1, Math.ceil(all.length / EXTRAS_SLICE))
+      const at = (Math.floor(Date.now() / RUN_SPACING_MS) % slices) * EXTRAS_SLICE
+      wanted = [...new Set([...unread, ...all.slice(at, at + EXTRAS_SLICE)])].slice(0, EXTRAS_MAX)
+    }
+    let n = 0
+    for (const course of wanted) {
+      try {
+        const html = fresh.has(course) ? details[course] : await get(`${BASE}/courseDetails?COURSE=${course}&SEMESTER=${term}`)
+        const { reservations, permission } = parseDetailsExtras(html)
+        extras[course] = { ...(Object.keys(reservations).length ? { reservations } : {}), ...(permission ? { permission: true as const } : {}) }
+      } catch (e) {
+        console.warn(`${term} ${course} reservations: ${(e as Error).message}`)
+      }
+      if (++n % 100 === 0) console.log(`${term} reservations: ${n}/${wanted.length}`)
+      if (!fresh.has(course)) await sleep(DELAY_MS)
+    }
+    writeExtras(extrasPath, extras)
+    console.log(`${term} reservations: read ${wanted.length} of ${all.length} courses; ${Object.values(extras).filter((x) => x.reservations).length} have some`)
+  }
 
   writeFileSync(
     join(dir, 'meta.json'),

@@ -117,11 +117,16 @@ function describe(before: Course, after: Course): string {
   if (removed.length) parts.push(`removed ${removed.join(', ')}`)
   if (before.title !== after.title) parts.push('title')
   if (before.units !== after.units) parts.push(`units ${before.units ?? 'var'} → ${after.units ?? 'var'}`)
+  if (!!before.permissionRequired !== !!after.permissionRequired) parts.push(after.permissionRequired ? 'now needs special permission' : 'no longer needs special permission')
+  const same = after.sections.filter((s) => names(before).has(s.name))
+  const was = (s: Course['sections'][number]) => before.sections.find((b) => b.name === s.name)!
+  const withoutReservations = (s: Course['sections'][number]) => JSON.stringify({ ...s, reservations: undefined })
   if (!parts.length || sectionKey(before) !== sectionKey(after)) {
-    const same = after.sections.filter((s) => names(before).has(s.name))
-    const changedSections = same.filter((s) => JSON.stringify(s) !== JSON.stringify(before.sections.find((b) => b.name === s.name)))
+    const changedSections = same.filter((s) => withoutReservations(s) !== withoutReservations(was(s)))
     if (changedSections.length) parts.push(`times, rooms or instructors (${changedSections.map((s) => s.name).join(', ')})`)
   }
+  const reserved = same.filter((s) => JSON.stringify(s.reservations ?? []) !== JSON.stringify(was(s).reservations ?? []))
+  if (reserved.length) parts.push(`reservations (${reserved.map((s) => s.name).join(', ')})`)
   return parts.join('; ')
 }
 

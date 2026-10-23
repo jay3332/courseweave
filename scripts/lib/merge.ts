@@ -15,6 +15,7 @@ export function mergeSupplement(primary: Map<string, Course>, supplement: Course
       continue
     }
     if (course.units === null && sup.units !== null) course.units = sup.units
+    if (!course.permissionRequired && sup.permissionRequired) course.permissionRequired = true
     for (const s of sup.sections) {
       const existing = course.sections.find((x) => x.name === s.name)
       if (!existing) {
@@ -23,6 +24,7 @@ export function mergeSupplement(primary: Map<string, Course>, supplement: Course
       }
       if (!existing.instructors.length) addInstructors(existing.instructors, s.instructors)
       if (existing.capacity === undefined && s.capacity !== undefined) existing.capacity = s.capacity
+      if (!existing.reservations && s.reservations) existing.reservations = [...s.reservations]
       if (existing.parent === null && s.parent !== null) existing.parent = s.parent
       const hasScheduled = existing.meetings.some((m) => m.days.length && m.start !== null)
       if (!hasScheduled) {

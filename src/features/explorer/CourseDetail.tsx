@@ -1,5 +1,5 @@
 import { coursePreview } from '../../components/CoursePreview'
-import { AlertTriangle, ArrowLeft, ArrowLeftRight, Check, ChevronDown, Info, Maximize2, Plus, Star, X } from 'lucide-react'
+import { AlertTriangle, ArrowLeft, ArrowLeftRight, Check, ChevronDown, Info, KeyRound, Maximize2, Plus, Star, UsersRound, X } from 'lucide-react'
 import { useMemo, useState, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import { Button } from '../../components/ui'
@@ -9,6 +9,7 @@ import { nextColor } from '../../lib/colors'
 import { instructorSlug } from '../../lib/data'
 import { departmentName, modeLabel } from '../../lib/departments'
 import { childSections, resolveSelection, selectionParts, topSections, type Selection } from '../../lib/sections'
+import { reservationCodes, reservationSummary } from '../../lib/reservations'
 import { formatDays, formatLocation, formatTimeRange } from '../../lib/time'
 import type { Course, Section } from '../../lib/types'
 import { partsConflict, useActiveScheduleId, useScheduleView, type ResolvedEntry } from '../../state/schedule-view'
@@ -215,6 +216,16 @@ export function CourseFacts({ course, search, layout = 'list', className = '' }:
     { label: 'Level', value: course.level === 'G' ? 'Graduate' : 'Undergraduate' },
   )
   if (mini) facts.push({ label: 'Session', value: mini })
+  if (course.permissionRequired)
+    facts.push({
+      label: 'Registration',
+      value: (
+        <span className="inline-flex items-center gap-1.5">
+          <KeyRound aria-hidden className="size-3.5 text-muted" />
+          Special permission required
+        </span>
+      ),
+    })
   if (course.instructors.length)
     facts.push({
       label: course.instructors.length === 1 ? 'Instructor' : 'Instructors',
@@ -507,6 +518,12 @@ function SectionRow({ course, entry, canEdit, conflictsFor, onHover, onAct, onRe
             {s.mini !== null ? <span className="font-medium text-ink-2">{miniName(s.mini, term.meta)}</span> : null}
             {s.capacity ? <span className={table ? '@3xl:hidden' : ''}>{s.capacity} seats</span> : null}
           </div>
+          {s.reservations?.length ? (
+            <div className="mt-1 flex items-start gap-1 text-[12.5px] text-muted" title={reservationCodes(s.reservations) || undefined}>
+              <UsersRound aria-hidden className="mt-0.5 size-3.5 shrink-0" />
+              <span>Reserved seats for {reservationSummary(s.reservations)}</span>
+            </div>
+          ) : null}
           {conflicts.length ? (
             <div className="mt-1 flex items-center gap-1 text-[12.5px] font-medium text-danger">
               <AlertTriangle className="size-3.5 shrink-0" />

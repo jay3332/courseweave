@@ -1,8 +1,10 @@
 # Twice-weekly course data refresh.
 #
 # CI can only reach public sources, so this workflow:
-#  - re-downloads CMU's Schedule of Classes and, when sections really changed, opens (or updates) a pull request
-#    listing what changed. Merge it, then run `npm run deploy` on your machine: a deploy also needs the Stellic and
+#  - re-downloads CMU's Schedule of Classes, plus course detail pages for seat reservations and special permission
+#    (a rotating share for current and upcoming semesters, so each course is re-read every couple of weeks; past
+#    semesters are read once), and, when sections or reservations really changed, opens (or updates) a pull request
+#    listing what changed. A newly published semester (e.g. Spring 2027) is picked up automatically. Merge it, then run `npm run deploy` on your machine: a deploy also needs the Stellic and
 #    FCE data that only live there.
 #  - keeps one "Data refresh checklist" issue for what needs you: newer FCE data from ScottyLabs, Stellic sections
 #    due for a refresh (that needs your CMU login), merged updates the live site doesn't have yet, and new semesters
@@ -28,7 +30,7 @@ concurrency:
 jobs:
   refresh:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 50 # a first read of reservations for a new or past semester takes ~20 minutes
     env:
       GH_TOKEN: ${{ github.token }}
       BRANCH: data/schedule-of-classes

@@ -63,6 +63,11 @@ export const socSource: SourceAdapter = (source, term, ctx) => {
   const deptOf = deptResolver(meta.departments)
   const detailsPath = join(dir, 'details.json.gz')
   const details: Record<string, string> = existsSync(detailsPath) ? JSON.parse(gunzipSync(readFileSync(detailsPath)).toString('utf8')) : {}
+  // Reservations and special permission, read from detail pages by fetch-soc (current and upcoming semesters).
+  const extrasPath = join(dir, 'extras.json')
+  const extras: Record<string, { reservations?: Record<string, string[]>; permission?: boolean }> = existsSync(extrasPath)
+    ? JSON.parse(readFileSync(extrasPath, 'utf8'))
+    : {}
 
   const courses: Course[] = []
   for (const level of ['U', 'G'] as const) {
@@ -105,6 +110,7 @@ export const socSource: SourceAdapter = (source, term, ctx) => {
       }
     }
 
+    const reservations = new Map(Object.entries(extras[raw.id]?.reservations ?? {}).map(([k, v]) => [sectionName(k), v]))
     const sections: Section[] = []
     const cancelled = new Set<string>()
     for (const s of raw.sections) {
@@ -127,6 +133,7 @@ export const socSource: SourceAdapter = (source, term, ctx) => {
         instructors: [],
         meetings: [],
         ...(title && title !== raw.title ? { title } : {}),
+        ...(reservations.get(name)?.length ? { reservations: reservations.get(name) } : {}),
       }
       for (const r of s.rows) {
         if (!keepCampus(r.location)) continue
@@ -154,6 +161,7 @@ export const socSource: SourceAdapter = (source, term, ctx) => {
       instructors: [],
       sections,
       crossListed: [],
+      ...(extras[raw.id]?.permission ? { permissionRequired: true } : {}),
     }
   }
 
