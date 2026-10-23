@@ -121,7 +121,7 @@ describe('mergePlanDoc', () => {
 })
 
 describe('normalizing server data', () => {
-  it("keeps a plan's semester links and course notes", () => {
+  it("keeps a plan's semester links", () => {
     const doc = normalizePlanDoc({
       plans: {
         p: {
@@ -129,8 +129,8 @@ describe('normalizing server data', () => {
           startTerm: 'F26',
           programs: [],
           terms: [
-            { term: 'F26', courses: [{ id: 'c1', courseId: '15122', note: 'with Iliano' }], link: { scheduleId: 's1' } },
-            { term: 'S27', courses: [{ id: 'c2', courseId: '15150', note: '' }], link: { scheduleId: 7 } },
+            { term: 'F26', courses: [{ id: 'c1', courseId: '15122' }], link: { scheduleId: 's1' } },
+            { term: 'S27', courses: [{ id: 'c2', courseId: '15150' }], link: { scheduleId: 7 } },
           ],
           createdAt: 1,
           updatedAt: 2,
@@ -139,7 +139,7 @@ describe('normalizing server data', () => {
       activePlanId: 'p',
     })
     expect(doc?.plans.p.terms).toEqual([
-      { term: 'F26', courses: [{ id: 'c1', courseId: '15122', note: 'with Iliano' }], link: { scheduleId: 's1' } },
+      { term: 'F26', courses: [{ id: 'c1', courseId: '15122' }], link: { scheduleId: 's1' } },
       { term: 'S27', courses: [{ id: 'c2', courseId: '15150' }] },
     ])
   })

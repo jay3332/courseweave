@@ -19,7 +19,7 @@ export function ProgramsField(props: ProgramsFieldProps) {
 }
 
 /** Requirement audit panel: progress per program and requirement, with course suggestions. */
-export function AuditColumn(props: { input: AuditInput; onAddCourse?(courseId: string, nodeId: number): void; termLabel?: (term: string) => string }) {
+export function AuditColumn(props: { input: AuditInput; onAddCourse?(courseId: string, nodeId: number): void; termLabel?: (term: string) => string; dragCourses?: boolean }) {
   return <AuditPanel {...props} />
 }
 

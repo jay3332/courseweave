@@ -48,6 +48,7 @@ describe.skipIf(!ready)('RequirementList', () => {
       inPlan: new Set(courses.map((c) => c.courseId)),
       onAddCourse: () => {},
       termLabel,
+      href: (id) => `/S27/courses/${id}`,
     }
     const html = renderToStaticMarkup(createElement(MemoryRouter, null, createElement(RequirementList, { results: result.programs[0].root.children, ctx, depth: 0 })))
     expect(html).toContain('Computer Science')

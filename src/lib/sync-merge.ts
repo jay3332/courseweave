@@ -147,7 +147,6 @@ function normalizePlanCourse(v: unknown): PlanCourse | null {
   const c: PlanCourse = { id: v.id, courseId: v.courseId }
   if (v.passFail === true) c.passFail = true
   if (isNum(v.units)) c.units = v.units
-  if (isStr(v.note) && v.note) c.note = v.note.slice(0, 1000)
   return c
 }
 

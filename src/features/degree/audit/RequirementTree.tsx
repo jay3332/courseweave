@@ -7,7 +7,8 @@ import type { CatalogIndex } from '../../../lib/catalog-types'
 import type { ReqNode } from '../../../lib/degree-types'
 import type { RequirementResult } from '../../../lib/plan-types'
 import { codeOf } from '../../../lib/requisite-format'
-import { courseHref, displayState, fmt, progressText, STATE_LABEL } from './format'
+import { DRAG_NEW_COURSE } from '../hooks'
+import { displayState, fmt, progressText, STATE_LABEL } from './format'
 import { ProgressBar, StateIcon } from './parts'
 
 export interface TreeContext {
@@ -22,6 +23,24 @@ export interface TreeContext {
   inPlan: Set<string>
   onAddCourse?(courseId: string, nodeId: number): void
   termLabel(term: string): string
+  /** Where a course links (its course page in the semester it's planned for, …). */
+  href(courseId: string, term?: string | null): string
+  /** Beside the semesters: unplanned courses can be dragged onto one. */
+  dragCourses?: boolean
+}
+
+/** Drag props for a course that isn't in the plan yet (dropping it on a semester adds it there). */
+function dragNew(id: string, ctx: TreeContext) {
+  if (!ctx.dragCourses) return {}
+  return {
+    draggable: true,
+    title: `Drag ${codeOf(id)} onto a semester to add it`,
+    onDragStart: (e: React.DragEvent) => {
+      e.dataTransfer.setData(DRAG_NEW_COURSE, id)
+      e.dataTransfer.setData('text/plain', codeOf(id))
+      e.dataTransfer.effectAllowed = 'copy'
+    },
+  }
 }
 
 
@@ -73,7 +92,7 @@ function RequirementRow({ r, ctx, depth }: { r: RequirementResult; ctx: TreeCont
   const needsWork = !done && state !== 'manual' && state !== 'skipped'
 
   return (
-    <li className="border-t border-line first:border-t-0">
+    <li id={`req-${r.nodeId}`} className="border-t border-line first:border-t-0">
       <div className="flex items-start gap-2 py-2">
         {isGroup ? (
           <button
@@ -145,7 +164,7 @@ function AssignedChip({ a, ctx }: { a: RequirementResult['assigned'][number]; ct
   const title = ctx.title(a.courseId)
   return (
     <Link
-      to={courseHref(ctx, a.courseId)}
+      to={ctx.href(a.courseId, a.term)}
       aria-label={title ? `${codeOf(a.courseId)} ${title}` : codeOf(a.courseId)}
       {...coursePreview(a.courseId)}
       className={`inline-flex min-h-9 items-center gap-1.5 rounded-md border px-2 text-[12.5px] transition-colors md:min-h-7 ${
@@ -168,11 +187,17 @@ function CourseLeafRow({ r, ctx }: { r: RequirementResult; ctx: TreeContext }) {
   const a = r.assigned[0]
   const counted = a && a.courseId !== id ? a.courseId : null
   const done = state === 'complete' || state === 'complete-with-plan'
+  const canDrag = !a && !done && state !== 'skipped' && !ctx.inPlan.has(id)
   return (
-    <li className="flex min-h-10 items-center gap-2 border-t border-line py-1.5 first:border-t-0 md:min-h-9" {...coursePreview(id)}>
+    <li
+      id={`req-${r.nodeId}`}
+      className={`flex min-h-10 items-center gap-2 border-t border-line py-1.5 first:border-t-0 md:min-h-9 ${canDrag && ctx.dragCourses ? 'cursor-grab' : ''}`}
+      {...coursePreview(id)}
+      {...(canDrag ? dragNew(id, ctx) : {})}
+    >
       <StateIcon state={state} className="size-4" />
       <span className="sr-only">{STATE_LABEL[state]}</span>
-      <Link to={courseHref(ctx, id)} className="course-code shrink-0 text-[14.5px] text-ink hover:text-accent">
+      <Link to={ctx.href(id, a?.term)} className="course-code shrink-0 text-[14.5px] text-ink hover:text-accent">
         {codeOf(id)}
       </Link>
       <span className={`min-w-0 flex-1 truncate text-[13.5px] ${state === 'skipped' ? 'text-muted' : 'text-ink-2'}`}>
@@ -226,8 +251,8 @@ function WaysToSatisfy({ node, ctx }: { node: ReqNode; ctx: TreeContext }) {
       </p>
       <ul className="mt-1 flex flex-col">
         {shown.map((id) => (
-          <li key={id} className="flex min-h-10 items-center gap-2 md:min-h-8" {...coursePreview(id)}>
-            <Link to={courseHref(ctx, id)} className={`course-code shrink-0 text-[13.5px] hover:text-accent ${ctx.offered(id) ? 'text-ink' : 'text-muted'}`}>
+          <li key={id} className={`flex min-h-10 items-center gap-2 md:min-h-8 ${ctx.dragCourses ? 'cursor-grab' : ''}`} {...coursePreview(id)} {...dragNew(id, ctx)}>
+            <Link to={ctx.href(id)} className={`course-code shrink-0 text-[13.5px] hover:text-accent ${ctx.offered(id) ? 'text-ink' : 'text-muted'}`}>
               {codeOf(id)}
             </Link>
             <span className="min-w-0 flex-1 truncate text-[13px] text-ink-2">

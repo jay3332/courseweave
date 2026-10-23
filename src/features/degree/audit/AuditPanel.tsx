@@ -11,7 +11,8 @@ import { useAuditData } from '../../../lib/programs'
 import { codeOf } from '../../../lib/requisite-format'
 import { termLabel as defaultTermLabel } from '../../../lib/requisites'
 import { useTerm } from '../../../state/term'
-import { courseHref, displayState, fmt } from './format'
+import { useCourseHref } from '../hooks'
+import { displayState, fmt } from './format'
 import { ProgressBar, StateBadge } from './parts'
 import { RequirementList, type TreeContext } from './RequirementTree'
 
@@ -23,12 +24,15 @@ export interface AuditPanelProps {
   onAddCourse?(courseId: string, nodeId: number): void
   /** Formats term codes ("F25" → "Fall 2025"). */
   termLabel?(term: string): string
+  /** Beside the semesters: unplanned courses can be dragged onto one. */
+  dragCourses?: boolean
 }
 
 /** Degree audit: per program, overall progress and the requirement tree with what's left. */
-export function AuditPanel({ input, onAddCourse, termLabel = defaultTermLabel }: AuditPanelProps) {
+export function AuditPanel({ input, onAddCourse, termLabel = defaultTermLabel, dragCourses = false }: AuditPanelProps) {
   const term = useTerm()
   const data = useAuditData(input)
+  const href = useCourseHref()
 
   if (!input.programs.length) {
     return (
@@ -57,7 +61,7 @@ export function AuditPanel({ input, onAddCourse, termLabel = defaultTermLabel }:
   const attachedTo = (catalogId: number) => result.programs.filter((p) => p.attachedTo === catalogId)
   const freeUnits = input.courses.filter((c) => result.unassigned.includes(c.courseId)).reduce((n, c) => n + c.units, 0)
 
-  const shared = { termId: term.meta.id, termName: term.meta.name, catalog, inPlan, onAddCourse, termLabel }
+  const shared = { termId: term.meta.id, termName: term.meta.name, catalog, inPlan, onAddCourse, termLabel, href, dragCourses }
 
   return (
     <div className="flex flex-col gap-6">
@@ -92,7 +96,7 @@ export function AuditPanel({ input, onAddCourse, termLabel = defaultTermLabel }:
               ) : (
               <li key={id}>
                 <Link
-                  to={courseHref({ termId: term.meta.id, offered: (x) => term.courseById.has(x) }, id)}
+                  to={href(id, input.courses.find((c) => c.courseId === id)?.term)}
                   aria-label={catalog?.courses[id]?.title ? `${codeOf(id)} ${catalog.courses[id].title}` : codeOf(id)}
                   {...coursePreview(id)}
                   className="course-code inline-flex min-h-9 items-center rounded-md border border-line-strong bg-surface px-2 text-[13.5px] text-ink hover:border-ink-2 md:min-h-7"
@@ -116,6 +120,8 @@ interface Shared {
   inPlan: Set<string>
   onAddCourse?(courseId: string, nodeId: number): void
   termLabel(term: string): string
+  href(courseId: string, term?: string | null): string
+  dragCourses: boolean
 }
 
 function indexNodes(root: ReqNode | undefined): Map<number, ReqNode> {
@@ -151,7 +157,7 @@ function ProgramAudit({
       node: (id) => nodes.get(id) ?? null,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [nodes, shared.catalog, shared.inPlan, shared.onAddCourse, shared.termId],
+    [nodes, shared.catalog, shared.inPlan, shared.onAddCourse, shared.termId, shared.href, shared.dragCourses],
   )
 
   const areas = program.root.children.filter((c) => !c.skipped && !c.manual)

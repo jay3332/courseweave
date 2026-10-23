@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { AuditResult, RequirementResult } from './plan-types'
-import { requirementsByCourse, seasonsLabel, semesterOrdinals } from './plan-table'
+import { requirementsByCourse, seasonsLabel } from './plan-table'
 
 const node = (name: string, extra: Partial<RequirementResult> = {}): RequirementResult => ({
   nodeId: Math.random(),
@@ -41,10 +41,13 @@ describe('requirementsByCourse', () => {
   const reqs = requirementsByCourse(audit)
 
   it('labels course leaves by their parent and pools by their own name, across programs', () => {
-    expect(reqs.get('15122', 'F26')).toEqual({
-      labels: ['Computer Science Core', 'Category 1: Cognition'],
-      paths: ['BS in Computer Science › Computer Science Core › 15-122', 'SCS General Education › Category 1: Cognition'],
-    })
+    const s = reqs.get('15122', 'F26')!
+    expect(s.labels).toEqual(['Computer Science Core', 'Category 1: Cognition'])
+    expect(s.paths).toEqual(['BS in Computer Science › Computer Science Core › 15-122', 'SCS General Education › Category 1: Cognition'])
+    expect(s.items.map((i) => [i.program, i.path, i.label])).toEqual([
+      ['BS in Computer Science', [], 'Computer Science Core'],
+      ['SCS General Education', [], 'Category 1: Cognition'],
+    ])
     expect(reqs.get('21242', 'F26')?.labels).toEqual(['Math electives'])
   })
 
@@ -55,19 +58,11 @@ describe('requirementsByCourse', () => {
   })
 })
 
-describe('seasonsLabel and semesterOrdinals', () => {
+describe('seasonsLabel', () => {
   it('names offering seasons like a planning spreadsheet', () => {
     expect(seasonsLabel({ offered: ['fall'] })).toBe('Fall')
     expect(seasonsLabel({ offered: ['spring', 'fall'] })).toBe('Fall and Spring')
     expect(seasonsLabel({ offered: ['fall', 'spring', 'summer'] })).toBe('All semesters')
     expect(seasonsLabel({})).toBeNull()
-  })
-  it('numbers semesters, counting summers separately', () => {
-    expect([...semesterOrdinals(['F26', 'S27', 'M27', 'F27'])]).toEqual([
-      ['F26', 'S1'],
-      ['S27', 'S2'],
-      ['M27', 'Summer 1'],
-      ['F27', 'S3'],
-    ])
   })
 })

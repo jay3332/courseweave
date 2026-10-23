@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { codeOf } from '../../lib/requisite-format'
 import { useCatalogIndex } from '../../lib/catalog'
 import type { CatalogIndex } from '../../lib/catalog-types'
 import { loadTerm } from '../../lib/data'
 import { examById, examLabel } from '../../lib/exam-credit'
 import { useFceSummary } from '../../lib/fce'
+import { nearestTerm, useOfferings } from '../../lib/offerings'
 import {
   academicYearStart,
   checkPlan,
@@ -190,9 +191,27 @@ export function entryYearOf(startTerm: string): number {
 
 /** Data transfer type for dragging plan courses between semesters. */
 export const DRAG_TYPE = 'application/x-courseweave-plan-course'
+/** A course dragged from the requirements panel onto a semester (adds it). */
+export const DRAG_NEW_COURSE = 'application/x-courseweave-course'
 
 /** Where a course link should go: its page in the routed term if offered there, else the requisite explorer. */
-export function useCourseHref(): (courseId: string) => string {
-  const term = useTerm()
-  return (id) => (term.courseById.has(id) ? `/${term.meta.id}/courses/${codeOf(id)}` : `/${term.meta.id}/requisites/${codeOf(id)}`)
+/**
+ * Where a course links from the degree planner: its course page in the semester it's planned for when that semester
+ * offers it, else in the semester you're browsing, else in the nearest semester that offers it. Only a course no
+ * semester here offers (catalog only) opens its requisite page.
+ */
+export function useCourseHref(): (courseId: string, term?: string | null) => string {
+  const routed = useTerm()
+  const offerings = useOfferings()
+  return useCallback(
+    (id, term) => {
+      const code = codeOf(id)
+      const terms = offerings?.byId.get(id)?.terms ?? []
+      if (term && terms.includes(term)) return `/${term}/courses/${code}`
+      if (routed.courseById.has(id)) return `/${routed.meta.id}/courses/${code}`
+      const nearest = nearestTerm(terms, term ?? routed.meta.id)
+      return nearest ? `/${nearest}/courses/${code}` : `/${routed.meta.id}/requisites/${code}`
+    },
+    [routed, offerings],
+  )
 }

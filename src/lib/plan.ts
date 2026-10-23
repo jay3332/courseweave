@@ -30,8 +30,6 @@ export interface PlanCourse {
   passFail?: boolean
   /** Units to count for a variable-unit course. */
   units?: number
-  /** The student's own note (the detailed view's Notes column). */
-  note?: string
 }
 
 export interface PlanTerm {
@@ -284,15 +282,8 @@ export function effectiveTermCourses(plan: Plan, schedulesById: Record<string, S
     for (const e of schedule.entries) {
       if (e.hidden || seen.has(e.courseId)) continue
       seen.add(e.courseId)
-      const own = t.courses.find((c) => c.courseId === e.courseId)
-      const units = own?.units
-      courses.push({
-        id: linkedCourseId(schedule.id, e.courseId),
-        courseId: e.courseId,
-        ...(e.passFail ? { passFail: true } : {}),
-        ...(units !== undefined ? { units } : {}),
-        ...(own?.note ? { note: own.note } : {}),
-      })
+      const units = t.courses.find((c) => c.courseId === e.courseId)?.units
+      courses.push({ id: linkedCourseId(schedule.id, e.courseId), courseId: e.courseId, ...(e.passFail ? { passFail: true } : {}), ...(units !== undefined ? { units } : {}) })
     }
     out.set(t.term, { courses, schedule, missing: false })
   }

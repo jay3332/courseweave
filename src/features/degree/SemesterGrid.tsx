@@ -2,7 +2,7 @@ import { LayoutGrid, Plus, Table2 } from 'lucide-react'
 import { useMemo } from 'react'
 import { Link } from 'react-router'
 import { academicYearLabel, academicYearStart, compareTerms, isSummer, nextTerm, type Plan } from '../../lib/plan'
-import { requirementsByCourse, semesterOrdinals } from '../../lib/plan-table'
+import { requirementsByCourse } from '../../lib/plan-table'
 import type { AuditResult } from '../../lib/plan-types'
 import { termLabel } from '../../lib/requisites'
 import { usePlans } from '../../state/plan'
@@ -31,7 +31,6 @@ export function SemesterGrid({ plan, derived, openTerms, onToggleTerm, isPhone, 
   const setLayout = useStore((s) => s.setPlanLayout)
   const table = layout === 'table'
   const requirements = useMemo(() => (table ? requirementsByCourse(audit) : undefined), [table, audit])
-  const ordinals = useMemo(() => semesterOrdinals(derived.columns.map((c) => c.term)), [derived.columns])
   const fceHours = useFceHours()
   const published = usePublishedTerms()
   const scheduled = useScheduledCourses(derived.columns.map((c) => c.term))
@@ -81,7 +80,7 @@ export function SemesterGrid({ plan, derived, openTerms, onToggleTerm, isPhone, 
             <div className="flex items-baseline gap-3">
               <h2 className="display text-[22px] text-ink">{academicYearLabel(key)}</h2>
               <span className="text-[13px] text-muted">{units} units</span>
-              {!hasSummer ? (
+              {!hasSummer && !table ? (
                 <button
                   type="button"
                   onClick={() => addTerm(plan.id, summer)}
@@ -107,10 +106,20 @@ export function SemesterGrid({ plan, derived, openTerms, onToggleTerm, isPhone, 
                   collapsible={isPhone}
                   dragEnabled={dragEnabled}
                   layout={layout}
-                  ordinal={ordinals.get(col.term)}
                   requirements={requirements}
                 />
               ))}
+              {/* Detailed layout: the summer goes after the year's spring, so that's where it's added. */}
+              {!hasSummer && table ? (
+                <button
+                  type="button"
+                  onClick={() => addTerm(plan.id, summer)}
+                  className="flex min-h-10 items-center justify-center gap-1.5 rounded-xl border border-dashed border-line px-3 text-[13px] font-medium text-ink-2 hover:border-line-strong hover:text-ink md:min-h-8"
+                >
+                  <Plus aria-hidden className="size-3.5" />
+                  Add {termLabel(summer)}
+                </button>
+              ) : null}
             </div>
           </section>
         )

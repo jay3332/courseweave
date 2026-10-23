@@ -1,3 +1,4 @@
+import { Plus } from 'lucide-react'
 import { useId, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { SearchInput } from '../../components/ui'
 import { useCatalogIndex } from '../../lib/catalog'
@@ -50,10 +51,12 @@ interface AddCourseInputProps {
   onAdd(courseId: string): void
   onClose?(): void
   autoFocus?: boolean
+  /** 'inline': a quiet "+ Add a course" row that stays put; type, Enter, type the next. */
+  variant?: 'field' | 'inline'
 }
 
 /** Combobox that adds a catalog course to a semester. Shows whether it's offered that semester. */
-export function AddCourseInput({ term, scheduled, inPlan, onAdd, onClose, autoFocus }: AddCourseInputProps) {
+export function AddCourseInput({ term, scheduled, inPlan, onAdd, onClose, autoFocus, variant = 'field' }: AddCourseInputProps) {
   const routed = useTerm()
   const index = useCatalogIndex()
   const catalog = index.status === 'ready' ? index.value : null
@@ -94,6 +97,14 @@ export function AddCourseInput({ term, scheduled, inPlan, onAdd, onClose, autoFo
   }
 
   const showList = query.trim().length > 0
+  const combobox = {
+    role: 'combobox',
+    'aria-label': `Add a course to ${term}`,
+    'aria-expanded': showList,
+    'aria-controls': `${id}-list`,
+    'aria-activedescendant': showList && results.length ? `${id}-${active}` : undefined,
+    'aria-autocomplete': 'list',
+  } as const
 
   return (
     <div
@@ -103,24 +114,44 @@ export function AddCourseInput({ term, scheduled, inPlan, onAdd, onClose, autoFo
         if (!query && !ref.current?.contains(e.relatedTarget as Node | null)) onClose?.()
       }}
     >
-      <SearchInput
-        value={query}
-        onChange={(v) => {
-          setQuery(v)
-          setActive(0)
-        }}
-        onKeyDown={onKeyDown}
-        autoFocus={autoFocus}
-        placeholder="Add a course: 15-122, calculus"
-        aria-label={`Add a course to ${term}`}
-        role="combobox"
-        aria-expanded={showList}
-        aria-controls={`${id}-list`}
-        aria-activedescendant={showList && results.length ? `${id}-${active}` : undefined}
-        aria-autocomplete="list"
-      />
+      {variant === 'inline' ? (
+        <label className="flex min-h-10 cursor-text items-center gap-1.5 rounded-md px-1.5 text-ink-2 hover:bg-surface-2 focus-within:bg-surface-2 md:min-h-8">
+          <Plus aria-hidden className="size-4 shrink-0" />
+          <input
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value)
+              setActive(0)
+            }}
+            onKeyDown={onKeyDown}
+            autoFocus={autoFocus}
+            placeholder="Add a course"
+            autoComplete="off"
+            spellCheck={false}
+            {...combobox}
+            className="h-10 min-w-0 flex-1 bg-transparent text-[13.5px] font-medium text-ink outline-none placeholder:font-medium placeholder:text-ink-2 md:h-8"
+          />
+        </label>
+      ) : (
+        <SearchInput
+          value={query}
+          onChange={(v) => {
+            setQuery(v)
+            setActive(0)
+          }}
+          onKeyDown={onKeyDown}
+          autoFocus={autoFocus}
+          placeholder="Add a course: 15-122, calculus"
+          {...combobox}
+        />
+      )}
       {showList ? (
-        <ul id={`${id}-list`} role="listbox" aria-label="Matching courses" className="absolute top-11 right-0 left-0 z-40 max-h-80 overflow-y-auto rounded-lg border border-line bg-surface p-1 shadow-xl">
+        <ul
+          id={`${id}-list`}
+          role="listbox"
+          aria-label="Matching courses"
+          className={`absolute right-0 left-0 z-40 max-h-80 overflow-y-auto rounded-lg border border-line bg-surface p-1 shadow-xl ${variant === 'inline' ? 'top-full mt-1' : 'top-11'}`}
+        >
           {results.length === 0 ? (
             <li className="px-3 py-3 text-[13.5px] text-muted">No courses match “{query.trim()}”.</li>
           ) : (

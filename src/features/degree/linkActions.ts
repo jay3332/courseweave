@@ -96,25 +96,11 @@ export function setPlanUnits(plan: Plan, planCourseId: string, units: number | u
   if (term) usePlans.getState().setCourseUnits(plan.id, term, linked.courseId, units)
 }
 
-/** A course's note: on the plan's own course, or (synced semesters) on the semester's snapshot row for it. */
-export function setPlanNote(plan: Plan, planCourseId: string, note: string) {
-  const linked = parseLinkedCourseId(planCourseId)
-  if (!linked) {
-    usePlans.getState().updateCourse(plan.id, planCourseId, { note })
-    return
-  }
-  const term = termOfSchedule(plan, linked.scheduleId)
-  if (term) usePlans.getState().setCourseNote(plan.id, term, linked.courseId, note)
-}
-
-/** Snapshot rows for a schedule's visible courses, carrying unit overrides and notes from the plan's own list. */
+/** Snapshot rows for a schedule's visible courses, carrying unit overrides from the plan's own list. */
 function scheduleSnapshot(schedule: Schedule, planCourses: PlanCourse[]): SnapshotCourse[] {
   return schedule.entries
     .filter((e) => !e.hidden)
-    .map((e) => {
-      const own = planCourses.find((c) => c.courseId === e.courseId)
-      return { courseId: e.courseId, passFail: e.passFail, units: own?.units, ...(own?.note ? { note: own.note } : {}) }
-    })
+    .map((e) => ({ courseId: e.courseId, passFail: e.passFail, units: planCourses.find((c) => c.courseId === e.courseId)?.units }))
 }
 
 /**

@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
-import { Button } from '../../components/ui'
+import { Maximize2 } from 'lucide-react'
+import { Button, Dialog } from '../../components/ui'
+import { PHONE_FULLSCREEN } from '../schedule-tools/dialog'
 import { academicYearStart, defaultTerms, isSummer, suggestTerm, type Plan } from '../../lib/plan'
 import type { ProgramSelection } from '../../lib/plan-types'
 import { termLabel } from '../../lib/requisites'
@@ -58,6 +60,7 @@ function PlanView({ plan }: { plan: Plan }) {
   const finePointer = useMediaQuery('(pointer: fine)')
   const [tab, setTab] = useState<'semesters' | 'requirements'>('semesters')
   const [openTerms, setOpenTerms] = useState<Record<string, boolean>>({})
+  const [requirementsOpen, setRequirementsOpen] = useState(false)
   const audit = useAuditResult(derived?.auditInput ?? null)
   const scheduled = useScheduledCourses(plan.terms.map((t) => t.term))
   // The detailed layout's tables want the width; the requirements column narrows beside them.
@@ -99,6 +102,7 @@ function PlanView({ plan }: { plan: Plan }) {
     <SemesterGrid plan={plan} derived={derived} openTerms={openTerms} onToggleTerm={toggleTerm} isPhone={isPhone} dragEnabled={finePointer && !isPhone} audit={audit} />
   )
   const auditPanel = <AuditColumn input={derived.auditInput} onAddCourse={addFromAudit} termLabel={termLabel} />
+  const dragFromAudit = finePointer && !isPhone
 
   return (
     <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-5 px-4 py-5 md:px-6 md:py-6">
@@ -112,8 +116,15 @@ function PlanView({ plan }: { plan: Plan }) {
         <div className={`grid items-start gap-6 ${detailed ? 'grid-cols-[minmax(0,1fr)_340px]' : 'grid-cols-[minmax(0,1fr)_400px]'}`}>
           {grid}
           <aside aria-label="Requirements" className="sticky top-4 flex max-h-[calc(100dvh-10rem)] flex-col gap-3 overflow-y-auto">
-            <h2 className="display text-[22px] text-ink">Requirements</h2>
-            {auditPanel}
+            <div className="flex items-center gap-2">
+              <h2 className="display text-[22px] text-ink">Requirements</h2>
+              <Button size="sm" variant="ghost" className="ml-auto" onClick={() => setRequirementsOpen(true)} title="Open the requirements in a larger view">
+                <Maximize2 aria-hidden className="size-3.5" />
+                Expand
+              </Button>
+            </div>
+            {dragFromAudit ? <p className="-mt-1 text-[12px] text-muted">Drag a course onto a semester, or use Add.</p> : null}
+            <AuditColumn input={derived.auditInput} onAddCourse={addFromAudit} termLabel={termLabel} dragCourses={dragFromAudit} />
           </aside>
         </div>
       ) : (
@@ -138,6 +149,9 @@ function PlanView({ plan }: { plan: Plan }) {
           </div>
         </>
       )}
+      <Dialog open={requirementsOpen} onClose={() => setRequirementsOpen(false)} title="Requirements" className={`w-[min(96vw,1040px)] ${PHONE_FULLSCREEN}`}>
+        <div className="p-5">{auditPanel}</div>
+      </Dialog>
       <p className="text-[12.5px] text-muted">
         Courses from your <Link to={`/${term.meta.id}/record`} className="underline decoration-line-strong underline-offset-2 hover:text-ink">academic record</Link> appear
         in their semesters automatically. Unit limits and FCE comparisons are guidance; your college's rules and your advisor have the final say.

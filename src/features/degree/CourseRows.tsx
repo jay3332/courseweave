@@ -1,9 +1,13 @@
 import { coursePreview } from '../../components/CoursePreview'
 import { AlertTriangle, ArrowRightLeft, Check, Clock, ExternalLink, GripVertical, Info, MoreHorizontal, Trash2 } from 'lucide-react'
-import { useState, type DragEvent } from 'react'
+import { useCallback, useState, type DragEvent } from 'react'
 import { Link } from 'react-router'
 import type { CatalogIndex } from '../../lib/catalog-types'
-import type { Satisfies } from '../../lib/plan-table'
+import { HoverCard } from '../../components/HoverCard'
+import type { Requisite } from '../../lib/catalog-types'
+import type { Satisfies, SatisfiesItem } from '../../lib/plan-table'
+import type { RequirementState } from '../../lib/plan-types'
+import { RequisiteExpression, type StatusFn } from '../catalog/RequisiteExpression'
 import { FCE_HOURS_HELP, formatHours } from '../../lib/fce'
 import { isVariableUnits, offering, OFFERING_LABEL, planCourseUnits, planCoursePassFail, termPhase, type PlanCheck, type PlanCourse, type RecordEntryLike, type UnitsOf } from '../../lib/plan'
 import { termLabel } from '../../lib/requisites'
@@ -107,7 +111,7 @@ function CourseOptions({ props, info }: { props: PlanCourseRowProps; info: Retur
               <UnitsInput value={course.units ?? units} onChange={(u) => onUpdate({ units: u })} />
             </label>
           ) : null}
-          <Link to={href(course.courseId)} className="flex min-h-10 items-center gap-2 rounded-md px-2.5 text-[14px] text-ink hover:bg-surface-2 md:min-h-8 md:text-[13.5px]">
+          <Link to={href(course.courseId, props.term)} className="flex min-h-10 items-center gap-2 rounded-md px-2.5 text-[14px] text-ink hover:bg-surface-2 md:min-h-8 md:text-[13.5px]">
             <ExternalLink aria-hidden className="size-4 text-muted" />
             View course
           </Link>
@@ -202,7 +206,7 @@ export function PlanCourseRow(props: PlanCourseRowProps) {
     >
       <div className="flex min-h-9 items-center gap-1.5 md:min-h-7" {...coursePreview(course.courseId)}>
         {draggable ? <GripVertical aria-hidden className="size-3.5 shrink-0 cursor-grab text-line-strong group-hover:text-muted" /> : null}
-        <Link to={href(course.courseId)} className="course-code shrink-0 text-[14.5px] text-ink hover:text-accent">
+        <Link to={href(course.courseId, props.term)} className="course-code shrink-0 text-[14.5px] text-ink hover:text-accent">
           {codeOf(course.courseId)}
         </Link>
         <span className="min-w-0 flex-1 truncate text-[13px] text-ink-2" title={title}>
@@ -234,79 +238,90 @@ export function PlanCourseRow(props: PlanCourseRowProps) {
 }
 
 /** Columns of the detailed (table) layout, in order. */
-export const TABLE_COLUMNS = ['Course', 'Name', 'Units', 'Satisfies', 'Notes', 'Offered', 'Prerequisites', 'FCE', ''] as const
+export const TABLE_COLUMNS = ['Course', 'Name', 'Units', 'Satisfies', 'Offered', 'Prerequisites', 'FCE', ''] as const
 
 interface TableExtras {
   satisfies: Satisfies | null
   freeElective: boolean
   offered: string | null
-  prerequisites: string | null
-  onNote(note: string): void
+  /** The course's catalog prerequisites; undefined when the catalog doesn't have the course. */
+  prerequisites: Requisite | null | undefined
+  /** Met / planned / missing for prerequisite chips, as of this semester. */
+  chipStatus?: StatusFn
 }
+
+const STATE_TEXT: Partial<Record<RequirementState, string>> = {
+  complete: 'Done',
+  'complete-with-plan': 'Done once planned courses are taken',
+  'in-progress': 'In progress',
+  missing: 'Not started',
+}
+
+function progressLine(item: SatisfiesItem): string | null {
+  const p = item.units ?? item.courses
+  if (!p) return null
+  const unit = item.units ? 'units' : 'courses'
+  return `${fmtNumber(p.have)}${p.planned ? ` + ${fmtNumber(p.planned)} planned` : ''} of ${fmtNumber(p.need)} ${unit}`
+}
+
+const fmtNumber = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1))
 
 function SatisfiesCell({ satisfies, freeElective }: { satisfies: Satisfies | null; freeElective: boolean }) {
-  if (satisfies?.labels.length)
+  if (satisfies?.items.length)
     return (
-      <span className="line-clamp-2 text-ink-2" title={satisfies.paths.join('\n')}>
-        {satisfies.labels.join(', ')}
+      <span className="flex flex-col items-start gap-0.5">
+        {satisfies.items.map((item) => (
+          <HoverCard
+            key={`${item.program}-${item.nodeId}`}
+            trigger={
+              <button type="button" className="text-left leading-snug text-ink-2 underline decoration-line-strong decoration-dotted underline-offset-2 hover:text-ink">
+                {item.label}
+              </button>
+            }
+          >
+            <p className="text-[12px] text-muted">{item.program}</p>
+            {item.path.length ? <p className="mt-0.5 text-[12.5px] text-muted">{item.path.join(' › ')} ›</p> : null}
+            <p className="mt-0.5 text-[14px] font-semibold text-ink">{item.label}</p>
+            <p className="mt-1.5 text-[12.5px]">
+              {STATE_TEXT[item.state] ?? ''}
+              {progressLine(item) ? <span className="text-muted">{STATE_TEXT[item.state] ? ', ' : ''}{progressLine(item)}</span> : null}
+            </p>
+            {satisfies.items.length > 1 ? <p className="mt-1.5 text-[12px] text-muted">This course counts toward {satisfies.items.length} requirements.</p> : null}
+          </HoverCard>
+        ))}
       </span>
     )
-  return freeElective ? <span className="text-muted">Free elective</span> : <span className="text-muted">—</span>
+  if (freeElective)
+    return (
+      <HoverCard trigger={<button type="button" className="text-left text-muted underline decoration-line-strong decoration-dotted underline-offset-2 hover:text-ink">Free elective</button>}>
+        <p className="text-[13px] text-ink">Doesn't count toward a specific requirement.</p>
+        <p className="mt-1 text-[12.5px] text-muted">Its units still count toward your degree's unit total.</p>
+      </HoverCard>
+    )
+  return <span className="text-muted">—</span>
 }
 
-/** Notes save when you leave the field (or press Enter), not on every keystroke. */
-function NoteInput({ value, label, onSave }: { value: string; label: string; onSave(note: string): void }) {
-  const [draft, setDraft] = useState(value)
-  const [editing, setEditing] = useState(false)
-  const shown = editing ? draft : value
-  return (
-    <input
-      value={shown}
-      aria-label={label}
-      placeholder="Add a note"
-      maxLength={1000}
-      onFocus={() => {
-        setDraft(value)
-        setEditing(true)
-      }}
-      onChange={(e) => setDraft(e.target.value)}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter') e.currentTarget.blur()
-        if (e.key === 'Escape') {
-          setDraft(value)
-          setEditing(false)
-          e.currentTarget.blur()
-        }
-      }}
-      onBlur={() => {
-        if (editing && draft.trim() !== value) onSave(draft.trim())
-        setEditing(false)
-      }}
-      className="h-8 w-full min-w-0 rounded-md border border-transparent bg-transparent px-1.5 text-[13px] text-ink placeholder:text-line-strong hover:border-line focus:border-line-strong focus:bg-surface focus:outline-none md:h-7"
-    />
-  )
-}
-
-/** A planned course as a spreadsheet row; everything the card row does, plus Satisfies, Notes, Offered and Prerequisites. */
+/** A planned course as a spreadsheet row: everything the card row does, plus Satisfies, Offered and Prerequisites. */
 export function PlanCourseTableRow(props: PlanCourseRowProps & TableExtras) {
-  const { course, title, fceHours, check, draggable, satisfies, freeElective, offered, prerequisites, onNote, onUpdate } = props
+  const { course, term, title, fceHours, check, draggable, satisfies, freeElective, offered, prerequisites, chipStatus, onUpdate } = props
   const href = useCourseHref()
+  const chipHref = useCallback((id: string) => href(id, term), [href, term])
   const [showIssues, setShowIssues] = useState(false)
   const info = useCourseRowInfo(props)
   const { units, passFailOnly, passFail, variable, offeringWarning, Status } = info
   const code = codeOf(course.courseId)
   return (
     <>
-      <tr id={`plan-course-${course.id}`} tabIndex={-1} {...dragProps(course, draggable)} className="group border-t border-line outline-none hover:bg-surface-2 focus-visible:bg-surface-2">
-        <td className="sticky left-0 z-[1] bg-surface py-1 pr-2 pl-2 align-middle whitespace-nowrap group-hover:bg-surface-2">
+      <tr id={`plan-course-${course.id}`} tabIndex={-1} {...dragProps(course, draggable)} className="group outline-none hover:bg-surface-2 focus-visible:bg-surface-2">
+        <td className="sticky left-0 z-[1] bg-surface py-1.5 pr-2 pl-2 align-top whitespace-nowrap group-hover:bg-surface-2">
           <span className="flex items-center gap-1">
             {draggable ? <GripVertical aria-hidden className="size-3.5 shrink-0 cursor-grab text-line-strong group-hover:text-muted" /> : null}
-            <Link to={href(course.courseId)} {...coursePreview(course.courseId)} className="course-code text-[14.5px] text-ink hover:text-accent">
+            <Link to={href(course.courseId, term)} {...coursePreview(course.courseId)} className="course-code text-[14.5px] text-ink hover:text-accent">
               {code}
             </Link>
           </span>
         </td>
-        <td className="max-w-0 py-1 pr-2">
+        <td className="max-w-0 py-1.5 pr-2 align-top">
           <span className="flex min-w-0 items-center gap-1.5">
             <span className="truncate text-ink" title={title}>
               {title ?? 'Not in the catalog'}
@@ -318,35 +333,34 @@ export function PlanCourseTableRow(props: PlanCourseRowProps & TableExtras) {
             ) : null}
           </span>
         </td>
-        <td className="py-1 pr-2 text-right tabular-nums">
+        <td className="py-1.5 pr-2 text-right align-top tabular-nums">
           {variable ? (
-            <UnitsInput value={course.units ?? units} onChange={(u) => onUpdate({ units: u })} className="h-8 w-14 rounded-md border border-line bg-surface px-1.5 text-right text-[13px] md:h-7" />
+            <UnitsInput value={course.units ?? units} onChange={(u) => onUpdate({ units: u })} className="-my-1 h-8 w-14 rounded-md border border-line bg-surface px-1.5 text-right text-[13px] md:h-7" />
           ) : (
             units
           )}
         </td>
-        <td className="py-1 pr-2 text-[12.5px]">
+        <td className="py-1.5 pr-2 align-top text-[12.5px]">
           <SatisfiesCell satisfies={satisfies} freeElective={freeElective} />
         </td>
-        <td className="py-1 pr-2">
-          <NoteInput value={course.note ?? ''} label={`Note for ${code}`} onSave={onNote} />
-        </td>
-        <td className={`py-1 pr-2 text-[12.5px] whitespace-nowrap ${offeringWarning ? 'text-warn' : 'text-ink-2'}`} title={offeringWarning ?? undefined}>
+        <td className={`py-1.5 pr-2 align-top text-[12.5px] ${offeringWarning ? 'text-warn' : 'text-ink-2'}`} title={offeringWarning ?? undefined}>
           {offeringWarning ? <AlertTriangle aria-label={offeringWarning} className="mr-1 inline size-3.5 align-[-2px]" /> : null}
           {offered ?? '—'}
         </td>
-        <td className="max-w-0 py-1 pr-2 text-[12.5px] text-ink-2">
-          <span className="flex min-w-0 items-center gap-1">
+        <td className="py-1 pr-2 align-top text-[12.5px] text-ink-2">
+          <span className="flex min-w-0 items-start gap-1">
             <StatusButton courseId={course.courseId} info={info} open={showIssues} onToggle={() => setShowIssues(!showIssues)} />
-            <span className="truncate" title={prerequisites ?? undefined}>
-              {prerequisites ?? 'None'}
-            </span>
+            {prerequisites ? (
+              <RequisiteExpression req={prerequisites} status={chipStatus} href={chipHref} className="py-0.5 [&_a]:min-h-7 [&_a]:px-1.5" />
+            ) : (
+              <span className="py-1 text-muted">{prerequisites === null ? 'None' : 'Not in the catalog'}</span>
+            )}
           </span>
         </td>
-        <td className="py-1 pr-2 text-right text-[12px] text-muted tabular-nums" title={FCE_HOURS_HELP}>
+        <td className="py-1.5 pr-2 text-right align-top text-[12px] text-muted tabular-nums" title={FCE_HOURS_HELP}>
           {fceHours !== null ? `${formatHours(fceHours)}h` : ''}
         </td>
-        <td className="py-1 pr-1 text-right">
+        <td className="py-0.5 pr-1 text-right align-top">
           <CourseOptions props={props} info={info} />
         </td>
       </tr>
@@ -365,30 +379,29 @@ export function PlanCourseTableRow(props: PlanCourseRowProps & TableExtras) {
 export function RecordCourseTableRow({ entry, title, units, satisfies, offered }: { entry: RecordEntryLike; title: string | undefined; units: number; satisfies: Satisfies | null; offered: string | null }) {
   const href = useCourseHref()
   return (
-    <tr className="border-t border-line text-ink-2">
-      <td className="sticky left-0 z-[1] bg-surface py-1 pr-2 pl-2 whitespace-nowrap">
+    <tr className="text-ink-2">
+      <td className="sticky left-0 z-[1] bg-surface py-1.5 pr-2 pl-2 align-top whitespace-nowrap">
         <span className="sr-only">From your academic record:</span>
         {entry.courseId ? (
-          <Link to={href(entry.courseId)} {...coursePreview(entry.courseId)} className="course-code pl-[18px] text-[14.5px] text-ink-2 hover:text-accent">
+          <Link to={href(entry.courseId, entry.term)} {...coursePreview(entry.courseId)} className="course-code pl-[18px] text-[14.5px] text-ink-2 hover:text-accent">
             {codeOf(entry.courseId)}
           </Link>
         ) : (
           <span className="course-code pl-[18px] text-[14.5px]">Transfer</span>
         )}
       </td>
-      <td className="max-w-0 py-1 pr-2">
+      <td className="max-w-0 py-1.5 pr-2 align-top">
         <span className="flex min-w-0 items-center gap-1.5">
           <span className="truncate text-muted">{entry.label ?? title ?? 'Not in the catalog'}</span>
           {entry.grade ? <span className="shrink-0 rounded bg-surface-2 px-1.5 text-[11.5px] font-semibold text-ink-2">{entry.grade}</span> : null}
         </span>
       </td>
-      <td className="py-1 pr-2 text-right text-muted tabular-nums">{units}</td>
-      <td className="py-1 pr-2 text-[12.5px]">
+      <td className="py-1.5 pr-2 text-right align-top text-muted tabular-nums">{units}</td>
+      <td className="py-1.5 pr-2 align-top text-[12.5px]">
         <SatisfiesCell satisfies={satisfies} freeElective={false} />
       </td>
-      <td className="py-1 pr-2 text-[12.5px] text-muted">On your record</td>
-      <td className="py-1 pr-2 text-[12.5px] whitespace-nowrap text-muted">{offered ?? '—'}</td>
-      <td className="py-1 pr-2 text-[12.5px] text-muted">—</td>
+      <td className="py-1.5 pr-2 align-top text-[12.5px] text-muted">{offered ?? '—'}</td>
+      <td className="py-1.5 pr-2 align-top text-[12.5px] text-muted">{entry.grade ? `Taken, ${entry.grade}` : 'On your record'}</td>
       <td />
       <td />
     </tr>
@@ -402,7 +415,7 @@ export function RecordCourseRow({ entry, title, units }: { entry: RecordEntryLik
     <li className="flex min-h-9 items-center gap-1.5 px-1.5 py-1 md:min-h-7" {...coursePreview(entry.courseId)}>
       <span className="sr-only">From your academic record:</span>
       {entry.courseId ? (
-        <Link to={href(entry.courseId)} className="course-code shrink-0 text-[14.5px] text-ink-2 hover:text-accent">
+        <Link to={href(entry.courseId, entry.term)} className="course-code shrink-0 text-[14.5px] text-ink-2 hover:text-accent">
           {codeOf(entry.courseId)}
         </Link>
       ) : (

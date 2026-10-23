@@ -30,7 +30,7 @@ interface PlanState {
   removeCourse(planId: string, planCourseId: string): void
   /** Moves a course to another semester (created if needed), at `index` or the end. */
   moveCourse(planId: string, planCourseId: string, toTerm: string, index?: number): void
-  updateCourse(planId: string, planCourseId: string, patch: Partial<Pick<PlanCourse, 'passFail' | 'units' | 'note'>>): void
+  updateCourse(planId: string, planCourseId: string, patch: Partial<Pick<PlanCourse, 'passFail' | 'units'>>): void
   /** Replaces a semester's courses, e.g. with a schedule from the schedule planner. */
   setTermCourses(planId: string, term: string, courses: { courseId: string; passFail?: boolean }[]): void
 
@@ -43,8 +43,6 @@ interface PlanState {
   unlinkTerm(planId: string, term: string, courses?: SnapshotCourse[]): void
   /** Units override for a course in a semester (variable-unit courses), creating its snapshot row if needed. */
   setCourseUnits(planId: string, term: string, courseId: string, units: number | undefined): void
-  /** Note for a course in a semester, kept on the semester's own list (so synced semesters keep it too). */
-  setCourseNote(planId: string, term: string, courseId: string, note: string): void
   /** Drops a course from a semester's own list by course id (keeps a synced semester's snapshot current). */
   removeCourseFromTerm(planId: string, term: string, courseId: string): void
 }
@@ -53,7 +51,6 @@ export interface SnapshotCourse {
   courseId: string
   passFail?: boolean
   units?: number
-  note?: string
 }
 
 const toPlanCourse = (c: SnapshotCourse): PlanCourse => ({
@@ -61,7 +58,6 @@ const toPlanCourse = (c: SnapshotCourse): PlanCourse => ({
   courseId: c.courseId,
   ...(c.passFail ? { passFail: true } : {}),
   ...(c.units !== undefined ? { units: c.units } : {}),
-  ...(c.note ? { note: c.note } : {}),
 })
 
 function uid() {
@@ -204,7 +200,6 @@ export const usePlans = create<PlanState>()(
                 const next = { ...c, ...patch }
                 if (!next.passFail) delete next.passFail
                 if (next.units === undefined) delete next.units
-                if (!next.note) delete next.note
                 return next
               }),
             })),
@@ -231,25 +226,6 @@ export const usePlans = create<PlanState>()(
           }))
         },
 
-        setCourseNote(planId, term, courseId, note) {
-          update(planId, (p) => ({
-            terms: withTerm(p.terms, term).map((t) => {
-              if (t.term !== term) return t
-              const existing = t.courses.some((c) => c.courseId === courseId)
-              const courses = existing
-                ? t.courses.map((c) => {
-                    if (c.courseId !== courseId) return c
-                    const next: PlanCourse = { ...c, note }
-                    if (!note) delete next.note
-                    return next
-                  })
-                : note
-                  ? [...t.courses, toPlanCourse({ courseId, note })]
-                  : t.courses
-              return { ...t, courses }
-            }),
-          }))
-        },
         setCourseUnits(planId, term, courseId, units) {
           update(planId, (p) => ({
             terms: withTerm(p.terms, term).map((t) => {

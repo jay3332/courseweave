@@ -1,18 +1,19 @@
-import { CalendarDays, ChevronDown, Copy, MoreHorizontal, Plus, RefreshCw, Trash2, Unlink } from 'lucide-react'
+import { CalendarDays, ChevronDown, Copy, MoreHorizontal, RefreshCw, Trash2, Unlink } from 'lucide-react'
 import { useMemo, useState, type DragEvent } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { Button, Dialog } from '../../components/ui'
-import { coursesMissingFrom, loadWarnings, termPhase, type Plan, type PlanCheck, type PlanCourse } from '../../lib/plan'
+import { coursesMissingFrom, loadWarnings, planRequisiteContext, termPhase, type Plan, type PlanCheck, type PlanCourse } from '../../lib/plan'
 import { seasonsLabel, type requirementsByCourse } from '../../lib/plan-table'
-import { codeOf, formatRequisite } from '../../lib/requisite-format'
+import { codeOf } from '../../lib/requisite-format'
+import { statusFnFor } from '../record/check-summary'
 import { termLabel } from '../../lib/requisites'
 import { usePlans } from '../../state/plan'
 import { useStore, type Schedule } from '../../state/store'
-import { addToTerm, linkTermToSchedule, moveInPlan, removeFromPlan, setPlanNote, setPlanPassFail, setPlanUnits, unlinkTerm } from './linkActions'
+import { addToTerm, linkTermToSchedule, moveInPlan, removeFromPlan, setPlanPassFail, setPlanUnits, unlinkTerm } from './linkActions'
 import { useCourseLookup } from '../record/hooks'
 import { AddCourseInput } from './AddCourseInput'
 import { PlanCourseRow, PlanCourseTableRow, RecordCourseRow, RecordCourseTableRow, TABLE_COLUMNS } from './CourseRows'
-import { DRAG_TYPE, type ColumnView, type PlanDerived } from './hooks'
+import { DRAG_NEW_COURSE, DRAG_TYPE, useRecordLike, type ColumnView, type PlanDerived } from './hooks'
 import { MenuItem, MenuLabel, Popover } from './Popover'
 
 const PHASE_TAG = { past: 'Completed', current: 'In progress', future: null } as const
@@ -32,13 +33,11 @@ interface TermCardProps {
   dragEnabled: boolean
   /** 'table': the detailed, spreadsheet-style layout (S1: Fall 2026, with Satisfies, Notes, Offered, Prerequisites). */
   layout?: 'cards' | 'table'
-  /** Table layout: "S1", "Summer 1", … */
-  ordinal?: string
   /** Table layout: the requirements each course counts toward. */
   requirements?: ReturnType<typeof requirementsByCourse>
 }
 
-export function TermCard({ plan, column, derived, scheduled, published, fceHours, open, onToggle, collapsible, dragEnabled, layout = 'cards', ordinal, requirements }: TermCardProps) {
+export function TermCard({ plan, column, derived, scheduled, published, fceHours, open, onToggle, collapsible, dragEnabled, layout = 'cards', requirements }: TermCardProps) {
   const table = layout === 'table'
   const { term, totals } = column
   const lookup = useCourseLookup()
@@ -50,7 +49,6 @@ export function TermCard({ plan, column, derived, scheduled, published, fceHours
   const termSchedules = useMemo(() => Object.values(allSchedules).filter((s) => s.termId === term).sort((a, b) => a.createdAt - b.createdAt), [allSchedules, term])
   const schedules = termSchedules.filter((s) => s.entries.length > 0)
 
-  const [adding, setAdding] = useState(false)
   const [dragOver, setDragOver] = useState(false)
   const [pendingImport, setPendingImport] = useState<Schedule | null>(null)
   const [pendingLink, setPendingLink] = useState<{ schedule: Schedule; missing: PlanCourse[] } | null>(null)
@@ -61,6 +59,11 @@ export function TermCard({ plan, column, derived, scheduled, published, fceHours
   const synced = derived.terms.get(term)
   const syncedSchedule = synced?.schedule ? allSchedules[synced.schedule.id] : undefined
   const inPlan = useMemo(() => new Set(derived.resolved.terms.flatMap((t) => t.courses.map((c) => c.courseId))), [derived.resolved])
+  const record = useRecordLike()
+  const chipStatus = useMemo(
+    () => (table ? statusFnFor(planRequisiteContext(derived.resolved, record, derived.catalog, term), false) : undefined),
+    [table, derived.resolved, derived.catalog, record, term],
+  )
 
   const startSync = (s: Schedule) => {
     const own = plan.terms.find((t) => t.term === term)?.courses ?? []
@@ -87,11 +90,13 @@ export function TermCard({ plan, column, derived, scheduled, published, fceHours
   }
 
   const onDrop = (e: DragEvent) => {
-    const id = e.dataTransfer.getData(DRAG_TYPE)
+    const moved = e.dataTransfer.getData(DRAG_TYPE)
+    const added = e.dataTransfer.getData(DRAG_NEW_COURSE)
     setDragOver(false)
-    if (!id) return
+    if (!moved && !added) return
     e.preventDefault()
-    moveInPlan(plan, id, term)
+    if (moved) moveInPlan(plan, moved, term)
+    else addToTerm(plan, term, added)
   }
 
   const headingId = `term-${term}-heading`
@@ -103,16 +108,17 @@ export function TermCard({ plan, column, derived, scheduled, published, fceHours
       onDragOver={
         dragEnabled
           ? (e) => {
-              if (!e.dataTransfer.types.includes(DRAG_TYPE)) return
+              const adding = e.dataTransfer.types.includes(DRAG_NEW_COURSE)
+              if (!adding && !e.dataTransfer.types.includes(DRAG_TYPE)) return
               e.preventDefault()
-              e.dataTransfer.dropEffect = 'move'
+              e.dataTransfer.dropEffect = adding ? 'copy' : 'move'
               setDragOver(true)
             }
           : undefined
       }
       onDragLeave={dragEnabled ? () => setDragOver(false) : undefined}
       onDrop={dragEnabled ? onDrop : undefined}
-      className={`flex min-w-0 flex-col rounded-xl border bg-surface transition-colors ${dragOver ? 'border-accent ring-2 ring-[color-mix(in_oklab,var(--accent)_25%,transparent)]' : 'border-line'} ${
+      className={`@container flex min-w-0 flex-col rounded-xl border bg-surface transition-colors ${dragOver ? 'border-accent ring-2 ring-[color-mix(in_oklab,var(--accent)_25%,transparent)]' : 'border-line'} ${
         phase === 'past' ? 'bg-surface-2/60' : ''
       }`}
     >
@@ -127,7 +133,6 @@ export function TermCard({ plan, column, derived, scheduled, published, fceHours
           >
           {collapsible ? <ChevronDown aria-hidden className={`size-4 shrink-0 text-muted transition-transform ${open ? '' : '-rotate-90'}`} /> : null}
           <h3 id={headingId} className="display truncate text-[19px] text-ink">
-            {table && ordinal ? `${ordinal}: ` : ''}
             {termLabel(term)}
           </h3>
           {tag ? <span className="shrink-0 rounded-full bg-surface-2 px-2 py-0.5 text-[11.5px] font-medium text-ink-2">{tag}</span> : null}
@@ -141,7 +146,6 @@ export function TermCard({ plan, column, derived, scheduled, published, fceHours
           <div className="flex min-h-9 min-w-0 flex-1 items-center gap-2">
           {collapsible ? <ChevronDown aria-hidden className={`size-4 shrink-0 text-muted transition-transform ${open ? '' : '-rotate-90'}`} /> : null}
           <h3 id={headingId} className="display truncate text-[19px] text-ink">
-            {table && ordinal ? `${ordinal}: ` : ''}
             {termLabel(term)}
           </h3>
           {tag ? <span className="shrink-0 rounded-full bg-surface-2 px-2 py-0.5 text-[11.5px] font-medium text-ink-2">{tag}</span> : null}
@@ -152,6 +156,18 @@ export function TermCard({ plan, column, derived, scheduled, published, fceHours
           ) : null}
           </div>
         )}
+        {syncedSchedule ? (
+          <button
+            type="button"
+            onClick={() => openSchedule(syncedSchedule.id)}
+            title={`Synced with “${syncedSchedule.name}”: this semester's courses come from that schedule, and changes here update it. Open it in the schedule planner.`}
+            aria-label={`Synced with ${syncedSchedule.name}`}
+            className="inline-flex h-8 max-w-[11rem] shrink-0 items-center gap-1 rounded-full border border-line-strong px-2 text-[12px] font-medium text-ink-2 hover:border-ink-2 hover:text-ink md:h-6"
+          >
+            <RefreshCw aria-hidden className="size-3 shrink-0 text-ok" />
+            <span className="hidden truncate @sm:inline">{syncedSchedule.name}</span>
+          </button>
+        ) : null}
         <span className="shrink-0 text-right leading-none">
           <span className="display text-[20px] text-ink">{totals.units}</span>
           <span className="ml-1 text-[12px] text-muted">{totals.hasVariable ? 'u+' : 'u'}</span>
@@ -240,19 +256,7 @@ export function TermCard({ plan, column, derived, scheduled, published, fceHours
         </Popover>
       </header>
 
-      {syncedSchedule ? (
-        <div className="flex flex-wrap items-center gap-2 border-b border-line px-3 py-1.5">
-          <button
-            type="button"
-            onClick={() => openSchedule(syncedSchedule.id)}
-            title={`This semester's courses come from “${syncedSchedule.name}”; changes here update that schedule.`}
-            className="inline-flex min-h-8 items-center gap-1.5 rounded-full border border-line-strong px-2.5 text-[12.5px] font-medium text-ink-2 hover:border-ink-2 hover:text-ink md:min-h-6"
-          >
-            <RefreshCw aria-hidden className="size-3.5 text-ok" />
-            Synced with {syncedSchedule.name}
-          </button>
-        </div>
-      ) : synced?.missing ? (
+      {synced?.missing && !syncedSchedule ? (
         <div role="status" className="flex flex-wrap items-center gap-2 border-b border-line px-3 py-1.5 text-[12.5px] text-warn">
           <span className="min-w-0 flex-1">The synced schedule was deleted; showing your planned courses.</span>
           <button type="button" onClick={() => unlinkTerm(plan, term)} className="min-h-8 rounded px-1 font-medium text-ink-2 underline decoration-line-strong underline-offset-2 hover:text-ink">
@@ -263,22 +267,21 @@ export function TermCard({ plan, column, derived, scheduled, published, fceHours
 
       {open || !collapsible ? (
         <div id={`term-${term}-body`} className="flex flex-1 flex-col gap-1 px-1.5 py-1.5">
-          {empty && !adding ? <p className="px-1.5 py-2 text-[13px] text-muted">{phase === 'past' ? 'Nothing recorded for this semester.' : 'Nothing planned yet.'}</p> : null}
+          {empty ? <p className="px-1.5 py-2 text-[13px] text-muted">{phase === 'past' ? 'Nothing recorded for this semester.' : 'Nothing planned yet.'}</p> : null}
           {table && (column.recorded.length || column.planned.length) ? (
             <div className="scrollbar-thin -mx-1.5 overflow-x-auto">
-              <table className="w-full min-w-[960px] table-fixed text-left text-[13px]">
+              <table className="w-full min-w-[980px] table-fixed text-left text-[13px]">
                 <colgroup>
                   <col className="w-[86px]" />
                   <col className="min-w-[180px]" />
                   <col className="w-[48px]" />
-                  <col className="w-[140px]" />
-                  <col className="w-[150px]" />
+                  <col className="w-[170px]" />
                   <col className="w-[104px]" />
-                  <col className="w-[196px]" />
+                  <col className="w-[310px]" />
                   <col className="w-[48px]" />
                   <col className="w-[40px]" />
                 </colgroup>
-                <thead className="text-[12px] text-muted">
+                <thead className="border-b border-line text-[12px] text-muted">
                   <tr>
                     {TABLE_COLUMNS.map((c, i) => (
                       <th key={c || i} scope="col" className={`py-1.5 pr-2 font-medium ${i === 0 ? 'sticky left-0 z-[1] bg-surface pl-2' : ''} ${c === 'Units' || c === 'FCE' ? 'text-right' : ''}`}>
@@ -324,8 +327,8 @@ export function TermCard({ plan, column, derived, scheduled, published, fceHours
                         satisfies={requirements?.get(c.courseId, term) ?? null}
                         freeElective={!!requirements?.free.has(c.courseId)}
                         offered={seasonsLabel(entry)}
-                        prerequisites={entry?.prereqs ? formatRequisite(entry.prereqs) : entry ? null : 'Not in the catalog'}
-                        onNote={(note) => setPlanNote(plan, c.id, note)}
+                        prerequisites={entry ? (entry.prereqs ?? null) : undefined}
+                        chipStatus={chipStatus}
                       />
                     )
                   })}
@@ -385,27 +388,9 @@ export function TermCard({ plan, column, derived, scheduled, published, fceHours
             </ul>
           ) : null}
 
-          {adding ? (
-            <div className="px-0.5 pt-1">
-              <AddCourseInput
-                term={term}
-                scheduled={scheduled}
-                inPlan={inPlan}
-                autoFocus
-                onAdd={(id) => addToTerm(plan, term, id)}
-                onClose={() => setAdding(false)}
-              />
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setAdding(true)}
-              className="mt-auto flex min-h-10 items-center gap-1.5 rounded-md px-1.5 text-[13.5px] font-medium text-ink-2 hover:bg-surface-2 hover:text-ink md:min-h-8"
-            >
-              <Plus aria-hidden className="size-4" />
-              Add course
-            </button>
-          )}
+          <div className="mt-auto px-0.5 pt-1">
+            <AddCourseInput term={term} scheduled={scheduled} inPlan={inPlan} variant="inline" onAdd={(id) => addToTerm(plan, term, id)} />
+          </div>
         </div>
       ) : null}
 
