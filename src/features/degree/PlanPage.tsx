@@ -6,6 +6,7 @@ import type { ProgramSelection } from '../../lib/plan-types'
 import { termLabel } from '../../lib/requisites'
 import { usePlanList, usePlans } from '../../state/plan'
 import { useRecord } from '../../state/record'
+import { useStore } from '../../state/store'
 import { RecordPrompt } from '../record/RecordStart'
 import { useTerm } from '../../state/term'
 import { useMediaQuery } from '../planner/hooks'
@@ -59,6 +60,8 @@ function PlanView({ plan }: { plan: Plan }) {
   const [openTerms, setOpenTerms] = useState<Record<string, boolean>>({})
   const audit = useAuditResult(derived?.auditInput ?? null)
   const scheduled = useScheduledCourses(plan.terms.map((t) => t.term))
+  // The detailed layout's tables want the width; the requirements column narrows beside them.
+  const detailed = useStore((s) => s.planLayout === 'table')
   const recordEmpty = useRecord((s) => s.entries.length === 0 && Object.keys(s.overrides).length === 0)
 
   const toggleTerm = useCallback(
@@ -93,7 +96,7 @@ function PlanView({ plan }: { plan: Plan }) {
   if (!derived) return null
 
   const grid = (
-    <SemesterGrid plan={plan} derived={derived} openTerms={openTerms} onToggleTerm={toggleTerm} isPhone={isPhone} dragEnabled={finePointer && !isPhone} />
+    <SemesterGrid plan={plan} derived={derived} openTerms={openTerms} onToggleTerm={toggleTerm} isPhone={isPhone} dragEnabled={finePointer && !isPhone} audit={audit} />
   )
   const auditPanel = <AuditColumn input={derived.auditInput} onAddCourse={addFromAudit} termLabel={termLabel} />
 
@@ -106,7 +109,7 @@ function PlanView({ plan }: { plan: Plan }) {
       <RequisiteProblems derived={derived} onJump={jumpTo} />
 
       {isWide ? (
-        <div className="grid grid-cols-[minmax(0,1fr)_400px] items-start gap-6">
+        <div className={`grid items-start gap-6 ${detailed ? 'grid-cols-[minmax(0,1fr)_340px]' : 'grid-cols-[minmax(0,1fr)_400px]'}`}>
           {grid}
           <aside aria-label="Requirements" className="sticky top-4 flex max-h-[calc(100dvh-10rem)] flex-col gap-3 overflow-y-auto">
             <h2 className="display text-[22px] text-ink">Requirements</h2>

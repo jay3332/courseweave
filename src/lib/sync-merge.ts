@@ -147,6 +147,7 @@ function normalizePlanCourse(v: unknown): PlanCourse | null {
   const c: PlanCourse = { id: v.id, courseId: v.courseId }
   if (v.passFail === true) c.passFail = true
   if (isNum(v.units)) c.units = v.units
+  if (isStr(v.note) && v.note) c.note = v.note.slice(0, 1000)
   return c
 }
 
@@ -155,7 +156,12 @@ function normalizePlan(id: string, v: unknown): Plan | null {
   const terms: PlanTerm[] = Array.isArray(v.terms)
     ? v.terms
         .filter((t): t is Record<string, unknown> => isObj(t) && isStr(t.term))
-        .map((t) => ({ term: t.term as string, courses: Array.isArray(t.courses) ? t.courses.map(normalizePlanCourse).filter((c): c is PlanCourse => c !== null) : [] }))
+        .map((t) => ({
+          term: t.term as string,
+          courses: Array.isArray(t.courses) ? t.courses.map(normalizePlanCourse).filter((c): c is PlanCourse => c !== null) : [],
+          // Keep a semester's sync with a schedule (it used to be dropped when plans arrived from another device).
+          ...(isObj(t.link) && isStr(t.link.scheduleId) ? { link: { scheduleId: t.link.scheduleId } } : {}),
+        }))
     : []
   const programs = Array.isArray(v.programs)
     ? v.programs

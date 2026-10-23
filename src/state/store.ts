@@ -48,6 +48,8 @@ interface State {
   bookmarks: Record<string, string[]>
   theme: Theme
   calendarDisplay: CalendarDisplay
+  /** Degree plan layout: semester cards (default) or the detailed, spreadsheet-style table. */
+  planLayout: 'cards' | 'table'
 
   /** Makes sure the term has at least one schedule and an active one. Returns the active id. */
   ensureSchedule(termId: string): string
@@ -71,6 +73,7 @@ interface State {
   toggleBookmark(termId: string, courseId: string): void
   setTheme(theme: Theme): void
   setCalendarDisplay(patch: Partial<CalendarDisplay>): void
+  setPlanLayout(layout: 'cards' | 'table'): void
 }
 
 const uid = () => Math.random().toString(36).slice(2, 10)
@@ -97,6 +100,7 @@ export const useStore = create<State>()(
         bookmarks: {},
         theme: 'system',
         calendarDisplay: { section: true, time: true, location: true },
+        planLayout: 'cards',
 
         ensureSchedule(termId) {
           const { activeSchedule, schedules } = get()
@@ -214,6 +218,9 @@ export const useStore = create<State>()(
           set({ theme })
         },
 
+        setPlanLayout(planLayout) {
+          set({ planLayout })
+        },
         setCalendarDisplay(patch) {
           set((state) => ({ calendarDisplay: { ...state.calendarDisplay, ...patch } }))
         },

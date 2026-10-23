@@ -1,8 +1,12 @@
-import { Plus } from 'lucide-react'
+import { LayoutGrid, Plus, Table2 } from 'lucide-react'
+import { useMemo } from 'react'
 import { Link } from 'react-router'
 import { academicYearLabel, academicYearStart, compareTerms, isSummer, nextTerm, type Plan } from '../../lib/plan'
+import { requirementsByCourse, semesterOrdinals } from '../../lib/plan-table'
+import type { AuditResult } from '../../lib/plan-types'
 import { termLabel } from '../../lib/requisites'
 import { usePlans } from '../../state/plan'
+import { useStore } from '../../state/store'
 import { useTerm } from '../../state/term'
 import { useCourseLookup } from '../record/hooks'
 import { useFceHours, usePublishedTerms, useScheduledCourses, type ColumnView, type PlanDerived } from './hooks'
@@ -16,11 +20,18 @@ interface SemesterGridProps {
   onToggleTerm(term: string): void
   isPhone: boolean
   dragEnabled: boolean
+  /** The audit, for the table layout's Satisfies column. */
+  audit: AuditResult | null
 }
 
 /** Semesters grouped into academic-year rows: Fall, Spring, then Summer when planned. */
-export function SemesterGrid({ plan, derived, openTerms, onToggleTerm, isPhone, dragEnabled }: SemesterGridProps) {
+export function SemesterGrid({ plan, derived, openTerms, onToggleTerm, isPhone, dragEnabled, audit }: SemesterGridProps) {
   const addTerm = usePlans((s) => s.addTerm)
+  const layout = useStore((s) => s.planLayout)
+  const setLayout = useStore((s) => s.setPlanLayout)
+  const table = layout === 'table'
+  const requirements = useMemo(() => (table ? requirementsByCourse(audit) : undefined), [table, audit])
+  const ordinals = useMemo(() => semesterOrdinals(derived.columns.map((c) => c.term)), [derived.columns])
   const fceHours = useFceHours()
   const published = usePublishedTerms()
   const scheduled = useScheduledCourses(derived.columns.map((c) => c.term))
@@ -36,6 +47,29 @@ export function SemesterGrid({ plan, derived, openTerms, onToggleTerm, isPhone, 
 
   return (
     <div className="flex flex-col gap-6">
+      <div className="-mb-3 flex items-center justify-end">
+        <div role="radiogroup" aria-label="Semester layout" className="flex rounded-lg border border-line-strong p-0.5 text-[12.5px]">
+          {(
+            [
+              ['cards', 'Cards', LayoutGrid],
+              ['table', 'Detailed', Table2],
+            ] as const
+          ).map(([value, label, Icon]) => (
+            <button
+              key={value}
+              type="button"
+              role="radio"
+              aria-checked={layout === value}
+              onClick={() => setLayout(value)}
+              title={value === 'table' ? 'Each semester as a table with requirements, notes, offering and prerequisites' : 'Semesters side by side'}
+              className={`inline-flex h-9 items-center gap-1.5 rounded-md px-2.5 font-medium md:h-7 ${layout === value ? 'bg-surface-2 text-ink shadow-sm' : 'text-muted hover:text-ink'}`}
+            >
+              <Icon aria-hidden className="size-3.5" />
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
       <IncomingCredit derived={derived} />
       {yearKeys.map((key) => {
         const cols = years.get(key)!
@@ -58,7 +92,7 @@ export function SemesterGrid({ plan, derived, openTerms, onToggleTerm, isPhone, 
                 </button>
               ) : null}
             </div>
-            <div className={`grid grid-cols-1 gap-3 md:grid-cols-2 ${hasSummer ? '2xl:grid-cols-3' : ''}`}>
+            <div className={table ? 'flex flex-col gap-3' : `grid grid-cols-1 gap-3 md:grid-cols-2 ${hasSummer ? '2xl:grid-cols-3' : ''}`}>
               {cols.map((col) => (
                 <TermCard
                   key={col.term}
@@ -72,6 +106,10 @@ export function SemesterGrid({ plan, derived, openTerms, onToggleTerm, isPhone, 
                   onToggle={() => onToggleTerm(col.term)}
                   collapsible={isPhone}
                   dragEnabled={dragEnabled}
+                  layout={layout}
+                  ordinal={ordinals.get(col.term)}
+                  tint={derived.columns.findIndex((c) => c.term === col.term)}
+                  requirements={requirements}
                 />
               ))}
             </div>

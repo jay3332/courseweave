@@ -121,6 +121,28 @@ describe('mergePlanDoc', () => {
 })
 
 describe('normalizing server data', () => {
+  it("keeps a plan's semester links and course notes", () => {
+    const doc = normalizePlanDoc({
+      plans: {
+        p: {
+          name: 'Main',
+          startTerm: 'F26',
+          programs: [],
+          terms: [
+            { term: 'F26', courses: [{ id: 'c1', courseId: '15122', note: 'with Iliano' }], link: { scheduleId: 's1' } },
+            { term: 'S27', courses: [{ id: 'c2', courseId: '15150', note: '' }], link: { scheduleId: 7 } },
+          ],
+          createdAt: 1,
+          updatedAt: 2,
+        },
+      },
+      activePlanId: 'p',
+    })
+    expect(doc?.plans.p.terms).toEqual([
+      { term: 'F26', courses: [{ id: 'c1', courseId: '15122', note: 'with Iliano' }], link: { scheduleId: 's1' } },
+      { term: 'S27', courses: [{ id: 'c2', courseId: '15150' }] },
+    ])
+  })
   it('rejects non-objects', () => {
     expect(normalizeSchedulesDoc(null)).toBeNull()
     expect(normalizeRecordDoc([])).toBeNull()

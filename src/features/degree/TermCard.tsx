@@ -3,14 +3,16 @@ import { useMemo, useState, type DragEvent } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { Button, Dialog } from '../../components/ui'
 import { coursesMissingFrom, loadWarnings, termPhase, type Plan, type PlanCheck, type PlanCourse } from '../../lib/plan'
-import { codeOf } from '../../lib/requisite-format'
+import { courseColorStyle } from '../../lib/colors'
+import { seasonsLabel, type requirementsByCourse } from '../../lib/plan-table'
+import { codeOf, formatRequisite } from '../../lib/requisite-format'
 import { termLabel } from '../../lib/requisites'
 import { usePlans } from '../../state/plan'
 import { useStore, type Schedule } from '../../state/store'
-import { addToTerm, linkTermToSchedule, moveInPlan, removeFromPlan, setPlanPassFail, setPlanUnits, unlinkTerm } from './linkActions'
+import { addToTerm, linkTermToSchedule, moveInPlan, removeFromPlan, setPlanNote, setPlanPassFail, setPlanUnits, unlinkTerm } from './linkActions'
 import { useCourseLookup } from '../record/hooks'
 import { AddCourseInput } from './AddCourseInput'
-import { PlanCourseRow, RecordCourseRow } from './CourseRows'
+import { PlanCourseRow, PlanCourseTableRow, RecordCourseRow, RecordCourseTableRow, TABLE_COLUMNS } from './CourseRows'
 import { DRAG_TYPE, type ColumnView, type PlanDerived } from './hooks'
 import { MenuItem, MenuLabel, Popover } from './Popover'
 
@@ -29,9 +31,18 @@ interface TermCardProps {
   /** Collapsing only applies on phones. */
   collapsible: boolean
   dragEnabled: boolean
+  /** 'table': the detailed, spreadsheet-style layout (S1: Fall 2026, with Satisfies, Notes, Offered, Prerequisites). */
+  layout?: 'cards' | 'table'
+  /** Table layout: "S1", "Summer 1", … */
+  ordinal?: string
+  /** Table layout: palette index for the semester's header band. */
+  tint?: number
+  /** Table layout: the requirements each course counts toward. */
+  requirements?: ReturnType<typeof requirementsByCourse>
 }
 
-export function TermCard({ plan, column, derived, scheduled, published, fceHours, open, onToggle, collapsible, dragEnabled }: TermCardProps) {
+export function TermCard({ plan, column, derived, scheduled, published, fceHours, open, onToggle, collapsible, dragEnabled, layout = 'cards', ordinal, tint = 0, requirements }: TermCardProps) {
+  const table = layout === 'table'
   const { term, totals } = column
   const lookup = useCourseLookup()
   const navigate = useNavigate()
@@ -108,7 +119,10 @@ export function TermCard({ plan, column, derived, scheduled, published, fceHours
         phase === 'past' ? 'bg-surface-2/60' : ''
       }`}
     >
-      <header className="flex items-center gap-2 border-b border-line px-3 py-2">
+      <header
+        className={`flex items-center gap-2 border-b border-line px-3 py-2 ${table ? 'rounded-t-xl' : ''}`}
+        style={table ? { ...courseColorStyle(tint), background: 'color-mix(in oklab, var(--course) 15%, var(--surface))' } : undefined}
+      >
         {collapsible ? (
           <button
             type="button"
@@ -119,6 +133,7 @@ export function TermCard({ plan, column, derived, scheduled, published, fceHours
           >
           {collapsible ? <ChevronDown aria-hidden className={`size-4 shrink-0 text-muted transition-transform ${open ? '' : '-rotate-90'}`} /> : null}
           <h3 id={headingId} className="display truncate text-[19px] text-ink">
+            {table && ordinal ? `${ordinal}: ` : ''}
             {termLabel(term)}
           </h3>
           {tag ? <span className="shrink-0 rounded-full bg-surface-2 px-2 py-0.5 text-[11.5px] font-medium text-ink-2">{tag}</span> : null}
@@ -132,6 +147,7 @@ export function TermCard({ plan, column, derived, scheduled, published, fceHours
           <div className="flex min-h-9 min-w-0 flex-1 items-center gap-2">
           {collapsible ? <ChevronDown aria-hidden className={`size-4 shrink-0 text-muted transition-transform ${open ? '' : '-rotate-90'}`} /> : null}
           <h3 id={headingId} className="display truncate text-[19px] text-ink">
+            {table && ordinal ? `${ordinal}: ` : ''}
             {termLabel(term)}
           </h3>
           {tag ? <span className="shrink-0 rounded-full bg-surface-2 px-2 py-0.5 text-[11.5px] font-medium text-ink-2">{tag}</span> : null}
@@ -254,7 +270,76 @@ export function TermCard({ plan, column, derived, scheduled, published, fceHours
       {open || !collapsible ? (
         <div id={`term-${term}-body`} className="flex flex-1 flex-col gap-1 px-1.5 py-1.5">
           {empty && !adding ? <p className="px-1.5 py-2 text-[13px] text-muted">{phase === 'past' ? 'Nothing recorded for this semester.' : 'Nothing planned yet.'}</p> : null}
-          {column.recorded.length ? (
+          {table && (column.recorded.length || column.planned.length) ? (
+            <div className="scrollbar-thin -mx-1.5 overflow-x-auto">
+              <table className="w-full min-w-[960px] table-fixed text-left text-[13px]">
+                <colgroup>
+                  <col className="w-[86px]" />
+                  <col className="min-w-[180px]" />
+                  <col className="w-[48px]" />
+                  <col className="w-[140px]" />
+                  <col className="w-[150px]" />
+                  <col className="w-[104px]" />
+                  <col className="w-[196px]" />
+                  <col className="w-[48px]" />
+                  <col className="w-[40px]" />
+                </colgroup>
+                <thead className="text-[12px] text-muted">
+                  <tr>
+                    {TABLE_COLUMNS.map((c, i) => (
+                      <th key={c || i} scope="col" className={`py-1.5 pr-2 font-medium ${i === 0 ? 'sticky left-0 z-[1] bg-surface pl-2' : ''} ${c === 'Units' || c === 'FCE' ? 'text-right' : ''}`}>
+                        {c || <span className="sr-only">Options</span>}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {column.recorded.map((e) => (
+                    <RecordCourseTableRow
+                      key={e.id}
+                      entry={e}
+                      title={e.courseId ? lookup(e.courseId).title : undefined}
+                      units={column.recordUnits.get(e.id) ?? 0}
+                      satisfies={e.courseId ? (requirements?.get(e.courseId, term) ?? null) : null}
+                      offered={e.courseId ? seasonsLabel(derived.catalog?.courses[e.courseId]) : null}
+                    />
+                  ))}
+                  {column.planned.map((c) => {
+                    const entry = derived.catalog?.courses[c.courseId]
+                    return (
+                      <PlanCourseTableRow
+                        key={c.id}
+                        course={c}
+                        term={term}
+                        current={derived.current}
+                        catalog={derived.catalog}
+                        unitsOf={derived.unitsOf}
+                        title={lookup(c.courseId).title}
+                        fceHours={fceHours(c.courseId)}
+                        check={derived.checks.get(c.id) as PlanCheck | undefined}
+                        scheduled={scheduled}
+                        moveTargets={moveTargets}
+                        draggable={dragEnabled}
+                        removeLabel={syncedSchedule ? `Remove from ${syncedSchedule.name}` : undefined}
+                        onMove={(t) => moveInPlan(plan, c.id, t)}
+                        onRemove={() => removeFromPlan(plan, c.id)}
+                        onUpdate={(patch) => {
+                          if ('passFail' in patch) setPlanPassFail(plan, c.id, !!patch.passFail)
+                          if ('units' in patch) setPlanUnits(plan, c.id, patch.units)
+                        }}
+                        satisfies={requirements?.get(c.courseId, term) ?? null}
+                        freeElective={!!requirements?.free.has(c.courseId)}
+                        offered={seasonsLabel(entry)}
+                        prerequisites={entry?.prereqs ? formatRequisite(entry.prereqs) : entry ? null : 'Not in the catalog'}
+                        onNote={(note) => setPlanNote(plan, c.id, note)}
+                      />
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
+          {!table && column.recorded.length ? (
             <ul aria-label="From your record" className="flex flex-col">
               {column.recorded.map((e) => (
                 <RecordCourseRow key={e.id} entry={e} title={e.courseId ? lookup(e.courseId).title : undefined} units={column.recordUnits.get(e.id) ?? 0} />
@@ -278,7 +363,7 @@ export function TermCard({ plan, column, derived, scheduled, published, fceHours
               ) : null}
             </div>
           ) : null}
-          {column.planned.length ? (
+          {!table && column.planned.length ? (
             <ul aria-label="Planned" className="flex flex-col">
               {column.planned.map((c) => (
                 <PlanCourseRow
