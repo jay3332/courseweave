@@ -1,4 +1,3 @@
-import { Check, Clock, X } from 'lucide-react'
 import { Fragment, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import { coursePreview } from '../../components/CoursePreview'
@@ -7,18 +6,25 @@ import { codeOf } from '../../lib/requisite-format'
 import { useChipContext, type ChipContext, type HrefFn, type RequisiteStatus, type StatusFn } from './chip-context'
 
 const STATUS_LABEL: Record<RequisiteStatus, string> = { met: 'completed', planned: 'planned', missing: 'not taken yet' }
-const STATUS_ICON = { met: Check, planned: Clock, missing: X }
-const STATUS_ICON_COLOR: Record<RequisiteStatus, string> = { met: 'text-ok', planned: 'text-warn', missing: 'text-danger' }
+// A highlight rather than an icon: these sit beside the row's own status icon in tables.
+const STATUS_HIGHLIGHT: Record<RequisiteStatus, string> = {
+  met: 'text-ok bg-[color-mix(in_oklab,var(--ok)_14%,transparent)]',
+  planned: 'text-warn bg-[color-mix(in_oklab,var(--warn)_14%,transparent)]',
+  missing: 'text-danger bg-[color-mix(in_oklab,var(--danger)_14%,transparent)]',
+}
 
 function CourseText({ id, minGrade, ctx }: { id: string; minGrade?: string; ctx: ChipContext }) {
   const code = codeOf(id)
   const status = ctx.status?.(id)
   const title = ctx.title(id)
   const label = [title ? `${code} ${title}` : code, minGrade ? `minimum grade ${minGrade}` : null, status ? STATUS_LABEL[status] : null].filter(Boolean).join(', ')
-  const Icon = status ? STATUS_ICON[status] : null
   return (
-    <Link to={ctx.href(id)} aria-label={label} {...coursePreview(id)} className="whitespace-nowrap text-ink hover:text-accent hover:underline">
-      {Icon ? <Icon aria-hidden className={`mr-0.5 inline size-3 align-[-1px] ${STATUS_ICON_COLOR[status!]}`} /> : null}
+    <Link
+      to={ctx.href(id)}
+      aria-label={label}
+      {...coursePreview(id)}
+      className={`rounded-[3px] whitespace-nowrap hover:underline ${status ? `px-1 py-px ${STATUS_HIGHLIGHT[status]}` : 'text-ink hover:text-accent'}`}
+    >
       <span className="course-code text-[13px]">{code}</span>
     </Link>
   )
@@ -72,7 +78,7 @@ function Part({ req, ctx, top, before, after }: { req: Requisite; ctx: ChipConte
 
 /**
  * A requisite expression as one line of wrapping text, like a catalog writes it: "15-122 and (21-127 or 15-151)".
- * Courses link and carry a met/planned/missing icon when `status` is given. For dense places such as tables;
+ * Courses link and are highlighted met/planned/missing when `status` is given. For dense places such as tables;
  * `RequisiteExpression` is the roomier, chip-based version.
  */
 export function RequisiteText({ req, status, href, className = '' }: { req: Requisite; status?: StatusFn; href?: HrefFn; className?: string }) {
