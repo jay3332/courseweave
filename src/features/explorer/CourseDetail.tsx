@@ -390,12 +390,14 @@ function SectionsList(props: SectionsListProps) {
   // The full page has room for every recitation; the side panel starts long lists collapsed.
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set(table ? topSections(course).map((t) => t.name) : []))
 
+  // Rows have side padding so a highlighted (added or hovered) row doesn't sit flush with its text; the list pulls out
+  // by the same amount so the text still lines up with the heading above.
   return (
-    <div className="@container">
+    <div className="@container -mx-2">
       {/* Column headings only once there's room for the Days / Time / Room columns (the meeting lines switch at @lg too). */}
       <div
         aria-hidden
-        className={`hidden border-b border-line-strong pb-1.5 text-[12px] text-muted @lg:grid @lg:grid-cols-[3.75rem_minmax(0,1fr)_5.75rem] @lg:gap-x-2 ${table ? `${TABLE_COLS}` : ''}`}
+        className={`hidden border-b border-line-strong px-2 pb-1.5 text-[12px] text-muted @lg:grid @lg:grid-cols-[3.75rem_minmax(0,1fr)_5.75rem] @lg:gap-x-2 ${table ? `${TABLE_COLS}` : ''}`}
       >
         <span>Section</span>
         <span className="grid grid-cols-[3rem_8.5rem_minmax(0,1fr)] gap-x-2">
@@ -432,7 +434,7 @@ function SectionsList(props: SectionsListProps) {
                           return next
                         })
                       }
-                      className="flex min-h-8 items-center gap-1 rounded py-1 text-[12.5px] font-medium text-ink-2 hover:text-ink"
+                      className="flex min-h-8 items-center gap-1 rounded px-2 py-1 text-[12.5px] font-medium text-ink-2 hover:text-ink"
                     >
                       <ChevronDown aria-hidden className={`size-3.5 transition-transform ${open ? '' : '-rotate-90'}`} />
                       {open ? 'Hide' : 'Show'} {children.length} recitations for {partLabel(top)}
@@ -473,7 +475,7 @@ function SectionRow({ course, entry, canEdit, conflictsFor, onHover, onAct, onRe
       onMouseLeave={() => onHover(null)}
       onFocus={() => onHover(s)}
       onBlur={() => onHover(null)}
-      className={`grid grid-cols-[3.25rem_minmax(0,1fr)_auto] gap-x-2 py-2 transition-colors hover:bg-surface-2 @md:grid-cols-[3.75rem_minmax(0,1fr)_5.75rem] ${table ? TABLE_COLS : ''} ${
+      className={`grid grid-cols-[3.25rem_minmax(0,1fr)_auto] gap-x-2 px-2 py-2 transition-colors hover:bg-surface-2 @md:grid-cols-[3.75rem_minmax(0,1fr)_5.75rem] ${table ? TABLE_COLS : ''} ${
         isChosen ? 'bg-[color-mix(in_oklab,var(--ok)_7%,transparent)]' : ''
       }`}
     >
