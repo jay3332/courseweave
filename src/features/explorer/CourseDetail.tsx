@@ -2,6 +2,7 @@ import { coursePreview } from '../../components/CoursePreview'
 import { AlertTriangle, ArrowLeft, ArrowLeftRight, Check, ChevronDown, Info, KeyRound, Maximize2, Plus, Star, UsersRound, X } from 'lucide-react'
 import { useMemo, useState, type ReactNode } from 'react'
 import { Link } from 'react-router'
+import { HoverCard } from '../../components/HoverCard'
 import { Button } from '../../components/ui'
 import { WeekGrid, type CalendarBlock } from '../../components/WeekGrid'
 import { isUnscheduled } from '../../lib/blocks'
@@ -470,6 +471,28 @@ function SectionsList(props: SectionsListProps) {
   )
 }
 
+/** A section's seat count; with reservations, a hover card says who the reserved seats are for. */
+function Seats({ section: s, suffix = '' }: { section: Section; suffix?: string }) {
+  const count = s.capacity !== undefined ? `${s.capacity}${suffix}` : 'Seats'
+  if (!s.reservations?.length) return <>{count}</>
+  const codes = reservationCodes(s.reservations)
+  return (
+    <HoverCard
+      trigger={
+        <button type="button" className="inline-flex items-center gap-1 underline decoration-line-strong decoration-dotted underline-offset-2 hover:text-ink">
+          <UsersRound aria-hidden className="size-3 text-muted" />
+          {count}
+        </button>
+      }
+    >
+      <p className="text-[12px] text-muted">Seat reservations</p>
+      <p className="mt-0.5 text-[13px] text-ink">Reserved seats for {reservationSummary(s.reservations)}</p>
+      {codes ? <p className="mt-1.5 text-[12px] text-muted">{codes}</p> : null}
+      <p className="mt-1.5 text-[11.5px] text-muted">From the Schedule of Classes.</p>
+    </HoverCard>
+  )
+}
+
 function SectionRow({ course, entry, canEdit, conflictsFor, onHover, onAct, onRemove, layout = 'stack', section: s }: SectionsListProps & { section: Section }) {
   const table = layout === 'table'
   const term = useTerm()
@@ -516,14 +539,12 @@ function SectionRow({ course, entry, canEdit, conflictsFor, onHover, onAct, onRe
             {!isChild ? s.instructors.map((name) => <InstructorFceBadge key={name} courseId={course.id} instructor={name} />) : null}
             <span title={`Delivery mode ${s.mode}`}>{modeLabel(s.mode)}</span>
             {s.mini !== null ? <span className="font-medium text-ink-2">{miniName(s.mini, term.meta)}</span> : null}
-            {s.capacity ? <span className={table ? '@3xl:hidden' : ''}>{s.capacity} seats</span> : null}
+            {s.capacity || s.reservations?.length ? (
+              <span className={table ? '@3xl:hidden' : ''}>
+                <Seats section={s} suffix=" seats" />
+              </span>
+            ) : null}
           </div>
-          {s.reservations?.length ? (
-            <div className="mt-1 flex items-start gap-1 text-[12.5px] text-muted" title={reservationCodes(s.reservations) || undefined}>
-              <UsersRound aria-hidden className="mt-0.5 size-3.5 shrink-0" />
-              <span>Reserved seats for {reservationSummary(s.reservations)}</span>
-            </div>
-          ) : null}
           {conflicts.length ? (
             <div className="mt-1 flex items-center gap-1 text-[12.5px] font-medium text-danger">
               <AlertTriangle className="size-3.5 shrink-0" />
@@ -533,7 +554,11 @@ function SectionRow({ course, entry, canEdit, conflictsFor, onHover, onAct, onRe
         </div>
       </div>
 
-      {table ? <div className="hidden text-right text-[13px] text-ink-2 tabular-nums @3xl:block">{s.capacity ?? '—'}</div> : null}
+      {table ? (
+        <div className="hidden text-right text-[13px] text-ink-2 tabular-nums @3xl:block">
+          <Seats section={s} />
+        </div>
+      ) : null}
 
       <div className="flex flex-col items-end gap-0.5">
         {isChosen ? (

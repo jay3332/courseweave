@@ -31,5 +31,9 @@ describe('reservationSummary', () => {
     expect(reservationCodes(['Some reservations are for Students in DC', 'Some reservations are for Students in QBA', 'Some reservations are for First-Year in M00'])).toBe(
       'DC: Dietrich College, M00: MCS, undeclared',
     )
+    // A college code means the college, not the department with the same code.
+    expect(reservationCodes(['Some reservations are for First-Year in SCS', 'Some reservations are for Students in ECE'])).toBe(
+      'SCS: School of Computer Science, ECE: Electrical & Computer Engineering',
+    )
   })
 })

@@ -23,8 +23,20 @@ function whoLabel(raw: string): string {
   return (WHO[m[1].toLowerCase()] ?? m[1].toLowerCase()) + (m[2] ? ' with a primary major' : '')
 }
 
-/** Reservation codes that aren't department codes, confirmed against SIO's wording. */
-const GROUPS: Record<string, string> = { DC: 'Dietrich College', TSB: 'Tepper School of Business', M00: 'MCS, undeclared' }
+/**
+ * Codes whose reservation meaning differs from (or is missing in) the department list: a college code reserves seats
+ * for the whole college ("SCS" is the School of Computer Science, not the SCS interdisciplinary department).
+ */
+const GROUPS: Record<string, string> = {
+  CFA: 'College of Fine Arts',
+  CIT: 'College of Engineering',
+  DC: 'Dietrich College',
+  HC: 'Heinz College',
+  MCS: 'Mellon College of Science',
+  SCS: 'School of Computer Science',
+  TSB: 'Tepper School of Business',
+  M00: 'MCS, undeclared',
+}
 
 const LINE = /^(?:Some|All) reservations are for (.+?)(?: in (.+))?$/i
 

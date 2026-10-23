@@ -1,5 +1,6 @@
 import { AlertTriangle, ChevronDown } from 'lucide-react'
 import { useId, useMemo, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { Link } from 'react-router'
 import { Button } from '../../components/ui'
 import { useCatalogIndex } from '../../lib/catalog'
@@ -19,6 +20,8 @@ interface RequisiteStatusProps {
   defaultOpen?: boolean
   /** Hide the status line when there's nothing to report ("No prerequisites"). */
   hideWhenClear?: boolean
+  /** Render the expanded details here instead of under the status line (e.g. a row below a bottom-aligned header). */
+  detailsContainer?: HTMLElement | null
   className?: string
 }
 
@@ -26,7 +29,7 @@ interface RequisiteStatusProps {
  * Status line for one course's requisites with expandable details and waiver actions.
  * Green: met. Amber: met by planned or same-term courses. Red: missing or conflicting.
  */
-export function RequisiteStatus({ courseId, termId, context, defaultOpen = false, hideWhenClear = false, className = '' }: RequisiteStatusProps) {
+export function RequisiteStatus({ courseId, termId, context, defaultOpen = false, hideWhenClear = false, detailsContainer, className = '' }: RequisiteStatusProps) {
   const own = useRequisiteContext(termId)
   const catalog = useCatalogIndex()
   const [open, setOpen] = useState(defaultOpen)
@@ -67,7 +70,11 @@ export function RequisiteStatus({ courseId, termId, context, defaultOpen = false
           </button>
         ) : null}
       </div>
-      {open && ctx && entry ? <RequisiteDetails id={detailsId} check={check} entry={entry} ctx={ctx} termId={termId} /> : null}
+      {open && ctx && entry
+        ? detailsContainer
+          ? createPortal(<RequisiteDetails id={detailsId} check={check} entry={entry} ctx={ctx} termId={termId} />, detailsContainer)
+          : <RequisiteDetails id={detailsId} check={check} entry={entry} ctx={ctx} termId={termId} />
+        : null}
     </div>
   )
 }

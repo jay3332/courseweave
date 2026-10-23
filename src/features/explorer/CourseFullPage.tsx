@@ -1,7 +1,7 @@
 // The full-width course page: everything in the side panel, laid out across the screen, plus history tables side by
 // side and the prerequisite tree. Opened from the side panel's Expand; Back returns to the list as it was.
 import { ArrowLeft, Star, X } from 'lucide-react'
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router'
 import { Button, Spinner } from '../../components/ui'
 import { buildUnlocks, useCatalogIndex } from '../../lib/catalog'
@@ -54,6 +54,8 @@ function CourseFull({ course, search }: { course: Course; search: string }) {
   const requisites = useRequisiteContext(termId)
   const chipStatus = useMemo(() => (requisites.ctx ? statusFnFor(requisites.ctx, false) : undefined), [requisites.ctx])
   const sched = useCourseSchedule(course)
+  // Where the requisite details open: a header row below the title and actions.
+  const [detailsSlot, setDetailsSlot] = useState<HTMLDivElement | null>(null)
   const index = useCatalogIndex()
   // Course chips stay in full view when the course is offered this term; others open the requisite explorer.
   const chipHref = useMemo(
@@ -90,17 +92,18 @@ function CourseFull({ course, search }: { course: Course; search: string }) {
         </div>
       </div>
 
-      {/* Top-aligned, so opening the requisite details grows the header downward rather than pushing it up. */}
-      <header className="-mt-4 flex flex-col gap-6 border-b border-line pb-8 lg:flex-row lg:items-start lg:justify-between lg:gap-12">
-        <div className="min-w-0">
+      {/* Actions sit level with the bottom of the title; requisite details open in a row below, so nothing moves up. */}
+      <header className="-mt-4 grid gap-6 border-b border-line pb-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:gap-x-12">
+        <div className="min-w-0 lg:self-end">
           <div className="course-code text-[56px] leading-none text-ink md:text-[76px]">{course.code}</div>
           <h1 className="display mt-2 max-w-[30ch] text-[28px] leading-tight text-ink md:text-[38px]">{course.title}</h1>
           <CourseFacts course={course} search={search} layout="row" className="mt-6" />
         </div>
-        <div className="flex shrink-0 flex-col gap-1 lg:max-w-[26rem] lg:items-end lg:text-right">
+        <div className="flex shrink-0 flex-col gap-1 lg:max-w-[26rem] lg:items-end lg:self-end lg:text-right">
           <ScheduleActions course={course} sched={sched} />
-          <RequisiteStatus courseId={course.id} termId={termId} context={requisites.ctx ?? undefined} className="mt-2 lg:text-left" />
+          <RequisiteStatus courseId={course.id} termId={termId} context={requisites.ctx ?? undefined} detailsContainer={detailsSlot} className="mt-2 lg:text-left" />
         </div>
+        <div ref={setDetailsSlot} className="empty:hidden lg:col-start-2 lg:-mt-2 lg:w-[26rem]" />
       </header>
 
       <div className="grid gap-x-10 gap-y-10 lg:grid-cols-[minmax(0,1fr)_minmax(320px,400px)]">
