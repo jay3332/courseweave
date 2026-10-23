@@ -3,6 +3,9 @@ import { createPortal } from 'react-dom'
 
 type Placement = { top?: number; bottom?: number; right: number }
 
+/** Inside a modal dialog a floating panel must live in the dialog (the top layer), not in <body>. */
+const hostOf = (el: Element) => el.closest('dialog') ?? document.body
+
 /**
  * A button that opens a small menu panel. The panel floats above the page (anchored to the button, opening upward
  * near the bottom of the screen), so scrolling tables and cards can't clip it. Closes on outside click, Escape, or
@@ -22,18 +25,20 @@ export function Popover({
   panelClassName?: string
 }) {
   const [open, setOpen] = useState(false)
-  const [place, setPlace] = useState<Placement | null>(null)
+  const [place, setPlace] = useState<{ pos: Placement; host: Element } | null>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
   const id = useId()
   const close = useCallback(() => setOpen(false), [])
 
   const measure = useCallback(() => {
-    const r = buttonRef.current?.getBoundingClientRect()
-    if (!r) return
+    const button = buttonRef.current
+    if (!button) return
+    const r = button.getBoundingClientRect()
     const right = Math.max(8, window.innerWidth - r.right)
     const below = window.innerHeight - r.bottom
-    setPlace(below < 280 && r.top > below ? { bottom: window.innerHeight - r.top + 4, right } : { top: r.bottom + 4, right })
+    const pos = below < 280 && r.top > below ? { bottom: window.innerHeight - r.top + 4, right } : { top: r.bottom + 4, right }
+    setPlace({ pos, host: hostOf(button) })
   }, [])
 
   useLayoutEffect(() => {
@@ -64,9 +69,6 @@ export function Popover({
     }
   }, [open, close, measure])
 
-  // Inside a modal dialog the panel must live in the dialog (the top layer), not in <body>.
-  const host = open ? (buttonRef.current?.closest('dialog') ?? document.body) : null
-
   return (
     <div className={`relative ${className}`}>
       <button
@@ -81,12 +83,12 @@ export function Popover({
       >
         {button}
       </button>
-      {open && place && host
+      {open && place
         ? createPortal(
             <div
               ref={panelRef}
               id={id}
-              style={{ position: 'fixed', ...place }}
+              style={{ position: 'fixed', ...place.pos }}
               onKeyDown={(e) => {
                 // Tabbing out of the menu closes it and returns to the button, as if the panel sat right after it.
                 if (e.key === 'Tab' && !e.shiftKey && e.target === [...(panelRef.current?.querySelectorAll<HTMLElement>('button, a, input, select') ?? [])].at(-1)) {
@@ -99,7 +101,7 @@ export function Popover({
             >
               {children(close)}
             </div>,
-            host,
+            place.host,
           )
         : null}
     </div>

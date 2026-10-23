@@ -8,7 +8,7 @@ const CLOSE_DELAY = 140
 
 export function HoverCard({ trigger, children, className = '' }: { trigger: ReactNode; children: ReactNode; className?: string }) {
   const [open, setOpen] = useState(false)
-  const [place, setPlace] = useState<{ top?: number; bottom?: number; left: number } | null>(null)
+  const [place, setPlace] = useState<{ pos: { top?: number; bottom?: number; left: number }; host: Element } | null>(null)
   const anchor = useRef<HTMLSpanElement>(null)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const id = useId()
@@ -21,11 +21,14 @@ export function HoverCard({ trigger, children, className = '' }: { trigger: Reac
 
   useLayoutEffect(() => {
     if (!open) return
-    const r = anchor.current?.getBoundingClientRect()
-    if (!r) return
+    const el = anchor.current
+    if (!el) return
+    const r = el.getBoundingClientRect()
     const left = Math.max(8, Math.min(r.left, window.innerWidth - 328))
     const below = window.innerHeight - r.bottom
-    setPlace(below < 220 && r.top > below ? { bottom: window.innerHeight - r.top + 6, left } : { top: r.bottom + 6, left })
+    const pos = below < 220 && r.top > below ? { bottom: window.innerHeight - r.top + 6, left } : { top: r.bottom + 6, left }
+    // Inside a modal dialog the card must live in the dialog (the top layer), not in <body>.
+    setPlace({ pos, host: el.closest('dialog') ?? document.body })
   }, [open])
 
   useEffect(() => {
@@ -40,8 +43,6 @@ export function HoverCard({ trigger, children, className = '' }: { trigger: Reac
     }
   }, [open])
 
-  const host = open ? (anchor.current?.closest('dialog') ?? document.body) : null
-
   return (
     <span
       ref={anchor}
@@ -53,19 +54,19 @@ export function HoverCard({ trigger, children, className = '' }: { trigger: Reac
       onBlur={() => schedule(false, CLOSE_DELAY)}
     >
       {trigger}
-      {open && place && host
+      {open && place
         ? createPortal(
             <div
               id={id}
               role="tooltip"
-              style={{ position: 'fixed', ...place }}
+              style={{ position: 'fixed', ...place.pos }}
               onMouseEnter={() => schedule(true, 0)}
               onMouseLeave={() => schedule(false, CLOSE_DELAY)}
               className="z-50 w-80 max-w-[calc(100vw-1rem)] rounded-lg border border-line bg-surface p-3 text-left text-[13px] font-normal text-ink-2 shadow-xl"
             >
               {children}
             </div>,
-            host,
+            place.host,
           )
         : null}
     </span>

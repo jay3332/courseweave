@@ -270,14 +270,14 @@ export function TermCard({ plan, column, derived, scheduled, published, fceHours
           {empty ? <p className="px-1.5 py-2 text-[13px] text-muted">{phase === 'past' ? 'Nothing recorded for this semester.' : 'Nothing planned yet.'}</p> : null}
           {table && (column.recorded.length || column.planned.length) ? (
             <div className="scrollbar-thin -mx-1.5 overflow-x-auto">
-              <table className="w-full min-w-[980px] table-fixed text-left text-[13px]">
+              <table className="w-full min-w-[930px] table-fixed text-left text-[13px]">
                 <colgroup>
                   <col className="w-[86px]" />
                   <col className="min-w-[180px]" />
                   <col className="w-[48px]" />
                   <col className="w-[170px]" />
                   <col className="w-[104px]" />
-                  <col className="w-[310px]" />
+                  <col className="w-[260px]" />
                   <col className="w-[48px]" />
                   <col className="w-[40px]" />
                 </colgroup>

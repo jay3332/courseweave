@@ -7,7 +7,8 @@ import { HoverCard } from '../../components/HoverCard'
 import type { Requisite } from '../../lib/catalog-types'
 import type { Satisfies, SatisfiesItem } from '../../lib/plan-table'
 import type { RequirementState } from '../../lib/plan-types'
-import { RequisiteExpression, type StatusFn } from '../catalog/RequisiteExpression'
+import type { StatusFn } from '../catalog/RequisiteExpression'
+import { RequisiteText } from '../catalog/RequisiteText'
 import { FCE_HOURS_HELP, formatHours } from '../../lib/fce'
 import { isVariableUnits, offering, OFFERING_LABEL, planCourseUnits, planCoursePassFail, termPhase, type PlanCheck, type PlanCourse, type RecordEntryLike, type UnitsOf } from '../../lib/plan'
 import { termLabel } from '../../lib/requisites'
@@ -350,10 +351,11 @@ export function PlanCourseTableRow(props: PlanCourseRowProps & TableExtras) {
         <td className="py-1 pr-2 align-top text-[12.5px] text-ink-2">
           <span className="flex min-w-0 items-start gap-1">
             <StatusButton courseId={course.courseId} info={info} open={showIssues} onToggle={() => setShowIssues(!showIssues)} />
+            {/* Text lines up with the status button: 18px lines in a 36px (touch) or 24px button. */}
             {prerequisites ? (
-              <RequisiteExpression req={prerequisites} status={chipStatus} href={chipHref} className="py-0.5 [&_a]:min-h-7 [&_a]:px-1.5" />
+              <RequisiteText req={prerequisites} status={chipStatus} href={chipHref} className="min-w-0 pt-[9px] md:pt-[3px]" />
             ) : (
-              <span className="py-1 text-muted">{prerequisites === null ? 'None' : 'Not in the catalog'}</span>
+              <span className="pt-[9px] leading-[18px] text-muted md:pt-[3px]">{prerequisites === null ? 'None' : 'Not in the catalog'}</span>
             )}
           </span>
         </td>
