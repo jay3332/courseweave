@@ -7,7 +7,7 @@ import { Button, Dialog } from '../../components/ui'
 import { useOfferings } from '../../lib/offerings'
 import { resolvePlan } from '../../lib/plan'
 import { termOrdinal } from '../../lib/requisites'
-import { STELLIC_ORIGIN, buildStellicScript, exportPlan, exportSchedule, sioText, stellicTerm, type ExportTerm } from '../../lib/stellic-export'
+import { SIO_PLAN_URL, STELLIC_ORIGIN, buildSioScript, buildStellicScript, exportPlan, exportSchedule, sioText, stellicTerm, type ExportTerm } from '../../lib/stellic-export'
 import { usePlanList } from '../../state/plan'
 import { useStore } from '../../state/store'
 import { useTerm } from '../../state/term'
@@ -85,6 +85,7 @@ function Body({ mode, initialId, currentTerm }: { mode: Mode; initialId?: string
 
   const courseCount = terms.reduce((n, t) => n + t.courses.length, 0)
   const script = useMemo(() => (terms.length ? buildStellicScript(terms) : ''), [terms])
+  const sioScript = useMemo(() => (terms.length ? buildSioScript(terms) : ''), [terms])
 
   return (
     <div className="flex flex-col gap-6 p-5">
@@ -224,13 +225,47 @@ function Body({ mode, initialId, currentTerm }: { mode: Mode; initialId?: string
         <section aria-labelledby="send-sio" className="flex flex-col gap-3 border-t border-line pt-5">
           <div>
             <h3 id="send-sio" className="display text-[19px] text-ink">
-              SIO
+              SIO planned schedule
             </h3>
             <p className="mt-1 text-[13.5px] text-ink-2">
-              SIO can’t take a script safely, so enter these in its registration page: each course number with the section to register for (a
-              recitation brings its lecture with it). If Stellic offers to send planned sections to SIO, you can also use that after the step above.
+              A script for SIO’s Plan Course Schedule page: it adds the courses to the planned schedule you’re viewing with SIO’s own Add box and
+              section buttons, shows you the list first, and changes nothing until you confirm. Planned schedules are SIO’s planning tool; nothing
+              is registered.
             </p>
           </div>
+          <ol className="flex list-decimal flex-col gap-1.5 pl-5 text-[13.5px] text-ink-2">
+            <li>
+              <Button size="sm" disabled={!courseCount} onClick={() => copy('sio-script', sioScript)}>
+                {copied === 'sio-script' ? <Check aria-hidden className="size-3.5" /> : <ClipboardCopy aria-hidden className="size-3.5" />}
+                {copied === 'sio-script' ? 'Script copied' : 'Copy SIO script'}
+              </Button>
+            </li>
+            <li>
+              Open SIO’s{' '}
+              <a href={SIO_PLAN_URL} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-medium text-ink underline decoration-line-strong underline-offset-2 hover:decoration-accent">
+                Plan Course Schedule
+                <ExternalLink aria-hidden className="size-3" />
+              </a>{' '}
+              and choose the planned schedule to fill, or make one with Plan New Schedule. SIO opens a semester for planning around when its
+              schedule is published.
+            </li>
+            <li>Open the console, paste the script and press Enter, then confirm the list.</li>
+            {terms.length > 1 ? (
+              <li>It fills the semester you’re viewing. For another semester, switch to a plan for it and run the script again.</li>
+            ) : null}
+          </ol>
+          <details className="rounded-md border border-line">
+            <summary className="flex min-h-9 cursor-pointer items-center px-3 text-[13px] font-medium text-ink-2 select-none">Show the script</summary>
+            <textarea
+              readOnly
+              value={sioScript}
+              rows={12}
+              aria-label="SIO script"
+              onFocus={(e) => e.currentTarget.select()}
+              className="block w-full resize-y border-t border-line bg-surface-2 p-2 font-mono text-[11.5px] text-ink"
+            />
+          </details>
+          <p className="text-[13px] text-ink-2">Or enter them yourself, by course number and the section to register for:</p>
           {terms.length ? (
             <>
               <div className="scrollbar-thin overflow-x-auto rounded-lg border border-line">

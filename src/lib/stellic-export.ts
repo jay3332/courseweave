@@ -1,4 +1,4 @@
-// Sending schedules and degree plans to Stellic (academicaudit.andrew.cmu.edu), and listing schedules for SIO.
+// Sending schedules and degree plans to Stellic (academicaudit.andrew.cmu.edu), and schedules to SIO planned schedules.
 //
 // Neither system has an import, so for Stellic this builds a script the student pastes into the console of their own
 // signed-in Stellic tab. It calls the same endpoints Stellic's planner uses (found by reading its front-end code):
@@ -8,8 +8,8 @@
 //   GET  /planner/getcoursesectionsforusems/?…            section ids by name, for the sections chosen here
 //   POST /planner/add-course/                             adds one course (with sections) to one term
 // It only ever adds courses: nothing is registered, dropped, swapped or removed, and nothing changes until the student
-// confirms the list it shows. SIO (CMU's registration system) has no usable interface for this, so schedules also
-// export as the course numbers and sections to enter there.
+// confirms the list it shows. For SIO's planned schedules, buildSioScript drives SIO's own page instead (its GWT-RPC
+// calls carry whole course objects), and schedules also export as plain course numbers and sections.
 import { isGeneralCredit, termPhase, type Plan, type ScheduleLike } from './plan'
 
 export const STELLIC_ORIGIN = 'https://academicaudit.andrew.cmu.edu'
@@ -253,6 +253,153 @@ ${summary}
     console.error(e);
     alert('Courseweave export stopped: ' + (e && e.message ? e.message : e) + ' Nothing after this point was changed.');
   }
+})();
+`
+}
+
+export const SIO_PLAN_URL = 'https://s3.andrew.cmu.edu/sio/#schedule-plan'
+
+/**
+ * The script to paste into SIO's Plan Course Schedule page. SIO's planned-schedule calls (GWT-RPC) carry whole course
+ * objects that are impractical to rebuild by hand, so the script drives SIO's own controls instead: the "Add course to
+ * planned schedule" box, then the course's section radio buttons. Each step waits for SIO's own save (an XHR) to
+ * finish, since clicking while a save is in flight gets undone when it returns. Planned schedules are SIO's planning
+ * tool; the script never goes near registration.
+ */
+export function buildSioScript(terms: ExportTerm[], generatedAt = new Date()): string {
+  const data = JSON.stringify(terms.map((t) => ({ name: t.name, source: t.source, courses: t.courses })), null, 2).replace(
+    /[\u2028\u2029]/g,
+    (c) => `\\u${c.charCodeAt(0).toString(16)}`,
+  )
+  const summary = terms.map((t) => `//   ${t.name}: ${t.courses.length} course${t.courses.length === 1 ? '' : 's'} from ${t.source}`).join('\n')
+  return `// Courseweave → SIO planned schedule (generated ${generatedAt.toISOString().slice(0, 10)})
+${summary}
+//
+// Adds these courses (and your sections) to the SIO planned schedule you're viewing, using SIO's own "Add course"
+// box and section buttons, as if you clicked them. It shows the list first and changes nothing unless you confirm.
+// Planned schedules are a planning tool: this never registers you for anything.
+// In SIO: Course Schedule → Plan Course Schedule, pick or create (Plan New Schedule) the plan for the semester, then
+// paste this into the console and press Enter.
+(async () => {
+  const TERMS = ${data.replace(/\n/g, '\n  ')};
+  const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  if (location.host !== 's3.andrew.cmu.edu' || !/^#schedule-plan/.test(location.hash)) {
+    alert('Open SIO → Course Schedule → Plan Course Schedule (${SIO_PLAN_URL}) and run this there.');
+    return;
+  }
+
+  // SIO saves each change with an XHR; count them so every step waits for the previous save to finish.
+  if (!window.__courseweaveSio) {
+    const state = (window.__courseweaveSio = { pending: 0, last: Date.now() });
+    const send = XMLHttpRequest.prototype.send;
+    XMLHttpRequest.prototype.send = function (...args) {
+      state.pending++;
+      state.last = Date.now();
+      this.addEventListener('loadend', () => {
+        state.pending--;
+        state.last = Date.now();
+      });
+      return send.apply(this, args);
+    };
+  }
+  async function settled(quietMs = 700, maxMs = 20000) {
+    const state = window.__courseweaveSio;
+    const start = Date.now();
+    while (Date.now() - start < maxMs) {
+      if (state.pending === 0 && Date.now() - state.last > quietMs) return true;
+      await wait(150);
+    }
+    return false;
+  }
+
+  await settled();
+  const pageText = () => document.body.innerText || '';
+  const viewing = (pageText().match(/Viewing plan for ([^:\\n]+):/) || [])[1];
+  if (!viewing) {
+    alert('Pick or create a planned schedule first (Plan New Schedule), so the page says "Viewing plan for …".');
+    return;
+  }
+  const semester = viewing.trim();
+  // SIO calls summer "Summer 1/All 2026" or "Summer 2 2026"; exports call it "Summer 2026".
+  const sameTerm = (name) => name === semester || (/^Summer/.test(name) && /^Summer/.test(semester) && name.slice(-4) === semester.slice(-4));
+  const term = TERMS.find((t) => sameTerm(t.name));
+  if (!term) {
+    alert('You\\'re viewing a ' + semester + ' plan, but this export is for ' + TERMS.map((t) => t.name).join(', ') + '. Switch to (or create) a plan for that semester and run it again.');
+    return;
+  }
+  const planSelect = [...document.querySelectorAll('select')].find((s) => s.offsetParent !== null);
+  const planName = planSelect && planSelect.options[planSelect.selectedIndex] ? planSelect.options[planSelect.selectedIndex].text : 'this plan';
+
+  const panel = [...document.querySelectorAll('div')].find((e) => /^Add course to planned schedule/.test((e.innerText || '').trim()) && e.querySelector('input.input-txt'));
+  const box = panel && panel.querySelector('input.input-txt');
+  const addButton = panel && [...panel.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Add');
+  if (!box || !addButton) {
+    alert('Couldn\\'t find SIO\\'s "Add course to planned schedule" box on this page. Nothing was changed.');
+    return;
+  }
+
+  const radios = (num) => [...document.querySelectorAll('input[type="radio"]')].filter((r) => r.name === num);
+  const sectionOf = (radio) => {
+    const row = radio.closest('tr');
+    return ((row && row.innerText) || '').trim().split(/\\s+/)[0] || '';
+  };
+  const norm = (s) => String(s).replace(/^lec(ture)?\\s*/i, '').trim().toUpperCase();
+  const inPlan = new Set([...document.querySelectorAll('input[type="radio"]')].map((r) => r.name));
+  for (const m of pageText().matchAll(/\\b(\\d{2})-?(\\d{3}) ::/g)) inPlan.add(m[1] + m[2]);
+
+  const rows = term.courses.map((c) => {
+    const num = c.code.replace('-', '');
+    return { course: c.code, title: c.title, section: c.sections.length ? c.sections[c.sections.length - 1] : '', num, action: inPlan.has(num) ? 'skip' : 'add', note: inPlan.has(num) ? 'already in this plan' : '' };
+  });
+  console.table(rows.map(({ course, title, section, action, note }) => ({ course, title, section, action, note })));
+  const toAdd = rows.filter((r) => r.action === 'add');
+  if (!toAdd.length) {
+    alert('Nothing to add: every course is already in "' + planName + '".');
+    return;
+  }
+  const list = toAdd.map((r) => r.course + (r.section ? ' (' + r.section + ')' : '') + '  ' + r.title).join('\\n');
+  if (!confirm('Add ' + toAdd.length + ' course' + (toAdd.length === 1 ? '' : 's') + ' to your ' + semester + ' planned schedule "' + planName + '"?\\n\\n' + list + '\\n\\nCancel changes nothing.')) {
+    console.log('Cancelled: nothing was changed.');
+    return;
+  }
+
+  for (const r of toAdd) {
+    box.focus();
+    box.value = r.num;
+    box.dispatchEvent(new Event('input', { bubbles: true }));
+    box.dispatchEvent(new Event('change', { bubbles: true }));
+    const before = window.__courseweaveSio.last;
+    addButton.click();
+    // Wait for SIO's save to start and finish, then briefly for the course's section buttons to render.
+    for (let i = 0; i < 50 && window.__courseweaveSio.last === before; i++) await wait(100);
+    await settled();
+    for (let i = 0; i < 10 && !radios(r.num).length && !new RegExp(r.course + ' added').test(pageText()); i++) await wait(150);
+    const added = radios(r.num).length > 0 || new RegExp(r.course + ' added').test(pageText());
+    if (!added) {
+      const message = ((panel.innerText || '').split('\\n').find((l) => l.trim() && !/^Add course to planned schedule|Search for a course|course number below/i.test(l)) || '').trim();
+      r.result = 'not added';
+      r.note = message || 'SIO didn\\'t add it (is it offered in ' + semester + '?)';
+      continue;
+    }
+    r.result = 'added';
+    if (!r.section) continue;
+    const pick = radios(r.num).find((x) => norm(sectionOf(x)) === norm(r.section));
+    if (!pick) {
+      r.note = 'section ' + r.section + ' isn\\'t listed in SIO; kept SIO\\'s default';
+      continue;
+    }
+    if (!pick.checked) {
+      pick.click();
+      await settled();
+      const now = radios(r.num).find((x) => norm(sectionOf(x)) === norm(r.section));
+      if (!now || !now.checked) r.note = 'couldn\\'t select section ' + r.section + '; pick it in SIO';
+    }
+  }
+
+  console.table(toAdd.map(({ course, title, section, result, note }) => ({ course, title, section, result, note })));
+  const done = toAdd.filter((r) => r.result === 'added').length;
+  alert('Added ' + done + ' of ' + toAdd.length + ' course' + (toAdd.length === 1 ? '' : 's') + ' to "' + planName + '".' + (toAdd.some((r) => r.note) ? ' See the console for notes.' : ''));
 })();
 `
 }
