@@ -1,5 +1,5 @@
 // Actions for one schedule: download .ics, copy share link, copy course list.
-import { CalendarArrowDown, Check, ChevronDown, ClipboardList, Link2, Share } from 'lucide-react'
+import { CalendarArrowDown, Check, ChevronDown, ClipboardList, Link2, Send, Share } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { Button } from '../../components/ui'
 import { buildIcs, hasScheduledMeetings, meetingSummary } from '../../lib/ics'
@@ -9,6 +9,7 @@ import { buildScheduleView } from '../../state/schedule-view'
 import type { Schedule } from '../../state/store'
 import { useTerm } from '../../state/term'
 import { partLabel } from '../planner/format'
+import { SendToStellicDialog } from './SendToStellic'
 
 type Copied = 'link' | 'list' | null
 
@@ -21,6 +22,7 @@ export function ExportMenu({ schedule }: { schedule: Schedule }) {
   const [open, setOpen] = useState(false)
   const [copied, setCopied] = useState<Copied>(null)
   const [fallback, setFallback] = useState<string | null>(null)
+  const [sending, setSending] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -158,6 +160,16 @@ export function ExportMenu({ schedule }: { schedule: Schedule }) {
             disabled={!view.entries.length}
             onClick={() => copy(courseList(), 'list')}
           />
+          <MenuItem
+            icon={<Send />}
+            label="Send to Stellic or SIO"
+            hint="Add it to your Stellic plan, or list it for SIO registration"
+            disabled={!view.entries.length}
+            onClick={() => {
+              close(false)
+              setSending(true)
+            }}
+          />
           {fallback ? (
             <div className="border-t border-line p-2">
               <label className="mb-1 block text-[12.5px] text-ink-2" htmlFor="export-fallback">
@@ -178,6 +190,7 @@ export function ExportMenu({ schedule }: { schedule: Schedule }) {
           </span>
         </div>
       ) : null}
+      <SendToStellicDialog open={sending} onClose={() => setSending(false)} mode="schedules" initialId={schedule.id} currentTerm={schedule.termId} />
     </div>
   )
 }

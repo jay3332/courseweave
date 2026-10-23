@@ -1,4 +1,4 @@
-import { Copy, MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react'
+import { Copy, MoreHorizontal, Pencil, Plus, Send, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
 import { Button, Dialog } from '../../components/ui'
@@ -10,6 +10,7 @@ import { useTerm } from '../../state/term'
 import { ProgramsField } from './AuditArea'
 import { entryYearOf, useStartTermOptions, type PlanDerived } from './hooks'
 import { MenuItem, Popover } from './Popover'
+import { SendToStellicDialog } from '../schedule-tools/SendToStellic'
 
 function countRequirements(r: RequirementResult): { done: number; total: number } {
   if (!r.children.length) return { done: r.state === 'complete' || r.state === 'complete-with-plan' ? 1 : 0, total: 1 }
@@ -38,6 +39,7 @@ export function PlanHeader({ plan, derived, audit }: { plan: Plan; derived: Plan
   const [renaming, setRenaming] = useState(false)
   const [name, setName] = useState(plan.name)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [sending, setSending] = useState(false)
 
   const go = (id: string) => {
     setActivePlan(id)
@@ -98,6 +100,15 @@ export function PlanHeader({ plan, derived, audit }: { plan: Plan; derived: Plan
                 >
                   <Copy aria-hidden />
                   Duplicate
+                </MenuItem>
+                <MenuItem
+                  onClick={() => {
+                    setSending(true)
+                    close()
+                  }}
+                >
+                  <Send aria-hidden />
+                  Send to Stellic
                 </MenuItem>
                 <MenuItem
                   danger
@@ -192,6 +203,7 @@ export function PlanHeader({ plan, derived, audit }: { plan: Plan; derived: Plan
           </div>
         </div>
       </Dialog>
+      <SendToStellicDialog open={sending} onClose={() => setSending(false)} mode="plan" initialId={plan.id} currentTerm={derived.current} />
     </header>
   )
 }
