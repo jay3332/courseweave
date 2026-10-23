@@ -44,9 +44,12 @@ export function SemesterGrid({ plan, derived, openTerms, onToggleTerm, isPhone, 
   }
   for (const col of derived.columns) put({ term: col.term, col })
   for (const term of missingSemesters(plan.startTerm, derived.columns.map((c) => c.term))) put({ term, col: null })
-  const yearKeys = [...years.keys()].sort(compareTerms)
   const last = derived.columns.at(-1)?.term ?? plan.startTerm
   const nextSemester = nextTerm(last)
+  // A plan ending in a fall gets its spring added within that year (before the year's summer), not at the bottom.
+  const nextInLastYear = derived.columns.length > 0 && academicYearStart(nextSemester) === academicYearStart(last)
+  if (nextInLastYear) put({ term: nextSemester, col: null })
+  const yearKeys = [...years.keys()].sort(compareTerms)
 
   return (
     <div className="flex flex-col gap-6">
@@ -141,14 +144,16 @@ export function SemesterGrid({ plan, derived, openTerms, onToggleTerm, isPhone, 
           </section>
         )
       })}
-      <button
-        type="button"
-        onClick={() => addTerm(plan.id, nextSemester)}
-        className="flex min-h-11 items-center justify-center gap-1.5 rounded-xl border border-dashed border-line-strong text-[14px] font-medium text-ink-2 hover:border-ink-2 hover:text-ink"
-      >
-        <Plus aria-hidden className="size-4" />
-        Add {termLabel(nextSemester)}
-      </button>
+      {!nextInLastYear ? (
+        <button
+          type="button"
+          onClick={() => addTerm(plan.id, nextSemester)}
+          className="flex min-h-11 items-center justify-center gap-1.5 rounded-xl border border-dashed border-line-strong text-[14px] font-medium text-ink-2 hover:border-ink-2 hover:text-ink"
+        >
+          <Plus aria-hidden className="size-4" />
+          Add {termLabel(nextSemester)}
+        </button>
+      ) : null}
     </div>
   )
 }

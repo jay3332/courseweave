@@ -8,6 +8,7 @@
 */
 
 :root {
+  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23626977' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   --paper: #f3f4f2;
   --surface: #ffffff;
   --surface-2: #f8f9f8;
@@ -42,6 +43,7 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
+    --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23949bab' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
     --paper: #14171c;
     --surface: #1b1f26;
     --surface-2: #20252d;
@@ -76,6 +78,7 @@
 }
 
 :root[data-theme='dark'] {
+  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23949bab' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   --paper: #14171c;
   --surface: #1b1f26;
   --surface-2: #20252d;
@@ -234,4 +237,18 @@
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/*
+ * Selects draw their own chevron, inset from the border (the native arrow hugs the border whatever the padding).
+ * Unlayered so the room it needs on the right wins over each select's padding utilities. A select with
+ * `appearance-none` brings its own chevron.
+ */
+select:not([multiple]):not(.appearance-none) {
+  appearance: none;
+  background-image: var(--select-chevron);
+  background-repeat: no-repeat;
+  background-position: right 0.625rem center;
+  background-size: 0.875rem;
+  padding-right: 2rem;
 }
