@@ -3,7 +3,6 @@ import { useMemo, useState, type DragEvent } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { Button, Dialog } from '../../components/ui'
 import { coursesMissingFrom, loadWarnings, termPhase, type Plan, type PlanCheck, type PlanCourse } from '../../lib/plan'
-import { courseColorStyle } from '../../lib/colors'
 import { seasonsLabel, type requirementsByCourse } from '../../lib/plan-table'
 import { codeOf, formatRequisite } from '../../lib/requisite-format'
 import { termLabel } from '../../lib/requisites'
@@ -35,13 +34,11 @@ interface TermCardProps {
   layout?: 'cards' | 'table'
   /** Table layout: "S1", "Summer 1", … */
   ordinal?: string
-  /** Table layout: palette index for the semester's header band. */
-  tint?: number
   /** Table layout: the requirements each course counts toward. */
   requirements?: ReturnType<typeof requirementsByCourse>
 }
 
-export function TermCard({ plan, column, derived, scheduled, published, fceHours, open, onToggle, collapsible, dragEnabled, layout = 'cards', ordinal, tint = 0, requirements }: TermCardProps) {
+export function TermCard({ plan, column, derived, scheduled, published, fceHours, open, onToggle, collapsible, dragEnabled, layout = 'cards', ordinal, requirements }: TermCardProps) {
   const table = layout === 'table'
   const { term, totals } = column
   const lookup = useCourseLookup()
@@ -119,10 +116,7 @@ export function TermCard({ plan, column, derived, scheduled, published, fceHours
         phase === 'past' ? 'bg-surface-2/60' : ''
       }`}
     >
-      <header
-        className={`flex items-center gap-2 border-b border-line px-3 py-2 ${table ? 'rounded-t-xl' : ''}`}
-        style={table ? { ...courseColorStyle(tint), background: 'color-mix(in oklab, var(--course) 15%, var(--surface))' } : undefined}
-      >
+      <header className="flex items-center gap-2 border-b border-line px-3 py-2">
         {collapsible ? (
           <button
             type="button"

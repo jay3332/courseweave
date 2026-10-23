@@ -108,7 +108,6 @@ export function SemesterGrid({ plan, derived, openTerms, onToggleTerm, isPhone, 
                   dragEnabled={dragEnabled}
                   layout={layout}
                   ordinal={ordinals.get(col.term)}
-                  tint={derived.columns.findIndex((c) => c.term === col.term)}
                   requirements={requirements}
                 />
               ))}
