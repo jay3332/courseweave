@@ -433,7 +433,7 @@ function SectionsList(props: SectionsListProps) {
             <li key={top.name} className="border-b border-line">
               <SectionRow {...props} section={top} />
               {children.length ? (
-                <div className={`mb-2 ml-3 border-l-2 border-line pl-2 @md:ml-6 ${table ? '@3xl:mb-0 @3xl:ml-0 @3xl:border-l-0 @3xl:pl-0' : ''}`}>
+                <div className={`mb-2 ${table ? '@3xl:mb-0' : ''}`}>
                   {children.length > COLLAPSE_AFTER && !holdsChoice ? (
                     <button
                       type="button"
@@ -446,14 +446,15 @@ function SectionsList(props: SectionsListProps) {
                           return next
                         })
                       }
-                      className="flex min-h-8 items-center gap-1 rounded px-2 py-1 text-[12.5px] font-medium text-ink-2 hover:text-ink"
+                      // Lined up with the lecture's details (just above it), so it reads as part of that lecture.
+                      className={`-mt-1 ml-[3.75rem] flex min-h-8 items-center gap-1 rounded px-2 py-1 text-[12.5px] font-medium text-ink-2 hover:text-ink @md:ml-[4.25rem] ${table ? '@3xl:mt-0 @3xl:ml-0' : ''}`}
                     >
                       <ChevronDown aria-hidden className={`size-3.5 transition-transform ${open ? '' : '-rotate-90'}`} />
                       {open ? 'Hide' : 'Show'} {children.length} recitations for {partLabel(top)}
                     </button>
                   ) : null}
                   {open ? (
-                    <ul aria-label={`Recitations of ${partLabel(top)}`}>
+                    <ul aria-label={`Recitations of ${partLabel(top)}`} className={`ml-3 border-l-2 border-line pl-2 @md:ml-6 ${table ? '@3xl:ml-0 @3xl:border-l-0 @3xl:pl-0' : ''}`}>
                       {children.map((child) => (
                         <li key={child.name} className={`border-t border-line first:border-t-0 ${table ? '@3xl:first:border-t' : ''}`}>
                           <SectionRow {...props} section={child} />
