@@ -1,5 +1,5 @@
-import { Copy, MoreHorizontal, Pencil, Plus, Send, Trash2 } from 'lucide-react'
-import { useState } from 'react'
+import { ChevronDown, Copy, MoreHorizontal, Pencil, Plus, Send, Trash2 } from 'lucide-react'
+import { useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router'
 import { Button, Dialog } from '../../components/ui'
 import type { Plan } from '../../lib/plan'
@@ -126,32 +126,38 @@ export function PlanHeader({ plan, derived, audit }: { plan: Plan; derived: Plan
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-start">
-        <div className="flex min-w-0 flex-col gap-1.5">
-          <span className="text-[13px] font-medium text-ink-2">Programs</span>
-          <ProgramsField value={plan.programs} onChange={(p) => setPrograms(plan.id, p)} entryYearHint={entryYearOf(plan.startTerm)} />
-        </div>
-        <label className="flex flex-col gap-1.5">
-          <span className="text-[13px] font-medium text-ink-2">First semester</span>
-          <select
-            value={plan.startTerm}
-            onChange={(e) => setStartTerm(plan.id, e.target.value)}
-            className="h-10 rounded-lg border border-line-strong bg-surface pr-7 pl-2.5 text-[14px] text-ink md:h-9"
-          >
-            {startOptions.map((t) => (
-              <option key={t} value={t}>
-                {termLabel(t)}
-              </option>
-            ))}
-          </select>
-        </label>
+      <div className="flex min-w-0 flex-col gap-1.5">
+        <span className="text-[13px] font-medium text-ink-2">Programs</span>
+        <ProgramsField value={plan.programs} onChange={(p) => setPrograms(plan.id, p)} entryYearHint={entryYearOf(plan.startTerm)} />
       </div>
 
       <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-4">
         <Stat label="Units planned" value={String(derived.totalUnits)} sub={needUnits ? `of ${needUnits} required` : undefined} />
         <Stat label="Units completed" value={String(derived.completedUnits)} sub="Record and credit" />
         <Stat label="Requirements" value={requirements ? `${requirements.done}/${requirements.total}` : '—'} sub={requirements ? 'met or planned' : 'Pick a program'} />
-        <Stat label="Semesters" value={String(derived.columns.length)} sub={`From ${termLabel(derived.columns[0]?.term ?? plan.startTerm)}`} />
+        <Stat
+          label="Semesters"
+          value={String(derived.columns.length)}
+          sub={
+            // The plan's first semester, editable where the semester count is.
+            <label className="relative inline-flex items-center gap-1">
+              Starts
+              <select
+                aria-label="First semester"
+                value={plan.startTerm}
+                onChange={(e) => setStartTerm(plan.id, e.target.value)}
+                className="min-h-8 cursor-pointer appearance-none bg-transparent pr-4 font-medium text-ink-2 underline decoration-line-strong underline-offset-2 hover:text-ink hover:decoration-accent md:min-h-0"
+              >
+                {startOptions.map((t) => (
+                  <option key={t} value={t}>
+                    {termLabel(t)}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown aria-hidden className="pointer-events-none absolute right-0 size-3 text-muted" />
+            </label>
+          }
+        />
       </dl>
 
       <Dialog open={renaming} onClose={() => setRenaming(false)} title="Rename plan">
@@ -208,7 +214,7 @@ export function PlanHeader({ plan, derived, audit }: { plan: Plan; derived: Plan
   )
 }
 
-function Stat({ label, value, sub }: { label: string; value: string; sub?: string }) {
+function Stat({ label, value, sub }: { label: string; value: string; sub?: ReactNode }) {
   return (
     <div className="flex flex-col bg-surface px-3 py-2.5">
       <dt className="text-[12.5px] text-muted">{label}</dt>
