@@ -3,6 +3,7 @@
 // Pure logic; the record store and planners build a RequisiteContext and call checkCourse().
 
 import type { CatalogEntry, CatalogIndex, Requisite } from './catalog-types'
+import { substitutesFor } from './substitutes'
 
 // ---------------------------------------------------------------------------
 // Terms
@@ -157,24 +158,53 @@ export function createContext(input: {
 }
 
 /**
- * Courses that count as each other: the catalog's `equivalents` lists (made symmetric) plus extra
- * groups such as a term's cross-listings. Deliberately not transitive: catalog equivalence chains
- * (36-201 ~ 36-225 ~ 21-325 …) would otherwise merge unrelated courses.
+ * For each course, the courses that count for it (`map.get(required)` → satisfying ids, excluding itself): the
+ * catalog's `equivalents` lists (made symmetric), extra groups such as a term's cross-listings, and one-way honors
+ * substitutes (21-425 counts for 21-325 and for what the catalog lists as equivalent to 21-325, not the reverse).
+ * Catalog equivalence is deliberately not transitive: chains (36-201 ~ 36-225 ~ 21-325 …) would otherwise merge
+ * unrelated courses.
  */
-export function buildEquivalence(catalog: CatalogIndex | null, extraGroups: string[][] = []): Map<string, Set<string>> {
+export function buildEquivalence(catalog: CatalogIndex | null, extraGroups: string[][] = [], substitutes = substitutesFor()): Map<string, Set<string>> {
   const out = new Map<string, Set<string>>()
+  const add = (required: string, by: string) => {
+    if (required === by) return
+    let s = out.get(required)
+    if (!s) out.set(required, (s = new Set()))
+    s.add(by)
+  }
   const link = (a: string, b: string) => {
-    if (a === b) return
-    let sa = out.get(a)
-    if (!sa) out.set(a, (sa = new Set()))
-    let sb = out.get(b)
-    if (!sb) out.set(b, (sb = new Set()))
-    sa.add(b)
-    sb.add(a)
+    add(a, b)
+    add(b, a)
   }
   if (catalog) for (const entry of Object.values(catalog.courses)) for (const e of entry.equivalents) link(entry.id, e)
   for (const group of extraGroups) for (const a of group) for (const b of group) link(a, b)
+  // A substitute counts for its lower course and for whatever that course counts for (one step, like the catalog).
+  const counted = invert(out)
+  for (const [lower, highers] of substitutes) {
+    const targets = [lower, ...(counted.get(lower) ?? [])]
+    for (const higher of highers) for (const t of targets) add(t, higher)
+  }
   return out
+}
+
+function invert(eq: Map<string, Set<string>>): Map<string, Set<string>> {
+  const inv = new Map<string, Set<string>>()
+  for (const [required, satisfiers] of eq)
+    for (const by of satisfiers) {
+      let s = inv.get(by)
+      if (!s) inv.set(by, (s = new Set()))
+      s.add(required)
+    }
+  return inv
+}
+
+const inverseCache = new WeakMap<Map<string, Set<string>>, Map<string, Set<string>>>()
+
+/** The other direction of an equivalence map: for a course taken, the courses it counts for. Don't mutate `eq` after. */
+export function countsAs(eq: Map<string, Set<string>>): Map<string, Set<string>> {
+  let inv = inverseCache.get(eq)
+  if (!inv) inverseCache.set(eq, (inv = invert(eq)))
+  return inv
 }
 
 // ---------------------------------------------------------------------------

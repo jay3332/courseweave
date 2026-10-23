@@ -160,6 +160,22 @@ describe('buildEquivalence', () => {
     const eq = buildEquivalence(null, [['x', 'y', 'z']])
     expect([...eq.get('x')!].sort()).toEqual(['y', 'z'])
   })
+  it('lets honors substitutes count one way, for the lower course and its catalog equivalents', () => {
+    const catalog: CatalogIndex = { generatedAt: '', courses: { '21325': entry('21325', { equivalents: ['36225'] }) } }
+    const eq = buildEquivalence(catalog)
+    expect(eq.get('21325')?.has('21425')).toBe(true)
+    expect(eq.get('36225')?.has('21425')).toBe(true)
+    expect(eq.get('21425')?.has('21325') ?? false).toBe(false)
+    // Chains: 21-269 > 21-268 > 21-266 > 21-259 > 21-256.
+    expect([...eq.get('21256')!].sort()).toEqual(['21259', '21266', '21268', '21269'])
+    expect(eq.get('21269')?.has('21256') ?? false).toBe(false)
+  })
+  it('counts honors substitutes for prerequisites, not the reverse', () => {
+    const eq = buildEquivalence(null)
+    expect(evaluateRequisite(course('21325', 'C'), createContext({ credits: [done('21425', 'B')], equivalents: eq })).status).toBe('met')
+    expect(evaluateRequisite(course('21241'), createContext({ credits: [planned('21242')], equivalents: eq })).status).toBe('planned')
+    expect(evaluateRequisite(course('21425'), createContext({ credits: [done('21325', 'A')], equivalents: eq })).status).toBe('missing')
+  })
 })
 
 describe('checkCourse', () => {

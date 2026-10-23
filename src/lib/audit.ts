@@ -13,7 +13,7 @@
 import type { CatalogIndex } from './catalog-types'
 import type { CountRule, DoubleCountRule, PoolSet, ProgramVersion, ReqNode } from './degree-types'
 import type { AuditInput, AuditResult, PlannedCourse, ProgramAuditResult, RequirementResult, RequirementState } from './plan-types'
-import { buildEquivalence, earnsCredit, meetsMinGrade, normalizeGrade, termOrdinal } from './requisites'
+import { buildEquivalence, countsAs, earnsCredit, meetsMinGrade, normalizeGrade, termOrdinal } from './requisites'
 
 // ---------------------------------------------------------------------------
 // Course instances
@@ -110,7 +110,8 @@ function matchesSet(set: PoolSet, inst: Inst, eq: Map<string, Set<string>>): boo
   const id = inst.id
   if (c.courses) {
     if (c.courses.has(id)) return true
-    const alt = eq.get(id)
+    // The pool names courses; the course taken may count for one of them.
+    const alt = countsAs(eq).get(id)
     if (alt) for (const a of alt) if (c.courses.has(a)) return true
   }
   if (c.depts?.has(id.slice(0, 2))) return true

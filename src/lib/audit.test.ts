@@ -130,6 +130,23 @@ describe('runAudit: alternatives', () => {
   })
 })
 
+describe('runAudit: honors substitutes', () => {
+  it('counts an honors course where the regular one is named or pooled, but not the reverse', () => {
+    const root = group('Major', { kind: 'all' }, [
+      leaf('21241'),
+      pool('Probability', { pool: [{ sets: [{ courses: ['21325', '36225'] }], units: false, min: 1 }] }),
+      leaf('21425'),
+    ])
+    const r = audit([version(1, root)], [done('21242'), done('21425'), done('21325')])
+    expect(find(r.programs[0].root, '21241').assigned.map((a) => a.courseId)).toEqual(['21242'])
+    expect(find(r.programs[0].root, 'Probability').state).toBe('complete')
+    // 21-325 can't stand in for 21-425, so the 21-425 slot keeps the real course.
+    expect(find(r.programs[0].root, '21425').assigned.map((a) => a.courseId)).toEqual(['21425'])
+    const onlyRegular = audit([version(2, group('Major', { kind: 'all' }, [leaf('21425')]))], [done('21325')])
+    expect(find(onlyRegular.programs[0].root, '21425').state).not.toBe('complete')
+  })
+})
+
 describe('runAudit: pools', () => {
   it('keeps "same subject code" pools to one department', () => {
     const sameDept = () =>
