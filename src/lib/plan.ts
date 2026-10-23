@@ -165,6 +165,21 @@ export function compareTerms(a: string, b: string): number {
   return (termOrdinal(a) ?? 0) - (termOrdinal(b) ?? 0)
 }
 
+/**
+ * Falls and springs the plan doesn't have, from its start (or first semester, if earlier) up to its last semester:
+ * ones the student removed, which the planner offers to add back. `terms` is in order.
+ */
+export function missingSemesters(startTerm: string, terms: string[]): string[] {
+  const have = new Set(terms)
+  const first = [startTerm, terms[0]].filter((t) => t && termOrdinal(t) !== null).sort(compareTerms)[0]
+  const last = terms.at(-1)
+  if (!first || !last) return []
+  const out: string[] = []
+  let t = isSummer(first) ? nextTerm(first) : first
+  for (let i = 0; i < 60 && compareTerms(t, last) < 0; i++, t = nextTerm(t)) if (!have.has(t)) out.push(t)
+  return out
+}
+
 // ---------------------------------------------------------------------------
 // Record → plan
 

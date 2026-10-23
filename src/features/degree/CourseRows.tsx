@@ -1,5 +1,5 @@
 import { coursePreview } from '../../components/CoursePreview'
-import { AlertTriangle, ArrowRightLeft, Check, Clock, ExternalLink, GripVertical, Info, MoreHorizontal, Trash2 } from 'lucide-react'
+import { AlertTriangle, ArrowDown, ArrowRightLeft, ArrowUp, Check, Clock, ExternalLink, GripVertical, Info, MoreHorizontal, Trash2 } from 'lucide-react'
 import { useCallback, useState, type DragEvent } from 'react'
 import { Link } from 'react-router'
 import type { CatalogIndex } from '../../lib/catalog-types'
@@ -40,6 +40,11 @@ interface PlanCourseRowProps {
   /** Label for the remove action (synced semesters remove from their schedule). */
   removeLabel?: string
   onMove(toTerm: string): void
+  /** Within the semester; absent at the top/bottom. */
+  onMoveUp?(): void
+  onMoveDown?(): void
+  /** While dragging over the semester: the course would land just before (or, for the last row, after) this row. */
+  dropMark?: 'before' | 'after'
   onRemove(): void
   onUpdate(patch: { passFail?: boolean; units?: number }): void
 }
@@ -80,12 +85,37 @@ function StatusButton({ courseId, info, open, onToggle }: { courseId: string; in
 /** Move, pass/fail, units, view and remove. */
 function CourseOptions({ props, info }: { props: PlanCourseRowProps; info: ReturnType<typeof useCourseRowInfo> }) {
   const href = useCourseHref()
-  const { course, moveTargets, removeLabel, onMove, onRemove, onUpdate } = props
+  const { course, moveTargets, removeLabel, onMove, onMoveUp, onMoveDown, onRemove, onUpdate } = props
   const { units, passFail, passFailOnly, variable } = info
   return (
     <Popover label={`Options for ${codeOf(course.courseId)}`} button={<MoreHorizontal />}>
       {(close) => (
         <>
+          {onMoveUp || onMoveDown ? (
+            <>
+              <MenuItem
+                disabled={!onMoveUp}
+                onClick={() => {
+                  onMoveUp?.()
+                  close()
+                }}
+              >
+                <ArrowUp aria-hidden />
+                Move up
+              </MenuItem>
+              <MenuItem
+                disabled={!onMoveDown}
+                onClick={() => {
+                  onMoveDown?.()
+                  close()
+                }}
+              >
+                <ArrowDown aria-hidden />
+                Move down
+              </MenuItem>
+              <div className="my-1 border-t border-line" />
+            </>
+          ) : null}
           <MenuLabel>Move to</MenuLabel>
           <div className="scrollbar-thin max-h-52 overflow-y-auto">
             {moveTargets.map((t) => (
@@ -185,11 +215,16 @@ function CourseIssues({ course, check, statusLabel }: { course: PlanCourse; chec
 
 const dragProps = (course: PlanCourse, draggable: boolean) => ({
   draggable,
+  'data-plan-row': course.id,
   onDragStart: (e: DragEvent) => {
     e.dataTransfer.setData(DRAG_TYPE, course.id)
     e.dataTransfer.effectAllowed = 'move'
   },
 })
+
+// An accent line where a dragged course would land.
+const DROP_MARK = { before: 'shadow-[0_-2px_0_var(--accent)]', after: 'shadow-[0_2px_0_var(--accent)]', none: '' }
+const DROP_MARK_CELLS = { before: '[&>td]:shadow-[inset_0_2px_0_var(--accent)]', after: '[&>td]:shadow-[inset_0_-2px_0_var(--accent)]', none: '' }
 
 export function PlanCourseRow(props: PlanCourseRowProps) {
   const { course, title, fceHours, check, draggable } = props
@@ -203,7 +238,7 @@ export function PlanCourseRow(props: PlanCourseRowProps) {
       id={`plan-course-${course.id}`}
       tabIndex={-1}
       {...dragProps(course, draggable)}
-      className="group rounded-md border border-transparent px-1.5 py-1 outline-none focus-visible:border-accent hover:bg-surface-2 target:border-accent"
+      className={`group rounded-md border border-transparent px-1.5 py-1 outline-none focus-visible:border-accent hover:bg-surface-2 target:border-accent ${DROP_MARK[props.dropMark ?? 'none']}`}
     >
       <div className="flex min-h-9 items-center gap-1.5 md:min-h-7" {...coursePreview(course.courseId)}>
         {draggable ? <GripVertical aria-hidden className="size-3.5 shrink-0 cursor-grab text-line-strong group-hover:text-muted" /> : null}
@@ -313,10 +348,15 @@ export function PlanCourseTableRow(props: PlanCourseRowProps & TableExtras) {
   const code = codeOf(course.courseId)
   return (
     <>
-      <tr id={`plan-course-${course.id}`} tabIndex={-1} {...dragProps(course, draggable)} className="group outline-none hover:bg-surface-2 focus-visible:bg-surface-2">
+      <tr
+        id={`plan-course-${course.id}`}
+        tabIndex={-1}
+        {...dragProps(course, draggable)}
+        className={`group outline-none hover:bg-surface-2 focus-visible:bg-surface-2 ${DROP_MARK_CELLS[props.dropMark ?? 'none']}`}
+      >
         <td className="sticky left-0 z-[1] bg-surface py-1.5 pr-2 pl-2 align-top whitespace-nowrap group-hover:bg-surface-2">
           <span className="flex items-center gap-1">
-            {draggable ? <GripVertical aria-hidden className="size-3.5 shrink-0 cursor-grab text-line-strong group-hover:text-muted" /> : null}
+            {draggable ? <GripVertical aria-hidden className="size-3.5 shrink-0 cursor-grab text-line-strong group-hover:text-muted" /> : <span aria-hidden className="w-3.5 shrink-0" />}
             <Link to={href(course.courseId, term)} {...coursePreview(course.courseId)} className="course-code text-[14.5px] text-ink hover:text-accent">
               {code}
             </Link>

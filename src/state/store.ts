@@ -69,6 +69,8 @@ interface State {
   setPassFail(scheduleId: string, courseId: string, passFail: boolean): void
   setColor(scheduleId: string, courseId: string, color: number): void
   toggleHidden(scheduleId: string, courseId: string): void
+  /** Moves a course in the schedule's list to just before another (null: the end). Order is only for organizing. */
+  moveEntry(scheduleId: string, courseId: string, beforeCourseId: string | null): void
 
   toggleBookmark(termId: string, courseId: string): void
   setTheme(theme: Theme): void
@@ -192,6 +194,17 @@ export const useStore = create<State>()(
           updateSchedule(scheduleId, (s) => ({
             entries: s.entries.map((e) => (e.courseId in sections ? { ...e, ...sections[e.courseId] } : e)),
           }))
+        },
+
+        moveEntry(scheduleId, courseId, beforeCourseId) {
+          updateSchedule(scheduleId, (s) => {
+            const entry = s.entries.find((e) => e.courseId === courseId)
+            if (!entry || beforeCourseId === courseId) return {}
+            const rest = s.entries.filter((e) => e !== entry)
+            const at = beforeCourseId ? rest.findIndex((e) => e.courseId === beforeCourseId) : -1
+            rest.splice(at < 0 ? rest.length : at, 0, entry)
+            return { entries: rest }
+          })
         },
 
         setPassFail(scheduleId, courseId, passFail) {

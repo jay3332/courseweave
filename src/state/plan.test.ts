@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { addToTerm, linkTermToSchedule, moveInPlan, removeFromPlan, setPlanPassFail, setPlanUnits, unlinkTerm } from '../features/degree/linkActions'
+import { addToTerm, linkTermToSchedule, moveInPlan, placeInTerm, removeFromPlan, setPlanPassFail, setPlanUnits, unlinkTerm } from '../features/degree/linkActions'
 import { effectiveTermCourses, linkedCourseId } from '../lib/plan'
 import { migratePlans, usePlans } from './plan'
 import { useStore, type Schedule } from './store'
@@ -103,5 +103,40 @@ describe('plan store migration', () => {
     const migrated = migratePlans(v1, 1)
     expect(migrated.plans.p.terms[0]).toEqual({ term: 'F25', courses: [], link: null })
     expect(migrated.activePlanId).toBe('p')
+  })
+})
+
+describe('reordering courses in a semester', () => {
+  const ids = (id: string, term: string) => plan(id).terms.find((t) => t.term === term)!.courses.map((c) => c.courseId)
+  const courseId = (id: string, term: string, code: string) => plan(id).terms.find((t) => t.term === term)!.courses.find((c) => c.courseId === code)!.id
+
+  it('moves a course before another or to the end of its own semester', () => {
+    const id = setup()
+    usePlans.getState().addCourse(id, 'S27', '21241')
+    expect(ids(id, 'S27')).toEqual(['76101', '15213', '21241'])
+    moveInPlan(plan(id), courseId(id, 'S27', '21241'), 'S27', courseId(id, 'S27', '76101'))
+    expect(ids(id, 'S27')).toEqual(['21241', '76101', '15213'])
+    moveInPlan(plan(id), courseId(id, 'S27', '21241'), 'S27', null)
+    expect(ids(id, 'S27')).toEqual(['76101', '15213', '21241'])
+    // Without a position, "moving" to its own semester does nothing.
+    moveInPlan(plan(id), courseId(id, 'S27', '21241'), 'S27')
+    expect(ids(id, 'S27')).toEqual(['76101', '15213', '21241'])
+  })
+
+  it('places a course moved from another semester where it was dropped', () => {
+    const id = setup()
+    usePlans.getState().addCourse(id, 'F26', '15122')
+    moveInPlan(plan(id), courseId(id, 'F26', '15122'), 'S27', courseId(id, 'S27', '15213'))
+    expect(ids(id, 'S27')).toEqual(['76101', '15122', '15213'])
+    expect(ids(id, 'F26')).toEqual([])
+  })
+
+  it("reorders a synced semester's schedule, leaving hidden entries in order", () => {
+    const id = setup()
+    useStore.setState((st) => ({ schedules: { sch1: { ...st.schedules.sch1, entries: [entry('15213'), entry('99999', { hidden: true }), entry('99101')] } } }))
+    linkTermToSchedule(plan(id), 'S27', useStore.getState().schedules.sch1, 'as-is')
+    placeInTerm(plan(id), linkedCourseId('sch1', '99101'), 'S27', linkedCourseId('sch1', '15213'))
+    expect(scheduleIds()).toEqual(['99101', '15213', '99999'])
+    expect(effective(id, 'S27')).toEqual(['99101', '15213'])
   })
 })

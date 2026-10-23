@@ -9,7 +9,7 @@ import { statusFnFor } from '../record/check-summary'
 import { termLabel } from '../../lib/requisites'
 import { usePlans } from '../../state/plan'
 import { useStore, type Schedule } from '../../state/store'
-import { addToTerm, linkTermToSchedule, moveInPlan, removeFromPlan, setPlanPassFail, setPlanUnits, unlinkTerm } from './linkActions'
+import { addToTerm, linkTermToSchedule, moveInPlan, placeInTerm, removeFromPlan, setPlanPassFail, setPlanUnits, unlinkTerm } from './linkActions'
 import { useCourseLookup } from '../record/hooks'
 import { AddCourseInput } from './AddCourseInput'
 import { PlanCourseRow, PlanCourseTableRow, RecordCourseRow, RecordCourseTableRow, TABLE_COLUMNS } from './CourseRows'
@@ -50,6 +50,8 @@ export function TermCard({ plan, column, derived, scheduled, published, fceHours
   const schedules = termSchedules.filter((s) => s.entries.length > 0)
 
   const [dragOver, setDragOver] = useState(false)
+  // Where a dragged course would land: before this course (null: at the end); undefined when not dragging here.
+  const [dropBefore, setDropBefore] = useState<string | null | undefined>(undefined)
   const [pendingImport, setPendingImport] = useState<Schedule | null>(null)
   const [pendingLink, setPendingLink] = useState<{ schedule: Schedule; missing: PlanCourse[] } | null>(null)
   const [confirmRemove, setConfirmRemove] = useState(false)
@@ -89,14 +91,44 @@ export function TermCard({ plan, column, derived, scheduled, published, fceHours
     setPendingImport(null)
   }
 
+  /** The planned course the pointer is above (by row midpoints), or null past the last one. */
+  const dropTarget = (e: DragEvent): string | null => {
+    const rows = [...e.currentTarget.querySelectorAll<HTMLElement>('[data-plan-row]')]
+    return rows.find((r) => e.clientY < r.getBoundingClientRect().top + r.getBoundingClientRect().height / 2)?.dataset.planRow ?? null
+  }
+
   const onDrop = (e: DragEvent) => {
     const moved = e.dataTransfer.getData(DRAG_TYPE)
     const added = e.dataTransfer.getData(DRAG_NEW_COURSE)
+    const before = dropTarget(e)
     setDragOver(false)
+    setDropBefore(undefined)
     if (!moved && !added) return
     e.preventDefault()
-    if (moved) moveInPlan(plan, moved, term)
-    else addToTerm(plan, term, added)
+    if (moved) {
+      // Dropped on its own slot (just before itself or the next course): nothing moves.
+      const at = column.planned.findIndex((c) => c.id === moved)
+      if (at >= 0 && (before === moved || before === (column.planned[at + 1]?.id ?? null))) return
+      moveInPlan(plan, moved, term, before)
+    } else {
+      const id = addToTerm(plan, term, added)
+      if (before) placeInTerm(plan, id, term, before)
+    }
+  }
+
+  /** Reorders by one, keeping focus on the course's menu button for repeated moves. */
+  const nudge = (id: string, before: string | null) => {
+    moveInPlan(plan, id, term, before)
+    requestAnimationFrame(() => document.querySelector<HTMLElement>(`[id="plan-course-${id}"] button[aria-label^="Options"]`)?.focus())
+  }
+  const orderProps = (i: number) => {
+    const c = column.planned[i]
+    const last = column.planned.length - 1
+    return {
+      onMoveUp: i > 0 ? () => nudge(c.id, column.planned[i - 1].id) : undefined,
+      onMoveDown: i < last ? () => nudge(c.id, column.planned[i + 2]?.id ?? null) : undefined,
+      dropMark: dropBefore === c.id ? ('before' as const) : dropBefore === null && i === last ? ('after' as const) : undefined,
+    }
   }
 
   const headingId = `term-${term}-heading`
@@ -113,10 +145,19 @@ export function TermCard({ plan, column, derived, scheduled, published, fceHours
               e.preventDefault()
               e.dataTransfer.dropEffect = adding ? 'copy' : 'move'
               setDragOver(true)
+              setDropBefore(dropTarget(e))
             }
           : undefined
       }
-      onDragLeave={dragEnabled ? () => setDragOver(false) : undefined}
+      onDragLeave={
+        dragEnabled
+          ? (e) => {
+              if (e.currentTarget.contains(e.relatedTarget as Node | null)) return
+              setDragOver(false)
+              setDropBefore(undefined)
+            }
+          : undefined
+      }
       onDrop={dragEnabled ? onDrop : undefined}
       className={`@container flex min-w-0 flex-col rounded-xl border bg-surface transition-colors ${dragOver ? 'border-accent ring-2 ring-[color-mix(in_oklab,var(--accent)_25%,transparent)]' : 'border-line'} ${
         phase === 'past' ? 'bg-surface-2/60' : ''
@@ -281,10 +322,10 @@ export function TermCard({ plan, column, derived, scheduled, published, fceHours
                   <col className="w-[48px]" />
                   <col className="w-[40px]" />
                 </colgroup>
-                <thead className="border-b border-line text-[12px] text-muted">
+                <thead className="text-[12px] text-muted">
                   <tr>
                     {TABLE_COLUMNS.map((c, i) => (
-                      <th key={c || i} scope="col" className={`py-1.5 pr-2 font-medium ${i === 0 ? 'sticky left-0 z-[1] bg-surface pl-2' : ''} ${c === 'Units' || c === 'FCE' ? 'text-right' : ''}`}>
+                      <th key={c || i} scope="col" className={`py-1.5 pr-2 font-medium ${i === 0 ? 'sticky left-0 z-[1] bg-surface pl-[26px]' : ''} ${c === 'Units' || c === 'FCE' ? 'text-right' : ''}`}>
                         {c || <span className="sr-only">Options</span>}
                       </th>
                     ))}
@@ -301,7 +342,7 @@ export function TermCard({ plan, column, derived, scheduled, published, fceHours
                       offered={e.courseId ? seasonsLabel(derived.catalog?.courses[e.courseId]) : null}
                     />
                   ))}
-                  {column.planned.map((c) => {
+                  {column.planned.map((c, i) => {
                     const entry = derived.catalog?.courses[c.courseId]
                     return (
                       <PlanCourseTableRow
@@ -319,6 +360,7 @@ export function TermCard({ plan, column, derived, scheduled, published, fceHours
                         draggable={dragEnabled}
                         removeLabel={syncedSchedule ? `Remove from ${syncedSchedule.name}` : undefined}
                         onMove={(t) => moveInPlan(plan, c.id, t)}
+                        {...orderProps(i)}
                         onRemove={() => removeFromPlan(plan, c.id)}
                         onUpdate={(patch) => {
                           if ('passFail' in patch) setPlanPassFail(plan, c.id, !!patch.passFail)
@@ -362,7 +404,7 @@ export function TermCard({ plan, column, derived, scheduled, published, fceHours
           ) : null}
           {!table && column.planned.length ? (
             <ul aria-label="Planned" className="flex flex-col">
-              {column.planned.map((c) => (
+              {column.planned.map((c, i) => (
                 <PlanCourseRow
                   key={c.id}
                   course={c}
@@ -378,6 +420,7 @@ export function TermCard({ plan, column, derived, scheduled, published, fceHours
                   draggable={dragEnabled}
                   removeLabel={syncedSchedule ? `Remove from ${syncedSchedule.name}` : undefined}
                   onMove={(t) => moveInPlan(plan, c.id, t)}
+                  {...orderProps(i)}
                   onRemove={() => removeFromPlan(plan, c.id)}
                   onUpdate={(patch) => {
                     if ('passFail' in patch) setPlanPassFail(plan, c.id, !!patch.passFail)

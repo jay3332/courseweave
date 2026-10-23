@@ -14,6 +14,7 @@ import {
   defaultTerms,
   incomingCredit,
   loadWarnings,
+  missingSemesters,
   nextTerm,
   offering,
   planColumns,
@@ -283,5 +284,16 @@ describe('semesters synced with a schedule', () => {
   it('leaves plans without links untouched', () => {
     const p = plan({ F25: ['15112'] })
     expect(resolvePlan(p, {})).toBe(p)
+  })
+})
+
+describe('missingSemesters', () => {
+  it('finds removed falls and springs between the start and the last semester, not summers or later ones', () => {
+    expect(missingSemesters('F25', ['F25', 'S26', 'F26', 'S27'])).toEqual([])
+    expect(missingSemesters('F25', ['F25', 'S26', 'M26', 'F26', 'F27', 'S28'])).toEqual(['S27'])
+    // A whole year removed, and the first semester removed (the plan still starts in F25).
+    expect(missingSemesters('F25', ['S26', 'S28'])).toEqual(['F25', 'F26', 'S27', 'F27'])
+    expect(missingSemesters('S26', ['M26', 'F26'])).toEqual(['S26'])
+    expect(missingSemesters('F25', [])).toEqual([])
   })
 })

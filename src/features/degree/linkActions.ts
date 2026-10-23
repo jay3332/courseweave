@@ -44,6 +44,22 @@ function termOfSchedule(plan: Plan, scheduleId: string): string | undefined {
   return plan.terms.find((t) => t.link?.scheduleId === scheduleId)?.term
 }
 
+/**
+ * Puts a course just before another course of its semester (null: at the end). Order is only for organizing. A
+ * synced semester's order is its schedule's, so that's what moves.
+ */
+export function placeInTerm(plan: Plan, planCourseId: string, term: string, before: string | null) {
+  if (before === planCourseId) return
+  const linked = parseLinkedCourseId(planCourseId)
+  if (linked) {
+    useStore.getState().moveEntry(linked.scheduleId, linked.courseId, before ? (parseLinkedCourseId(before)?.courseId ?? null) : null)
+    return
+  }
+  const others = usePlans.getState().plans[plan.id]?.terms.find((t) => t.term === term)?.courses.filter((c) => c.id !== planCourseId) ?? []
+  const at = before ? others.findIndex((c) => c.id === before) : -1
+  usePlans.getState().moveCourse(plan.id, planCourseId, term, at < 0 ? others.length : at)
+}
+
 /** Removes a course from the plan, or from the synced schedule it comes from. */
 export function removeFromPlan(plan: Plan, planCourseId: string) {
   const linked = parseLinkedCourseId(planCourseId)
@@ -67,17 +83,27 @@ function findCourse(plan: Plan, planCourseId: string): { term: string; course: P
 }
 
 /** Moves a course between semesters; synced semesters on either side edit their schedules. */
-export function moveInPlan(plan: Plan, planCourseId: string, toTerm: string, index?: number) {
+/**
+ * Moves a course to another semester, or within its own. `before` places it just before that course (null: at the
+ * end); without it a course moved to another semester goes last and one already there stays put.
+ */
+export function moveInPlan(plan: Plan, planCourseId: string, toTerm: string, before?: string | null) {
   const found = findCourse(plan, planCourseId)
-  if (!found || found.term === toTerm) return
+  if (!found) return
+  if (found.term === toTerm) {
+    if (before !== undefined) placeInTerm(plan, planCourseId, toTerm, before)
+    return
+  }
   const fromLinked = parseLinkedCourseId(planCourseId) !== null
   const toLinked = linkedScheduleId(plan, toTerm, schedules()) !== null
   if (!fromLinked && !toLinked) {
-    usePlans.getState().moveCourse(plan.id, planCourseId, toTerm, index)
+    usePlans.getState().moveCourse(plan.id, planCourseId, toTerm)
+    if (before) placeInTerm(plan, planCourseId, toTerm, before)
     return
   }
   removeFromPlan(plan, planCourseId)
-  addToTerm(plan, toTerm, found.course.courseId, { passFail: found.course.passFail, units: found.course.units })
+  const id = addToTerm(plan, toTerm, found.course.courseId, { passFail: found.course.passFail, units: found.course.units })
+  if (before) placeInTerm(plan, id, toTerm, before)
 }
 
 export function setPlanPassFail(plan: Plan, planCourseId: string, passFail: boolean) {

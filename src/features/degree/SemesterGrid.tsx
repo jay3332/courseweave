@@ -1,7 +1,7 @@
 import { LayoutGrid, Plus, Table2 } from 'lucide-react'
 import { useMemo } from 'react'
 import { Link } from 'react-router'
-import { academicYearLabel, academicYearStart, compareTerms, isSummer, nextTerm, type Plan } from '../../lib/plan'
+import { academicYearLabel, academicYearStart, compareTerms, isSummer, missingSemesters, nextTerm, type Plan } from '../../lib/plan'
 import { requirementsByCourse } from '../../lib/plan-table'
 import type { AuditResult } from '../../lib/plan-types'
 import { termLabel } from '../../lib/requisites'
@@ -35,11 +35,15 @@ export function SemesterGrid({ plan, derived, openTerms, onToggleTerm, isPhone, 
   const published = usePublishedTerms()
   const scheduled = useScheduledCourses(derived.columns.map((c) => c.term))
 
-  const years = new Map<string, ColumnView[]>()
-  for (const col of derived.columns) {
-    const key = academicYearStart(col.term)
-    years.set(key, [...(years.get(key) ?? []), col])
+  // Each year's semesters, plus a slot for each fall or spring missing between the plan's start and its last
+  // semester (one the student removed), so it can be added back where it belongs.
+  const years = new Map<string, Slot[]>()
+  const put = (slot: Slot) => {
+    const key = academicYearStart(slot.term)
+    years.set(key, [...(years.get(key) ?? []), slot].sort((a, b) => compareTerms(a.term, b.term)))
   }
+  for (const col of derived.columns) put({ term: col.term, col })
+  for (const term of missingSemesters(plan.startTerm, derived.columns.map((c) => c.term))) put({ term, col: null })
   const yearKeys = [...years.keys()].sort(compareTerms)
   const last = derived.columns.at(-1)?.term ?? plan.startTerm
   const nextSemester = nextTerm(last)
@@ -71,7 +75,8 @@ export function SemesterGrid({ plan, derived, openTerms, onToggleTerm, isPhone, 
       </div>
       <IncomingCredit derived={derived} />
       {yearKeys.map((key) => {
-        const cols = years.get(key)!
+        const slots = years.get(key)!
+        const cols = slots.flatMap((s) => (s.col ? [s.col] : []))
         const summer = `M${String(Number(key.slice(1)) + 1).padStart(2, '0')}`
         const hasSummer = cols.some((c) => isSummer(c.term))
         const units = cols.reduce((n, c) => n + c.totals.units, 0)
@@ -92,23 +97,35 @@ export function SemesterGrid({ plan, derived, openTerms, onToggleTerm, isPhone, 
               ) : null}
             </div>
             <div className={table ? 'flex flex-col gap-3' : `grid grid-cols-1 gap-3 md:grid-cols-2 ${hasSummer ? '2xl:grid-cols-3' : ''}`}>
-              {cols.map((col) => (
-                <TermCard
-                  key={col.term}
-                  plan={plan}
-                  column={col}
-                  derived={derived}
-                  scheduled={scheduled.get(col.term)}
-                  published={published.has(col.term)}
-                  fceHours={fceHours}
-                  open={openTerms[col.term] ?? col.phase !== 'past'}
-                  onToggle={() => onToggleTerm(col.term)}
-                  collapsible={isPhone}
-                  dragEnabled={dragEnabled}
-                  layout={layout}
-                  requirements={requirements}
-                />
-              ))}
+              {slots.map(({ term, col }) =>
+                col ? (
+                  <TermCard
+                    key={term}
+                    plan={plan}
+                    column={col}
+                    derived={derived}
+                    scheduled={scheduled.get(term)}
+                    published={published.has(term)}
+                    fceHours={fceHours}
+                    open={openTerms[term] ?? col.phase !== 'past'}
+                    onToggle={() => onToggleTerm(term)}
+                    collapsible={isPhone}
+                    dragEnabled={dragEnabled}
+                    layout={layout}
+                    requirements={requirements}
+                  />
+                ) : (
+                  <button
+                    key={term}
+                    type="button"
+                    onClick={() => addTerm(plan.id, term)}
+                    className={`flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-line-strong px-3 text-[13.5px] font-medium text-ink-2 hover:border-ink-2 hover:text-ink ${table ? 'min-h-11' : 'min-h-28'}`}
+                  >
+                    <Plus aria-hidden className="size-4" />
+                    Add {termLabel(term)}
+                  </button>
+                ),
+              )}
               {/* Detailed layout: the summer goes after the year's spring, so that's where it's added. */}
               {!hasSummer && table ? (
                 <button
@@ -171,3 +188,5 @@ function IncomingCredit({ derived }: { derived: PlanDerived }) {
     </section>
   )
 }
+
+type Slot = { term: string; col: ColumnView | null }
