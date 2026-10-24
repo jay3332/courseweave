@@ -1,22 +1,25 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { BrowserRouter, Link, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams, Outlet } from 'react-router'
 import { AppShell } from './components/AppShell'
 import { CoursePreviewLayer } from './components/CoursePreview'
+import { PageErrorBoundary } from './components/PageErrorBoundary'
 import { Spinner } from './components/ui'
+import { lazyPage } from './lib/app-update'
 import { useOnboardingDue } from './state/onboarding'
 import { useSession } from './state/session'
 import { startSync, stopSync } from './state/sync'
 import { TermProvider, useTerms } from './state/term'
 
-// Each page is its own chunk, so the first visit only downloads the page it opens.
-const RequisitesPage = lazy(() => import('./features/catalog/RequisitesPage').then((m) => ({ default: m.RequisitesPage })))
-const CoursesPage = lazy(() => import('./features/explorer/CoursesPage').then((m) => ({ default: m.CoursesPage })))
-const CourseFullPage = lazy(() => import('./features/explorer/CourseFullPage').then((m) => ({ default: m.CourseFullPage })))
-const InstructorsPage = lazy(() => import('./features/instructors/InstructorsPage').then((m) => ({ default: m.InstructorsPage })))
-const SchedulePage = lazy(() => import('./features/planner/SchedulePage').then((m) => ({ default: m.SchedulePage })))
-const RecordPage = lazy(() => import('./features/record/RecordPage').then((m) => ({ default: m.RecordPage })))
-const PlanPage = lazy(() => import('./features/degree/PlanPage').then((m) => ({ default: m.PlanPage })))
-const RecordOnboarding = lazy(() => import('./features/record/RecordStart'))
+// Each page is its own chunk, so the first visit only downloads the page it opens. After a deploy, a stale chunk
+// reloads the page (lazyPage).
+const RequisitesPage = lazyPage(() => import('./features/catalog/RequisitesPage').then((m) => ({ default: m.RequisitesPage })))
+const CoursesPage = lazyPage(() => import('./features/explorer/CoursesPage').then((m) => ({ default: m.CoursesPage })))
+const CourseFullPage = lazyPage(() => import('./features/explorer/CourseFullPage').then((m) => ({ default: m.CourseFullPage })))
+const InstructorsPage = lazyPage(() => import('./features/instructors/InstructorsPage').then((m) => ({ default: m.InstructorsPage })))
+const SchedulePage = lazyPage(() => import('./features/planner/SchedulePage').then((m) => ({ default: m.SchedulePage })))
+const RecordPage = lazyPage(() => import('./features/record/RecordPage').then((m) => ({ default: m.RecordPage })))
+const PlanPage = lazyPage(() => import('./features/degree/PlanPage').then((m) => ({ default: m.PlanPage })))
+const RecordOnboarding = lazyPage(() => import('./features/record/RecordStart'))
 
 export default function App() {
   return (
@@ -85,6 +88,8 @@ function DefaultTermRedirect() {
 
 function TermLayout() {
   const { termId = '' } = useParams()
+  // A page that failed gets another try on the next navigation.
+  const { pathname } = useLocation()
   return (
     <TermProvider
       termId={termId}
@@ -95,9 +100,11 @@ function TermLayout() {
         </FullMessage>
       )}
     >
-      <Suspense fallback={<Loading />}>
-        <Outlet />
-      </Suspense>
+      <PageErrorBoundary key={pathname}>
+        <Suspense fallback={<Loading />}>
+          <Outlet />
+        </Suspense>
+      </PageErrorBoundary>
       <CoursePreviewLayer />
       <Onboarding />
     </TermProvider>
@@ -115,9 +122,11 @@ function Onboarding() {
   }, [due, onRecordPage])
   if (!open) return null
   return (
-    <Suspense fallback={null}>
-      <RecordOnboarding onClose={() => setOpen(false)} />
-    </Suspense>
+    <PageErrorBoundary>
+      <Suspense fallback={null}>
+        <RecordOnboarding onClose={() => setOpen(false)} />
+      </Suspense>
+    </PageErrorBoundary>
   )
 }
 
