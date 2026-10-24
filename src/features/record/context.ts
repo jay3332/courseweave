@@ -3,6 +3,7 @@ import { useMemo } from 'react'
 import { useCatalogIndex } from '../../lib/catalog'
 import type { CatalogIndex } from '../../lib/catalog-types'
 import { buildEquivalence, createContext, termOrdinal, type CourseCredit, type RequisiteContext } from '../../lib/requisites'
+import { sameCourseTitle } from '../../lib/substitutes'
 import { entryGrade, useRecord, type RecordData } from '../../state/record'
 import { usePlans } from '../../state/plan'
 import { useStore } from '../../state/store'
@@ -67,7 +68,15 @@ function useCrossListGroups(termId: string): string[][] {
   const term = useTerm()
   return useMemo(() => {
     if (term.meta.id !== termId) return []
-    return term.courses.filter((c) => c.crossListed.length).map((c) => [c.id, ...c.crossListed])
+    // Sections that meet together aren't always the same course (Intermediate French I and II share a room): only
+    // the ones with the same title count for each other.
+    return term.courses.flatMap((c) => {
+      const same = c.crossListed.filter((id) => {
+        const other = term.courseById.get(id)
+        return other ? sameCourseTitle(c.title, other.title) : false
+      })
+      return same.length ? [[c.id, ...same]] : []
+    })
   }, [term, termId])
 }
 

@@ -11,6 +11,7 @@ import { instructorSlug } from '../../lib/data'
 import { departmentName, modeLabel } from '../../lib/departments'
 import { childSections, resolveSelection, selectionParts, topSections, type Selection } from '../../lib/sections'
 import { reservationCodes, reservationSummary } from '../../lib/reservations'
+import { sameCourseTitle } from '../../lib/substitutes'
 import { formatDays, formatLocation, formatTimeRange } from '../../lib/time'
 import type { Course, Section } from '../../lib/types'
 import { partsConflict, useActiveScheduleId, useScheduleView, type ResolvedEntry } from '../../state/schedule-view'
@@ -181,7 +182,10 @@ export function CourseFacts({ course, search, layout = 'list', className = '' }:
   const term = useTerm()
   const termId = term.meta.id
   const slugByName = useMemo(() => new Map(term.instructors.map((i) => [i.name, i.slug])), [term])
-  const crossListed = course.crossListed.filter((id) => term.courseById.has(id))
+  // Same title: the course under another number. Otherwise the sections only meet together (French I and II).
+  const together = course.crossListed.filter((id) => term.courseById.has(id))
+  const crossListed = together.filter((id) => sameCourseTitle(course.title, term.courseById.get(id)!.title))
+  const meetsWith = together.filter((id) => !crossListed.includes(id))
   const mini = courseMini(course, term.meta)
 
   const facts: { label: string; value: ReactNode }[] = [
@@ -244,24 +248,28 @@ export function CourseFacts({ course, search, layout = 'list', className = '' }:
         </span>
       ),
     })
-  if (crossListed.length)
-    facts.push({
-      label: 'Also listed as',
-      value: (
-        <span className="flex flex-wrap gap-x-3">
-          {crossListed.map((id) => (
-            <Link
-              key={id}
-              to={`/${termId}/courses/${codeOf(id)}${layout === 'row' ? '/full' : ''}${search}`}
-              {...coursePreview(id)}
-              className="course-code text-[14.5px] text-ink underline decoration-line-strong underline-offset-2 hover:decoration-accent"
-            >
-              {codeOf(id)}
-            </Link>
-          ))}
-        </span>
-      ),
-    })
+  for (const [label, ids] of [
+    ['Also listed as', crossListed],
+    ['Meets with', meetsWith],
+  ] as const)
+    if (ids.length)
+      facts.push({
+        label,
+        value: (
+          <span className="flex flex-wrap gap-x-3">
+            {ids.map((id) => (
+              <Link
+                key={id}
+                to={`/${termId}/courses/${codeOf(id)}${layout === 'row' ? '/full' : ''}${search}`}
+                {...coursePreview(id)}
+                className="course-code text-[14.5px] text-ink underline decoration-line-strong underline-offset-2 hover:decoration-accent"
+              >
+                {codeOf(id)}
+              </Link>
+            ))}
+          </span>
+        ),
+      })
 
   if (layout === 'row') {
     return (

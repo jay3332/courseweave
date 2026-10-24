@@ -16,6 +16,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, wri
 import { join } from 'node:path'
 import type { CatalogDetails, CatalogEntry, CatalogIndex, Requisite } from '../src/lib/catalog-types.ts'
 import { parseRequisiteText, simplify } from '../src/lib/requisite-format.ts'
+import { sameCourseTitle } from '../src/lib/substitutes.ts'
 import { courseCode, dataDir, derivedDir, publicDataDir, scottylabsDir } from './lib/common.ts'
 
 const SOC_BASE = 'https://enr-apps.as.cmu.edu'
@@ -26,6 +27,8 @@ const outDir = join(publicDataDir, 'catalog')
 
 interface StellicCourseRef {
   code: string
+  /** The course's title, on equivalents (also for retired numbers). */
+  name?: string
 }
 
 interface StellicConstraint {
@@ -300,7 +303,7 @@ async function main() {
 
   const entries: Record<string, CatalogEntry> = {}
   const details: Record<string, Record<string, CatalogDetails>> = {}
-  const stats = { tree: 0, socText: 0, textOnly: 0, none: 0, socDescriptions: 0, stellicDescriptions: 0 }
+  const stats = { tree: 0, socText: 0, textOnly: 0, none: 0, socDescriptions: 0, stellicDescriptions: 0, relatedDropped: 0 }
 
   for (const id of [...new Set([...infos.keys(), ...Object.keys(soc)])].sort()) {
     const info = infos.get(id)
@@ -338,7 +341,26 @@ async function main() {
     const passFail = Boolean(info?.grade_option && (info.grade_option.is_pass_fail || info.grade_option.never_graded))
 
     const coreqs = [...new Set([...idList(info?.co_reqs, id), ...(s?.coreqs ?? []).filter((c) => c !== id)])].sort()
-    const equivalents = [...new Set([...idList(info?.equiv, id), ...(s?.crossListed ?? []).filter((c) => c !== id && isCourseId(c))])].sort()
+    // Stellic's equivalents and SOC's cross-listings both include courses that only overlap or meet together
+    // (21-241 and 21-341; Intermediate French I and II): keep the ones whose titles name the same course. A course
+    // whose title we don't know (a retired number) gets the benefit of the doubt.
+    const title = cleanText(info?.name) ?? s?.title
+    const titleOf = (other: string) => cleanText(infos.get(other)?.name) ?? soc[other]?.title
+    const same = (other: string, name?: string) => {
+      const t = cleanText(name) ?? titleOf(other)
+      const ok = !title || !t || sameCourseTitle(title, t)
+      if (!ok) stats.relatedDropped++
+      return ok
+    }
+    const equivalents = [
+      ...new Set([
+        ...idList(
+          (info?.equiv ?? []).filter((r) => same(toId(r.code), r.name)),
+          id,
+        ),
+        ...(s?.crossListed ?? []).filter((c) => c !== id && isCourseId(c) && same(c)),
+      ]),
+    ].sort()
 
     const entry: CatalogEntry = {
       id,
@@ -399,7 +421,8 @@ async function main() {
   const n = Object.keys(entries).length
   console.log(
     `catalog: ${n} courses; prerequisites from Stellic trees ${stats.tree}, parsed SOC text ${stats.socText}, text only ${stats.textOnly}, none ${stats.none}; ` +
-      `descriptions SOC ${stats.socDescriptions}, Stellic ${stats.stellicDescriptions}; pass/fail ${passFail.length}`,
+      `descriptions SOC ${stats.socDescriptions}, Stellic ${stats.stellicDescriptions}; pass/fail ${passFail.length}; ` +
+      `equivalents dropped as only related ${stats.relatedDropped}`,
   )
 }
 
