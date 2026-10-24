@@ -5,6 +5,7 @@ import { useStore, type CalendarDisplay, type Theme } from '../state/store'
 import { useSync } from '../state/sync'
 import { Button, Dialog } from './ui'
 import { WeekGrid, type CalendarBlock } from './WeekGrid'
+import { ClearDeviceDialog } from './ClearDeviceDialog'
 
 const THEMES: { value: Theme; label: string; icon: typeof Sun }[] = [
   { value: 'system', label: 'Match system', icon: Monitor },
@@ -94,6 +95,7 @@ function AccountSection() {
   const lastSyncedAt = useSync((s) => s.lastSyncedAt)
   const syncStatus = useSync((s) => s.status)
   const [confirming, setConfirming] = useState(false)
+  const [clearing, setClearing] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [deleteFailed, setDeleteFailed] = useState(false)
 
@@ -140,11 +142,13 @@ function AccountSection() {
       <p className="mt-1 text-[12.5px] text-muted">{PRIVACY}</p>
       <div className="mt-3 flex flex-wrap gap-2">
         <Button onClick={() => void signOut()}>Sign out</Button>
+        <Button onClick={() => setClearing(true)}>Sign out and clear this device</Button>
         <Button variant="danger" onClick={() => setConfirming(true)}>
           Delete my synced data
         </Button>
       </div>
 
+      <ClearDeviceDialog open={clearing} onClose={() => setClearing(false)} />
       <Dialog open={confirming} onClose={() => !deleting && setConfirming(false)} title="Delete your synced data?" className="w-[min(94vw,440px)]">
         <div className="px-5 py-4">
           <p className="text-ink-2">

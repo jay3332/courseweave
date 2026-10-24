@@ -333,6 +333,34 @@ export async function startSync(): Promise<void> {
   }
 }
 
+/** True when the account holds exactly what this device has, for every synced document. */
+function allUploaded(): boolean {
+  return running && ADAPTERS.every((a) => keys.get(a.key)?.uploaded === stableStringify(a.read()))
+}
+
+/**
+ * Uploads whatever hasn't reached the account yet and waits for it, up to `timeoutMs`. True when the account holds
+ * everything this device has, so the device's copy can go. Offline, or paused by the server, it says so at once.
+ */
+export async function syncNow(timeoutMs = 15_000): Promise<boolean> {
+  if (!running) return false
+  if (allUploaded()) return true
+  if (isOffline() || [...keys.values()].some((k) => k.pausedUntil > Date.now())) return false
+  for (const a of ADAPTERS) {
+    const k = keys.get(a.key)
+    if (!k) continue
+    // A change waiting out its debounce goes now.
+    if (k.timer) {
+      clearTimeout(k.timer)
+      k.timer = null
+    }
+    flush(a, epoch)
+  }
+  const deadline = Date.now() + timeoutMs
+  while (!allUploaded() && running && !isOffline() && Date.now() < deadline) await new Promise((r) => setTimeout(r, 200))
+  return allUploaded()
+}
+
 /** Stops syncing (sign-out, session expiry). Local data stays as it is. */
 export function stopSync() {
   running = false

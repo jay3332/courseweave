@@ -1,7 +1,8 @@
-import { AlertTriangle, Check, CloudOff, LogIn, LogOut, RefreshCw, Settings } from 'lucide-react'
+import { AlertTriangle, Check, CloudOff, Eraser, LogIn, LogOut, RefreshCw, Settings } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { startSignIn, useSession } from '../state/session'
 import { retrySync, useSync, type SyncStatus } from '../state/sync'
+import { ClearDeviceDialog } from './ClearDeviceDialog'
 import { Button, IconButton } from './ui'
 
 const STATUS: Record<SyncStatus, { text: string; icon: typeof Check; tone: string }> = {
@@ -26,6 +27,7 @@ export function AccountMenu({ onOpenSettings }: { onOpenSettings(): void }) {
   const signOut = useSession((s) => s.signOut)
   const sync = useSync()
   const [open, setOpen] = useState(false)
+  const [clearing, setClearing] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -107,8 +109,17 @@ export function AccountMenu({ onOpenSettings }: { onOpenSettings(): void }) {
               void signOut()
             }}
           />
+          <MenuButton
+            icon={Eraser}
+            label="Sign out and clear this device"
+            onClick={() => {
+              setOpen(false)
+              setClearing(true)
+            }}
+          />
         </div>
       ) : null}
+      <ClearDeviceDialog open={clearing} onClose={() => setClearing(false)} />
     </div>
   )
 }
