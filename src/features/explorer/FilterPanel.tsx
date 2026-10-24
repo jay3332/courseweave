@@ -21,6 +21,8 @@ export function FilterPanel({
   onChange,
   heading = true,
   fceAvailable = false,
+  showUnoffered,
+  onShowUnofferedChange,
 }: {
   term: Term
   filters: Filters
@@ -28,6 +30,9 @@ export function FilterPanel({
   heading?: boolean
   /** Show the FCE workload/rating filters (hidden when FCE data isn't loaded). */
   fceAvailable?: boolean
+  /** "Show courses not offered in <term>"; the option is left out without a handler. */
+  showUnoffered?: boolean
+  onShowUnofferedChange?(value: boolean): void
 }) {
   const set = <K extends keyof Filters>(key: K, value: Filters[K]) => onChange({ ...filters, [key]: value })
   const count = activeFilterCount(filters)
@@ -49,6 +54,15 @@ export function FilterPanel({
           </button>
         ) : null}
       </div>
+
+      {onShowUnofferedChange ? (
+        <div className="flex flex-col gap-1">
+          <Toggle checked={Boolean(showUnoffered)} onChange={onShowUnofferedChange}>
+            Show courses not offered in {term.meta.name}
+          </Toggle>
+          <p className="pl-[42px] text-[12px] text-muted">Offered in other semesters or listed in the catalog. Listed after this semester’s courses.</p>
+        </div>
+      ) : null}
 
       <div className="flex flex-col gap-2">
         <Toggle checked={filters.fits} onChange={(v) => set('fits', v)}>

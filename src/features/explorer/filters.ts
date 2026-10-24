@@ -143,6 +143,11 @@ export function parseView(params: URLSearchParams): ViewMode {
   return params.get('view') === 'chart' ? 'chart' : 'list'
 }
 
+/** "Show courses not offered in <term>" (`unoffered=1`). A view option, not a filter: "Clear all" keeps it. */
+export function parseShowUnoffered(params: URLSearchParams): boolean {
+  return params.get('unoffered') === '1'
+}
+
 /** Writes filters into a copy of `params`, keeping unrelated keys (q, sort). */
 export function writeFilters(params: URLSearchParams, f: Filters): URLSearchParams {
   const next = new URLSearchParams(params)
@@ -191,7 +196,8 @@ export function activeFilterCount(f: Filters): number {
   )
 }
 
-function hasSectionFilters(f: Filters): boolean {
+/** Filters that need a semester's sections; courses the semester doesn't offer can't pass them. */
+export function hasSectionFilters(f: Filters): boolean {
   return Boolean(f.days.length || f.after !== null || f.before !== null || f.delivery.length || f.sessions.length || f.fits || f.scheduledOnly)
 }
 
@@ -258,13 +264,23 @@ export interface FilterContext {
   reqAccepts?: ((courseId: string) => boolean) | null
 }
 
-function fceMatches(course: Course, f: Filters, fce: Map<string, FceSummary> | null | undefined): boolean {
+/** What the FCE filters and sorts read: the semester's course when it's offered (for the mini check), else null. */
+interface FceSubject {
+  id: string
+  title: string
+  units: number | null
+  course: Course | null
+}
+
+const subjectOf = (course: Course): FceSubject => ({ id: course.id, title: course.title, units: course.units, course })
+
+function fceMatches(subject: FceSubject, f: Filters, fce: Map<string, FceSummary> | null | undefined): boolean {
   if (!fce || (f.maxHours === null && f.minRating === null && !f.withinUnits)) return true
-  const s = fce.get(course.id)
+  const s = fce.get(subject.id)
   if (f.maxHours !== null && (s?.hours == null || s.hours > f.maxHours)) return false
   if (f.minRating !== null && (s?.courseRate == null || s.courseRate < f.minRating)) return false
   if (f.withinUnits) {
-    const expected = expectedHours(course.units, courseIsMini(course, s))
+    const expected = expectedHours(subject.units, courseIsMini(subject.course, s))
     if (s?.hours == null || expected === null || s.hours > expected) return false
   }
   return true
@@ -276,15 +292,42 @@ export function courseMatches(course: Course, f: Filters, ctx: FilterContext): b
   if (f.units.length && !UNIT_BUCKETS.some((b) => f.units.includes(b.id) && b.test(course.units))) return false
   if (f.saved && !ctx.bookmarks.has(course.id)) return false
   if (f.req && ctx.reqAccepts && !ctx.reqAccepts(course.id)) return false
-  if (!fceMatches(course, f, ctx.fce)) return false
+  if (!fceMatches(subjectOf(course), f, ctx.fce)) return false
   if (!hasSectionFilters(f)) return true
   const fitting = f.fits ? new Set(ctx.fittingSelections(course).map(choiceKey)) : null
   return allSelections(course).some((c) => choiceMatches(c, f, fitting))
 }
 
+/** A course the routed semester doesn't offer, as much as other semesters and the catalog tell about it. */
+export interface OtherCourse {
+  id: string
+  code: string
+  title: string
+  /** Department code, as in the Schedule of Classes; '' when unknown. */
+  dept: string
+  level: Level
+  /** null = variable units (or unknown, see `unitsKnown`). */
+  units: number | null
+  unitsKnown: boolean
+}
+
+/**
+ * The filters that don't need this semester's sections. Section filters (days, times, delivery, session, fits,
+ * scheduled) can't be met by a course the semester doesn't offer, so they hide every one of them.
+ */
+export function otherCourseMatches(course: OtherCourse, f: Filters, ctx: Pick<FilterContext, 'bookmarks' | 'fce' | 'reqAccepts'>): boolean {
+  if (hasSectionFilters(f)) return false
+  if (f.depts.length && !f.depts.includes(course.dept)) return false
+  if (f.levels.length && !f.levels.includes(course.level)) return false
+  if (f.units.length && !(course.unitsKnown && UNIT_BUCKETS.some((b) => f.units.includes(b.id) && b.test(course.units)))) return false
+  if (f.saved && !ctx.bookmarks.has(course.id)) return false
+  if (f.req && ctx.reqAccepts && !ctx.reqAccepts(course.id)) return false
+  return fceMatches({ id: course.id, title: course.title, units: course.units, course: null }, f, ctx.fce)
+}
+
 /** FCE value used by a sort; null sorts last in every direction. */
-function fceKey(course: Course, sort: SortKey, fce: Map<string, FceSummary>): number | null {
-  const s = fce.get(course.id)
+function fceKey(subject: FceSubject, sort: SortKey, fce: Map<string, FceSummary>): number | null {
+  const s = fce.get(subject.id)
   if (!s) return null
   switch (sort) {
     case 'hours':
@@ -292,7 +335,7 @@ function fceKey(course: Course, sort: SortKey, fce: Map<string, FceSummary>): nu
     case 'hours-desc':
       return s.hours === null ? null : -s.hours
     case 'ratio':
-      return s.hours === null || !course.units ? null : s.hours / expectedHours(course.units, courseIsMini(course, s))!
+      return s.hours === null || !subject.units ? null : s.hours / expectedHours(subject.units, courseIsMini(subject.course, s))!
     case 'rating':
       return s.courseRate === null ? null : -s.courseRate
     case 'teaching':
@@ -302,33 +345,52 @@ function fceKey(course: Course, sort: SortKey, fce: Map<string, FceSummary>): nu
   }
 }
 
-export function sortCourses(items: { course: Course; score: number }[], sort: SortKey, fce?: Map<string, FceSummary> | null): Course[] {
-  const out = [...items]
+function sortBy<T>(items: { item: T; score: number }[], view: (item: T) => FceSubject, sort: SortKey, fce?: Map<string, FceSummary> | null): T[] {
+  const rows = items.map((x) => ({ item: x.item, score: x.score, v: view(x.item) }))
   if (FCE_SORTS.includes(sort)) {
     const map = fce ?? new Map<string, FceSummary>()
-    const keyed = out.map((x) => ({ course: x.course, key: fceKey(x.course, sort, map) }))
+    const keyed = rows.map((r) => ({ ...r, key: fceKey(r.v, sort, map) }))
     keyed.sort((a, b) => {
-      if (a.key === null || b.key === null) return a.key === null ? (b.key === null ? a.course.id.localeCompare(b.course.id) : 1) : -1
-      return a.key - b.key || a.course.id.localeCompare(b.course.id)
+      if (a.key === null || b.key === null) return a.key === null ? (b.key === null ? a.v.id.localeCompare(b.v.id) : 1) : -1
+      return a.key - b.key || a.v.id.localeCompare(b.v.id)
     })
-    return keyed.map((x) => x.course)
+    return keyed.map((r) => r.item)
   }
   switch (sort) {
     case 'relevance':
-      out.sort((a, b) => b.score - a.score || a.course.id.localeCompare(b.course.id))
+      rows.sort((a, b) => b.score - a.score || a.v.id.localeCompare(b.v.id))
       break
     case 'title':
-      out.sort((a, b) => a.course.title.localeCompare(b.course.title) || a.course.id.localeCompare(b.course.id))
+      rows.sort((a, b) => a.v.title.localeCompare(b.v.title) || a.v.id.localeCompare(b.v.id))
       break
     case 'units':
-      out.sort((a, b) => {
-        const ua = a.course.units ?? Infinity
-        const ub = b.course.units ?? Infinity
-        return ua - ub || a.course.id.localeCompare(b.course.id)
+      rows.sort((a, b) => {
+        const ua = a.v.units ?? Infinity
+        const ub = b.v.units ?? Infinity
+        return ua - ub || a.v.id.localeCompare(b.v.id)
       })
       break
     default:
-      out.sort((a, b) => a.course.id.localeCompare(b.course.id))
+      rows.sort((a, b) => a.v.id.localeCompare(b.v.id))
   }
-  return out.map((x) => x.course)
+  return rows.map((r) => r.item)
+}
+
+export function sortCourses(items: { course: Course; score: number }[], sort: SortKey, fce?: Map<string, FceSummary> | null): Course[] {
+  return sortBy(
+    items.map((x) => ({ item: x.course, score: x.score })),
+    subjectOf,
+    sort,
+    fce,
+  )
+}
+
+/** Same order as `sortCourses`; unknown units sort with variable ones, last. */
+export function sortOtherCourses<T extends OtherCourse>(items: { course: T; score: number }[], sort: SortKey, fce?: Map<string, FceSummary> | null): T[] {
+  return sortBy(
+    items.map((x) => ({ item: x.course, score: x.score })),
+    (c) => ({ id: c.id, title: c.title, units: c.units, course: null }),
+    sort,
+    fce,
+  )
 }

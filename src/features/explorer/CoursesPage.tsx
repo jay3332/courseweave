@@ -14,7 +14,7 @@ import { usePlans } from '../../state/plan'
 import { useBookmarks } from '../../state/store'
 import { useTerm } from '../../state/term'
 import { CourseDetail } from './CourseDetail'
-import { NotOfferedHere, OtherTermResults } from './OtherTerms'
+import { NotOfferedHere, OtherTermResults, UnofferedResults } from './OtherTerms'
 import { HoursScatter } from '../fce/HoursScatter'
 import { FilterPanel } from './FilterPanel'
 import { RequirementChip } from './RequirementFilter'
@@ -23,10 +23,14 @@ import {
   courseMatches,
   EMPTY_FILTERS,
   FCE_SORTS,
+  hasSectionFilters,
+  otherCourseMatches,
   parseFilters,
+  parseShowUnoffered,
   parseSort,
   parseView,
   sortCourses,
+  sortOtherCourses,
   writeFilters,
   type Filters,
   type SortKey,
@@ -34,6 +38,7 @@ import {
 } from './filters'
 import { ResultsHeader, ResultsList } from './ResultsList'
 import { rowId } from './summary'
+import { useUnofferedDocs, type UnofferedCourse } from './unoffered'
 
 const SORT_LABELS: Record<SortKey, string> = {
   relevance: 'Relevance',
@@ -107,6 +112,17 @@ export function CoursesPage() {
       },
       { replace: true },
     )
+  const showUnoffered = parseShowUnoffered(params)
+  const setShowUnoffered = (on: boolean) =>
+    setParams(
+      (prev) => {
+        const next = new URLSearchParams(prev)
+        if (on) next.set('unoffered', '1')
+        else next.delete('unoffered')
+        return next
+      },
+      { replace: true },
+    )
   const filterCount = activeFilterCount(filters)
   const setFilters = (next: Filters) => setParams((prev) => writeFilters(prev, next))
   const setSort = (value: SortKey) =>
@@ -155,6 +171,20 @@ export function CoursesPage() {
     )
   }, [scored, filters, bookmarkSet, schedule, sort, fce, reqAccepts])
 
+  // "Show courses not offered": other semesters' and catalog-only courses, through the filters that don't need sections.
+  const unofferedDocs = useUnofferedDocs(showUnoffered)
+  const unoffered = useMemo((): UnofferedCourse[] | null | undefined => {
+    if (!showUnoffered || !unofferedDocs) return unofferedDocs === null ? null : undefined
+    const ctx = { bookmarks: bookmarkSet, fce, reqAccepts }
+    const out: { course: UnofferedCourse; score: number }[] = []
+    for (const doc of unofferedDocs) {
+      if (!otherCourseMatches(doc.course, filters, ctx)) continue
+      const score = deferredQuery ? scoreCourse(doc, deferredQuery) : 1
+      if (score > 0) out.push({ course: doc.course, score })
+    }
+    return sortOtherCourses(out, sort, fce)
+  }, [showUnoffered, unofferedDocs, filters, bookmarkSet, fce, reqAccepts, deferredQuery, sort])
+
   const selectedId = courseCode ? parseCourseCode(courseCode) : null
   const selected = selectedId ? (term.courseById.get(selectedId) ?? null) : null
 
@@ -164,6 +194,21 @@ export function CoursesPage() {
   const activeIndex =
     active && active.key === resultsKey ? active.index : Math.max(0, selectedId ? results.findIndex((c) => c.id === selectedId) : 0)
   const setActiveIndex = (index: number) => setActive({ key: resultsKey, index })
+
+  // Shown in place of the usual empty state while loading, or when it has courses (or explains why it has none).
+  const unofferedShows = showUnoffered && unoffered !== null && (unoffered === undefined || unoffered.length > 0 || hasSectionFilters(filters))
+  const unofferedSection = (empty: boolean) => (
+    <UnofferedResults
+      key={resultsKey}
+      courses={unoffered ?? undefined}
+      sectionFiltered={hasSectionFilters(filters)}
+      query={deferredQuery}
+      search={location.search}
+      empty={empty}
+      scrollRoot={scrollRef}
+    />
+  )
+
   const scrollToActive = useRef(false)
 
   useEffect(() => {
@@ -235,7 +280,14 @@ export function CoursesPage() {
   return (
     <div className="flex h-full min-h-0">
       <aside aria-label="Filters" className="scrollbar-thin hidden w-[252px] shrink-0 overflow-y-auto border-r border-line bg-surface px-4 py-4 lg:block">
-        <FilterPanel term={term} filters={filters} onChange={setFilters} fceAvailable={Boolean(fce)} />
+        <FilterPanel
+          term={term}
+          filters={filters}
+          onChange={setFilters}
+          fceAvailable={Boolean(fce)}
+          showUnoffered={showUnoffered}
+          onShowUnofferedChange={setShowUnoffered}
+        />
       </aside>
 
       <section aria-label="Course results" className={`${courseCode ? 'hidden md:flex' : 'flex'} min-w-0 flex-1 flex-col`}>
@@ -266,6 +318,7 @@ export function CoursesPage() {
             <span className="text-ink-2" aria-live="polite">
               <span className="font-semibold text-ink">{results.length.toLocaleString()}</span> {results.length === 1 ? 'course' : 'courses'}
               <span className="hidden text-muted sm:inline"> in {term.meta.name}</span>
+              {showUnoffered && unoffered?.length ? <span className="text-muted">, plus {unoffered.length.toLocaleString()} not offered</span> : null}
             </span>
             <div className="flex items-center gap-2">
               {view === 'list' ? (
@@ -310,9 +363,17 @@ export function CoursesPage() {
                 bookmarks={bookmarkSet}
                 scrollRoot={scrollRef}
                 fce={fce}
+                footer={
+                  showUnoffered ? (
+                    unofferedSection(false)
+                  ) : (
+                    <OtherTermResults query={deferredQuery} filters={filters} search={location.search} empty={false} fallback={null} />
+                  )
+                }
               />
-              <OtherTermResults query={deferredQuery} filters={filters} search={location.search} empty={false} fallback={null} />
             </>
+          ) : unofferedShows ? (
+            unofferedSection(true)
           ) : (
             <OtherTermResults
               query={deferredQuery}
@@ -341,7 +402,15 @@ export function CoursesPage() {
 
       <Dialog open={filtersOpen} onClose={() => setFiltersOpen(false)} title="Filters" className="w-[min(94vw,420px)]">
         <div className="px-5 py-4">
-          <FilterPanel term={term} filters={filters} onChange={setFilters} heading={false} fceAvailable={Boolean(fce)} />
+          <FilterPanel
+            term={term}
+            filters={filters}
+            onChange={setFilters}
+            heading={false}
+            fceAvailable={Boolean(fce)}
+            showUnoffered={showUnoffered}
+            onShowUnofferedChange={setShowUnoffered}
+          />
         </div>
         <div className="sticky bottom-0 border-t border-line bg-surface px-5 py-3">
           <Button variant="primary" className="w-full" onClick={() => setFiltersOpen(false)}>

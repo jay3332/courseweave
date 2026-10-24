@@ -1,8 +1,9 @@
-// Courses the routed semester doesn't offer: grayed search matches from other semesters, and the panel shown when a
-// link names one. Both offer the semester(s) that do offer it. Courses only in the catalog (offered in none of the
-// built semesters) appear only for an exact course number; anything with no data at all is left out.
+// Courses the routed semester doesn't offer: grayed search matches from other semesters, the full list behind "Show
+// courses not offered", and the panel shown when a link names one. Each offers the semester(s) that do offer it.
+// Search shows catalog-only courses (offered in none of the built semesters) only for an exact course number; the
+// full list includes them. Anything with no data at all is left out.
 import { ArrowRight, GitFork } from 'lucide-react'
-import type { ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
 import { Link } from 'react-router'
 import { useCatalogIndex } from '../../lib/catalog'
 import { exactCourseId, nearestTerm, searchOtherTerms, useOfferings, type Offering } from '../../lib/offerings'
@@ -10,6 +11,7 @@ import { codeOf } from '../../lib/requisite-format'
 import { termLabel, termOrdinal } from '../../lib/requisites'
 import { useTerm, useTerms } from '../../state/term'
 import { EMPTY_FILTERS, type Filters } from './filters'
+import { catalogTitle, type UnofferedCourse } from './unoffered'
 
 /** Most other-semester matches listed; the rest are counted. */
 const LIMIT = 8
@@ -42,11 +44,6 @@ function useOtherTermMatches(query: string, filters: Filters): { matches: Match[
     if (title) found.unshift({ id: exact, title, terms: [] })
   }
   return { matches: found.slice(0, LIMIT), more: Math.max(0, found.length - LIMIT) }
-}
-
-/** A catalog title worth showing; some entries only repeat the course number ("15-101"), which says nothing. */
-function catalogTitle(title: string | undefined): string | undefined {
-  return title && !/^\d{2}-?\d{3}$/.test(title.trim()) ? title : undefined
 }
 
 /** Link to a course in another semester, keeping the current search and filters. */
@@ -138,6 +135,84 @@ export function OtherTermResults({ query, filters, search, empty, fallback }: { 
         ))}
       </ul>
       {result.more ? <p className="border-t border-line px-4 py-2.5 text-[12.5px] text-muted">{result.more} more in other semesters; keep typing to narrow it down.</p> : null}
+    </section>
+  )
+}
+
+const PAGE = 80
+
+/**
+ * Every course the semester doesn't offer that passes the filters, grayed like search's other-semester matches and
+ * paged like the results list. `courses` is undefined while loading. Remount (via `key`) when the list changes.
+ */
+export function UnofferedResults({
+  courses,
+  sectionFiltered,
+  query,
+  search,
+  empty,
+  scrollRoot,
+}: {
+  courses: UnofferedCourse[] | undefined
+  /** A section filter is on, which hides every unoffered course. */
+  sectionFiltered: boolean
+  query: string
+  search: string
+  /** The semester itself has no results: this replaces the list rather than following it. */
+  empty: boolean
+  scrollRoot: RefObject<HTMLDivElement | null>
+}) {
+  const term = useTerm()
+  const [limit, setLimit] = useState(PAGE)
+  const sentinel = useRef<HTMLParagraphElement>(null)
+  const total = courses?.length ?? 0
+  const shown = Math.min(total, limit)
+
+  useEffect(() => {
+    const el = sentinel.current
+    if (!el) return
+    const observer = new IntersectionObserver((entries) => entries.some((e) => e.isIntersecting) && setLimit((l) => l + PAGE), {
+      root: scrollRoot.current,
+      rootMargin: '600px 0px',
+    })
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [scrollRoot, shown, total])
+
+  return (
+    <section aria-labelledby="unoffered-heading" aria-busy={courses === undefined} className={empty ? 'pb-6' : 'border-t-4 border-line pb-6'}>
+      <div className="px-4 pt-4 pb-2">
+        {empty ? (
+          <p className="mb-2 text-[14px] text-ink-2">{query ? `No ${term.meta.name} courses match “${query}”.` : `No ${term.meta.name} courses pass these filters.`}</p>
+        ) : null}
+        <h2 id="unoffered-heading" className="text-[13px] font-semibold text-ink-2">
+          Not offered in {term.meta.name}
+          {courses?.length ? <span className="ml-1.5 font-normal text-muted tabular-nums">{courses.length.toLocaleString()}</span> : null}
+        </h2>
+        <p className="mt-0.5 text-[12.5px] text-muted">
+          {courses === undefined
+            ? 'Loading courses from other semesters and the catalog…'
+            : sectionFiltered
+              ? `Hidden while a day, time, delivery, session or schedule filter is on: those need ${term.meta.name}’s sections.`
+              : !courses.length
+                ? 'None of them match either.'
+                : 'Offered in other semesters, or listed in the catalog.'}
+        </p>
+      </div>
+      {courses?.length ? (
+        <>
+          <ul className="opacity-90">
+            {courses.slice(0, shown).map((c) => (
+              <MatchRow key={c.id} match={c} search={search} />
+            ))}
+          </ul>
+          {shown < total ? (
+            <p ref={sentinel} className="border-t border-line px-4 py-4 text-center text-[13px] text-muted">
+              Showing {shown.toLocaleString()} of {total.toLocaleString()}
+            </p>
+          ) : null}
+        </>
+      ) : null}
     </section>
   )
 }
