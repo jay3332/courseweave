@@ -22,6 +22,7 @@ import type { CalendarSelection, Preview } from './types'
 import { UnscheduledList } from './UnscheduledList'
 import { ScheduleWorkload } from '../fce/ScheduleWorkload'
 import { ScheduleRequisiteSummary } from '../record/ScheduleRequisiteSummary'
+import { DisplayMenu } from './DisplayMenu'
 
 export function SchedulePage() {
   const term = useTerm()
@@ -155,6 +156,7 @@ export function SchedulePage() {
                 <span className="hidden min-[400px]:inline">Generate schedules</span>
                 <span className="min-[400px]:hidden">Generate</span>
               </Button>
+              <DisplayMenu />
               {view.schedule ? <ExportMenu schedule={view.schedule} /> : null}
             </div>
           </div>

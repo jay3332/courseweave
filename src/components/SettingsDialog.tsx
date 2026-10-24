@@ -1,10 +1,9 @@
 import { LogIn, Monitor, Moon, Sun } from 'lucide-react'
 import { useState } from 'react'
 import { startSignIn, useSession } from '../state/session'
-import { useStore, type CalendarDisplay, type Theme } from '../state/store'
+import { useStore, type Theme } from '../state/store'
 import { useSync } from '../state/sync'
 import { Button, Dialog } from './ui'
-import { WeekGrid, type CalendarBlock } from './WeekGrid'
 import { ClearDeviceDialog } from './ClearDeviceDialog'
 
 const THEMES: { value: Theme; label: string; icon: typeof Sun }[] = [
@@ -13,23 +12,9 @@ const THEMES: { value: Theme; label: string; icon: typeof Sun }[] = [
   { value: 'dark', label: 'Dark', icon: Moon },
 ]
 
-const DISPLAY_OPTIONS: { key: keyof CalendarDisplay; label: string; hint: string }[] = [
-  { key: 'section', label: 'Section', hint: 'Lec 1, Rec A or Sec A next to the course number' },
-  { key: 'time', label: 'Meeting time', hint: 'Shown when the block is tall enough' },
-  { key: 'location', label: 'Room', hint: 'Building and room, when there is space' },
-]
-
-// Two classes back to back, so the preview shows both a lecture and a recitation.
-const PREVIEW: CalendarBlock[] = [
-  { key: 'l', day: 0, start: 600, end: 680, color: 4, label: '15-151', section: 'Lec 1', location: 'DH 2210' },
-  { key: 'r', day: 0, start: 690, end: 740, color: 4, label: '15-151', section: 'Rec A', location: 'WEH 5310' },
-]
-
 export function SettingsDialog({ open, onClose }: { open: boolean; onClose(): void }) {
   const theme = useStore((s) => s.theme)
   const setTheme = useStore((s) => s.setTheme)
-  const display = useStore((s) => s.calendarDisplay)
-  const setDisplay = useStore((s) => s.setCalendarDisplay)
 
   return (
     <Dialog open={open} onClose={onClose} title="Settings" className="w-[min(94vw,520px)]">
@@ -54,31 +39,6 @@ export function SettingsDialog({ open, onClose }: { open: boolean; onClose(): vo
           </div>
         </fieldset>
 
-        <fieldset>
-          <legend className="mb-1 text-[14px] font-semibold text-ink">Calendar blocks</legend>
-          <p className="mb-3 text-[13px] text-muted">The course number is always shown. Choose what else appears on each class.</p>
-          <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_12.5rem]">
-            <div className="flex flex-col gap-1">
-              {DISPLAY_OPTIONS.map(({ key, label, hint }) => (
-                <label key={key} className="flex min-h-10 cursor-pointer items-start gap-3 rounded-md px-1 py-1.5 hover:bg-surface-2">
-                  <input
-                    type="checkbox"
-                    checked={display[key]}
-                    onChange={(e) => setDisplay({ [key]: e.target.checked })}
-                    className="mt-0.5 size-4 shrink-0 accent-[var(--accent)]"
-                  />
-                  <span>
-                    <span className="block text-[14px] text-ink">{label}</span>
-                    <span className="block text-[12.5px] text-muted">{hint}</span>
-                  </span>
-                </label>
-              ))}
-            </div>
-            <div aria-label="Preview" className="rounded-lg border border-line bg-surface p-1.5">
-              <WeekGrid blocks={PREVIEW} days={[0]} minHour={10} maxHour={13} hourHeight={56} />
-            </div>
-          </div>
-        </fieldset>
       </div>
     </Dialog>
   )
