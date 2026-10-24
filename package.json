@@ -7,7 +7,7 @@
     "predev": "npm run data",
     "dev": "vite",
     "data": "node scripts/build-catalog.ts && node scripts/build-fce.ts && node scripts/build-programs.ts && node scripts/build-data.ts && node scripts/build-syllabi.ts",
-    "build": "npm run data && tsc -b && vite build",
+    "build": "npm run data && tsc -b && vite build && node scripts/build-seo.ts",
     "typecheck": "tsc -b",
     "test": "vitest run",
     "lint": "oxlint",

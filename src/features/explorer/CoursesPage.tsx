@@ -4,6 +4,7 @@ import { useLocation, useNavigate, useParams, useSearchParams } from 'react-rout
 import { Button, Dialog, SearchInput } from '../../components/ui'
 import { parseCourseCode } from '../../lib/data'
 import { useCatalogIndex } from '../../lib/catalog'
+import { useHead } from '../../lib/head'
 import { useFceSummary } from '../../lib/fce'
 import { useProgramVersions } from '../../lib/programs'
 import { compileAcceptor } from '../../lib/requirement-match'
@@ -206,6 +207,16 @@ export function CoursesPage() {
   const selectedId = courseCode ? parseCourseCode(courseCode) : null
   const allById = useMemo(() => new Map((all?.docs ?? []).map((d) => [d.course.id, d.course])), [all])
   const selected = selectedId ? ((allMode ? allById : term.courseById).get(selectedId) ?? null) : null
+
+  // A course has one address across semesters (the all-semesters page), matching scripts/build-seo.ts.
+  useHead(
+    selected
+      ? `${selected.code} ${selected.title} · ${allMode ? 'CMU course' : term.meta.name} · Courseweave`
+      : allMode
+        ? 'All CMU courses · Courseweave'
+        : `Courses · ${term.meta.name} · Courseweave`,
+    selected ? `/all/courses/${selected.code}` : allMode ? '/all/courses' : `/${termId}/courses`,
+  )
 
   // Keyboard highlight; falls back to the open course (or the top result) whenever the result set changes.
   const resultsKey = JSON.stringify([routeBase, deferredQuery, filters, sort, Boolean(fce), Boolean(reqAccepts), Boolean(all)])

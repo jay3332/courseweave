@@ -1,0 +1,12 @@
+# Courseweave. Course pages (/all/courses/<code>) are listed in the sitemap; /data/ stays crawlable so pages render.
+User-agent: *
+Disallow: /api/
+Disallow: /auth/
+# Personal tools: nothing public to index.
+Disallow: /*/schedule
+Disallow: /*/record
+Disallow: /*/plan
+# People pages: many instructors are students (TAs), so they stay out of search results.
+Disallow: /*/instructors
+
+Sitemap: https://courseweave.jay3332.tech/sitemap.xml

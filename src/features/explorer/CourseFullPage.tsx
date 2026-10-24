@@ -1,8 +1,9 @@
 // The full-width course page: everything in the side panel, laid out across the screen, plus history tables side by
 // side and the prerequisite tree. Opened from the side panel's Expand; Back returns to the list as it was.
 import { ArrowLeft, Star, X } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router'
+import { useHead } from '../../lib/head'
 import { Button, Spinner } from '../../components/ui'
 import { buildUnlocks, useCatalogIndex } from '../../lib/catalog'
 import { parseCourseCode } from '../../lib/data'
@@ -30,9 +31,8 @@ export function CourseFullPage() {
   const courseId = parseCourseCode(courseCode) ?? ''
   const course = term.courseById.get(courseId) ?? null
 
-  useEffect(() => {
-    document.title = course ? `${course.code} ${course.title} · Courseweave` : 'Course not found · Courseweave'
-  }, [course])
+  // One address per course across semesters: the all-semesters page.
+  useHead(course ? `${course.code} ${course.title} · ${term.meta.name} · Courseweave` : 'Course not found · Courseweave', course ? `/all/courses/${course.code}` : undefined)
 
   return (
     <div className="h-full overflow-y-auto">
