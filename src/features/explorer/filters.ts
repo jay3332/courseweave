@@ -197,6 +197,22 @@ export function activeFilterCount(f: Filters): number {
 }
 
 /** Filters that need a semester's sections; courses the semester doesn't offer can't pass them. */
+const SECTION_KEYS = ['days', 'dayMode', 'after', 'before', 'delivery', 'sessions', 'fits', 'scheduledOnly'] as const
+
+/** The filters with the section-based ones (days, times, delivery, session, fits, scheduled) cleared. */
+export function withoutSectionFilters(f: Filters): Filters {
+  const out = { ...f }
+  for (const k of SECTION_KEYS) (out as Record<string, unknown>)[k] = EMPTY_FILTERS[k]
+  return out
+}
+
+/** `next` with the section-based filters taken from `from`: changes in a view without sections keep them. */
+export function keepSectionFilters(next: Filters, from: Filters): Filters {
+  const out = { ...next }
+  for (const k of SECTION_KEYS) (out as Record<string, unknown>)[k] = from[k]
+  return out
+}
+
 export function hasSectionFilters(f: Filters): boolean {
   return Boolean(f.days.length || f.after !== null || f.before !== null || f.delivery.length || f.sessions.length || f.fits || f.scheduledOnly)
 }

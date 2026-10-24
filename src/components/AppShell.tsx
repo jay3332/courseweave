@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate, useParams } from 'react-router'
 import { useSession } from '../state/session'
 import { useStore } from '../state/store'
+import { ALL_SEMESTERS } from '../state/term-scope'
 import { useTerms } from '../state/term'
 import { AccountMenu } from './AccountMenu'
 import { SettingsDialog } from './SettingsDialog'
@@ -94,7 +95,10 @@ function TermSelect({ termId }: { termId: string }) {
   const navigate = useNavigate()
   const location = useLocation()
   const options = terms.status === 'ready' ? terms.value : []
-  const known = options.some((t) => t.id === termId)
+  const page = location.pathname.split('/')[2] || 'courses'
+  // "All semesters" only means something for browsing courses.
+  const offerAll = page === 'courses'
+  const known = options.some((t) => t.id === termId) || (offerAll && termId === ALL_SEMESTERS)
 
   return (
     <label className="flex items-center">
@@ -102,12 +106,13 @@ function TermSelect({ termId }: { termId: string }) {
       <select
         value={termId}
         onChange={(e) => {
-          const rest = location.pathname.split('/').slice(2, 3).join('/') || 'courses'
-          navigate(`/${e.target.value}/${rest}`)
+          // Comparing semesters keeps the search and filters.
+          navigate(`/${e.target.value}/${page}${page === 'courses' ? location.search : ''}`)
         }}
         className="h-9 w-auto max-w-[9.5rem] rounded-lg border border-line-strong bg-surface pr-7 pl-2.5 text-[13px] font-medium text-ink md:max-w-none md:text-[14px]"
       >
         {!known ? <option value={termId}>{termId}</option> : null}
+        {offerAll ? <option value={ALL_SEMESTERS}>All semesters</option> : null}
         {options.map((t) => (
           <option key={t.id} value={t.id}>
             {t.name}

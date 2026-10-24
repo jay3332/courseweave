@@ -11,8 +11,11 @@ import { scoreCourse } from '../../lib/search'
 import type { Course } from '../../lib/types'
 import { fittingSelections, useScheduleView } from '../../state/schedule-view'
 import { usePlans } from '../../state/plan'
-import { useBookmarks } from '../../state/store'
+import { useBookmarks, useStore } from '../../state/store'
+import { ALL_SEMESTERS } from '../../state/term-scope'
 import { useTerm } from '../../state/term'
+import { AllSemestersDetail } from './AllSemestersDetail'
+import { useAllCourses, type AllCourses } from './allSemesters'
 import { CourseDetail } from './CourseDetail'
 import { NotOfferedHere, OtherTermResults, UnofferedResults } from './OtherTerms'
 import { HoursScatter } from '../fce/HoursScatter'
@@ -24,6 +27,7 @@ import {
   EMPTY_FILTERS,
   FCE_SORTS,
   hasSectionFilters,
+  keepSectionFilters,
   otherCourseMatches,
   parseFilters,
   parseShowUnoffered,
@@ -31,6 +35,7 @@ import {
   parseView,
   sortCourses,
   sortOtherCourses,
+  withoutSectionFilters,
   writeFilters,
   type Filters,
   type SortKey,
@@ -53,6 +58,7 @@ const SORT_LABELS: Record<SortKey, string> = {
 }
 
 const NO_IDS: number[] = []
+const NO_DOCS: AllCourses['docs'] = []
 
 function isEditable(el: EventTarget | null): boolean {
   if (!(el instanceof HTMLElement)) return false
@@ -62,12 +68,17 @@ function isEditable(el: EventTarget | null): boolean {
 export function CoursesPage() {
   const term = useTerm()
   const termId = term.meta.id
-  const { courseCode } = useParams()
+  const { termId: routeTermId, courseCode } = useParams()
+  // "All semesters": every course, without sections. `term` is then the semester underneath (the one last visited).
+  const allMode = routeTermId === ALL_SEMESTERS
+  const all = useAllCourses(allMode)
+  const routeBase = allMode ? ALL_SEMESTERS : termId
   const [params, setParams] = useSearchParams()
   const location = useLocation()
   const navigate = useNavigate()
   const schedule = useScheduleView()
   const bookmarks = useBookmarks(termId)
+  const allBookmarks = useStore((s) => s.bookmarks)
   const searchRef = useRef<HTMLInputElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const [filtersOpen, setFiltersOpen] = useState(false)
@@ -99,7 +110,9 @@ export function CoursesPage() {
 
   const fceData = useFceSummary()
   const fce = fceData ? fceData.courses : fceData
-  const filters = useMemo(() => parseFilters(params), [params])
+  const urlFilters = useMemo(() => parseFilters(params), [params])
+  // Without sections, the section-based filters can't apply; they stay in the URL for the next semester.
+  const filters = useMemo(() => (allMode ? withoutSectionFilters(urlFilters) : urlFilters), [allMode, urlFilters])
   const sort = parseSort(params, Boolean(deferredQuery))
   const view: ViewMode = parseView(params)
   const setView = (value: ViewMode) =>
@@ -112,7 +125,7 @@ export function CoursesPage() {
       },
       { replace: true },
     )
-  const showUnoffered = parseShowUnoffered(params)
+  const showUnoffered = !allMode && parseShowUnoffered(params)
   const setShowUnoffered = (on: boolean) =>
     setParams(
       (prev) => {
@@ -124,7 +137,7 @@ export function CoursesPage() {
       { replace: true },
     )
   const filterCount = activeFilterCount(filters)
-  const setFilters = (next: Filters) => setParams((prev) => writeFilters(prev, next))
+  const setFilters = (next: Filters) => setParams((prev) => writeFilters(prev, allMode ? keepSectionFilters(next, urlFilters) : next))
   const setSort = (value: SortKey) =>
     setParams(
       (prev) => {
@@ -149,18 +162,23 @@ export function CoursesPage() {
     })
   }, [filters.req, reqVersions, catalogIndex, termId, planPrograms])
 
-  const bookmarkSet = useMemo(() => new Set(bookmarks), [bookmarks])
-  const entryColors = useMemo(() => new Map(schedule.entries.map((e) => [e.course.id, e.entry.color])), [schedule.entries])
+  // Saved courses are per semester; across all of them, any semester's count.
+  const bookmarkSet = useMemo(() => new Set(allMode ? Object.values(allBookmarks).flat() : bookmarks), [allMode, allBookmarks, bookmarks])
+  const entryColors = useMemo(
+    () => (allMode ? new Map<string, number>() : new Map(schedule.entries.map((e) => [e.course.id, e.entry.color]))),
+    [allMode, schedule.entries],
+  )
 
+  const docs = allMode ? (all?.docs ?? NO_DOCS) : term.searchDocs
   const scored = useMemo(() => {
-    if (!deferredQuery) return term.searchDocs.map((d) => ({ course: d.course, score: 1 }))
+    if (!deferredQuery) return docs.map((d) => ({ course: d.course, score: 1 }))
     const out: { course: Course; score: number }[] = []
-    for (const doc of term.searchDocs) {
+    for (const doc of docs) {
       const score = scoreCourse(doc, deferredQuery)
       if (score > 0) out.push({ course: doc.course, score })
     }
     return out
-  }, [term, deferredQuery])
+  }, [docs, deferredQuery])
 
   const results = useMemo(() => {
     const ctx = { bookmarks: bookmarkSet, fittingSelections: (c: Course) => fittingSelections(c, schedule), fce, reqAccepts }
@@ -186,10 +204,11 @@ export function CoursesPage() {
   }, [showUnoffered, unofferedDocs, filters, bookmarkSet, fce, reqAccepts, deferredQuery, sort])
 
   const selectedId = courseCode ? parseCourseCode(courseCode) : null
-  const selected = selectedId ? (term.courseById.get(selectedId) ?? null) : null
+  const allById = useMemo(() => new Map((all?.docs ?? []).map((d) => [d.course.id, d.course])), [all])
+  const selected = selectedId ? ((allMode ? allById : term.courseById).get(selectedId) ?? null) : null
 
   // Keyboard highlight; falls back to the open course (or the top result) whenever the result set changes.
-  const resultsKey = JSON.stringify([deferredQuery, filters, sort, Boolean(fce), Boolean(reqAccepts)])
+  const resultsKey = JSON.stringify([routeBase, deferredQuery, filters, sort, Boolean(fce), Boolean(reqAccepts), Boolean(all)])
   const [active, setActive] = useState<{ key: string; index: number } | null>(null)
   const activeIndex =
     active && active.key === resultsKey ? active.index : Math.max(0, selectedId ? results.findIndex((c) => c.id === selectedId) : 0)
@@ -218,8 +237,8 @@ export function CoursesPage() {
     if (course) document.getElementById(rowId(course))?.scrollIntoView({ block: 'nearest' })
   }, [activeIndex, results])
 
-  const hrefFor = (course: Course) => `/${termId}/courses/${course.code}${location.search}`
-  const closeHref = `/${termId}/courses${location.search}`
+  const hrefFor = (course: Course) => `/${routeBase}/courses/${course.code}${location.search}`
+  const closeHref = `/${routeBase}/courses${location.search}`
 
   const open = (course: Course | undefined) => {
     if (course) navigate(hrefFor(course))
@@ -286,7 +305,9 @@ export function CoursesPage() {
           onChange={setFilters}
           fceAvailable={Boolean(fce)}
           showUnoffered={showUnoffered}
-          onShowUnofferedChange={setShowUnoffered}
+          onShowUnofferedChange={allMode ? undefined : setShowUnoffered}
+          allSemesters={allMode}
+          departments={allMode ? all?.departments : undefined}
         />
       </aside>
 
@@ -298,7 +319,7 @@ export function CoursesPage() {
               value={query}
               onChange={onQueryChange}
               onKeyDown={onSearchKeyDown}
-              placeholder="Search by number, title or instructor"
+              placeholder={allMode ? 'Search by number or title' : 'Search by number, title or instructor'}
               aria-label="Search courses"
               aria-controls="course-results"
               className="min-w-0 flex-1"
@@ -317,7 +338,7 @@ export function CoursesPage() {
           <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 text-[13px]">
             <span className="text-ink-2" aria-live="polite">
               <span className="font-semibold text-ink">{results.length.toLocaleString()}</span> {results.length === 1 ? 'course' : 'courses'}
-              <span className="hidden text-muted sm:inline"> in {term.meta.name}</span>
+              <span className="hidden text-muted sm:inline">{allMode ? ' across all semesters' : ` in ${term.meta.name}`}</span>
               {showUnoffered && unoffered?.length ? <span className="text-muted">, plus {unoffered.length.toLocaleString()} not offered</span> : null}
             </span>
             <div className="flex items-center gap-2">
@@ -348,9 +369,15 @@ export function CoursesPage() {
         <div ref={scrollRef} id="course-results" onKeyDown={onListKeyDown} className="scrollbar-thin @container min-h-0 flex-1 overflow-y-auto bg-surface">
           {results.length && view === 'chart' && fce ? (
             <HoursScatter courses={results} fce={fce} selectedId={selectedId} entryColors={entryColors} hrefFor={hrefFor} onOpen={open} />
+          ) : allMode && all === undefined ? (
+            <div className="grid min-h-60 place-items-center p-8 text-[14px] text-muted" aria-busy>
+              Loading courses from every semester and the catalog…
+            </div>
+          ) : allMode && all === null ? (
+            <div className="grid min-h-60 place-items-center p-8 text-center text-[14px] text-ink-2">All semesters isn’t available: this build has no list of offered courses.</div>
           ) : results.length ? (
             <>
-              <ResultsHeader showFce={Boolean(fce)} />
+              <ResultsHeader showFce={Boolean(fce)} allSemesters={allMode} />
               <ResultsList
                 key={resultsKey}
                 term={term}
@@ -363,8 +390,9 @@ export function CoursesPage() {
                 bookmarks={bookmarkSet}
                 scrollRoot={scrollRef}
                 fce={fce}
+                offered={allMode ? all?.termsOf : undefined}
                 footer={
-                  showUnoffered ? (
+                  allMode ? null : showUnoffered ? (
                     unofferedSection(false)
                   ) : (
                     <OtherTermResults query={deferredQuery} filters={filters} search={location.search} empty={false} fallback={null} />
@@ -374,6 +402,8 @@ export function CoursesPage() {
             </>
           ) : unofferedShows ? (
             unofferedSection(true)
+          ) : allMode ? (
+            <EmptyResults query={deferredQuery} filterCount={filterCount} onClearFilters={() => setFilters(EMPTY_FILTERS)} onClearAll={clearAll} />
           ) : (
             <OtherTermResults
               query={deferredQuery}
@@ -392,7 +422,11 @@ export function CoursesPage() {
           aria-label="Course details"
           className="scrollbar-thin flex w-full shrink-0 flex-col overflow-y-auto border-l border-line bg-surface md:w-[400px] lg:w-[440px] xl:w-[500px]"
         >
-          {selected ? (
+          {allMode && selected ? (
+            <AllSemestersDetail course={selected} terms={all?.termsOf.get(selected.id) ?? []} closeHref={closeHref} search={location.search} />
+          ) : allMode && all === undefined ? (
+            <div className="min-h-60" aria-busy />
+          ) : selected ? (
             <CourseDetail course={selected} closeHref={closeHref} search={location.search} />
           ) : (
             <NotOfferedHere courseId={selectedId ?? ''} search={location.search} backHref={closeHref} />
@@ -409,7 +443,9 @@ export function CoursesPage() {
             heading={false}
             fceAvailable={Boolean(fce)}
             showUnoffered={showUnoffered}
-            onShowUnofferedChange={setShowUnoffered}
+            onShowUnofferedChange={allMode ? undefined : setShowUnoffered}
+            allSemesters={allMode}
+            departments={allMode ? all?.departments : undefined}
           />
         </div>
         <div className="sticky bottom-0 border-t border-line bg-surface px-5 py-3">

@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest'
 import type { CatalogEntry, CatalogIndex } from '../../lib/catalog-types'
 import type { FceSummary } from '../../lib/fce'
 import type { Offering, Offerings } from '../../lib/offerings'
-import { EMPTY_FILTERS, otherCourseMatches, sortOtherCourses, type Filters } from './filters'
+import { buildAllCourses } from './allSemesters'
+import { EMPTY_FILTERS, keepSectionFilters, otherCourseMatches, sortOtherCourses, withoutSectionFilters, type Filters } from './filters'
 import { buildUnoffered } from './unoffered'
 
 const offering = (id: string, title: string, dept: string, level: string, terms: string[]): Offering => ({ id, title, dept, level, terms })
@@ -98,5 +99,39 @@ describe('unoffered courses', () => {
     expect(sortOtherCourses(items, 'hours', fce).map((c) => c.id).slice(0, 2)).toEqual(['10601', '15411'])
     expect(sortOtherCourses(items, 'units').map((c) => c.id)).toEqual(['10601', '15466', '15411', '15700', '15999'])
     expect(sortOtherCourses(items, 'number').map((c) => c.id)).toEqual(['10601', '15411', '15466', '15700', '15999'])
+  })
+})
+
+describe('buildAllCourses', () => {
+  const all = buildAllCourses(buildUnoffered(() => false, offerings, catalog))
+  const ids = (prefix: string) => all.docs.filter((d) => d.course.id.startsWith(prefix)).map((d) => d.course.id)
+
+  it('lists every offered and catalog course as a section-less course, with the semesters that offer it', () => {
+    const ids = all.docs.map((d) => d.course.id)
+    expect(ids).toContain('15122')
+    expect(ids).toContain('15466')
+    const c = all.docs.find((d) => d.course.id === '15411')!.course
+    expect(c).toMatchObject({ code: '15-411', title: 'Compiler Design', units: 15, dept: 'CS', level: 'U', sections: [], instructors: [] })
+    expect(all.termsOf.get('15122')).toEqual(['F26', 'S26'])
+    expect(all.termsOf.get('15466')).toEqual([])
+  })
+
+  it('collects the departments', () => {
+    expect(all.departments.map((d) => [d.code, d.prefixes, d.courseCount])).toEqual(
+      expect.arrayContaining([
+        ['CS', ['15'], ids('15').length],
+        ['MLG', ['10'], 1],
+      ]),
+    )
+  })
+})
+
+describe('section filters in a view without sections', () => {
+  const withSections: Filters = { ...EMPTY_FILTERS, days: [1], after: 600, fits: true, saved: true, depts: ['CS'] }
+
+  it('are set aside, and kept when the other filters change', () => {
+    const shown = withoutSectionFilters(withSections)
+    expect(shown).toEqual({ ...EMPTY_FILTERS, saved: true, depts: ['CS'] })
+    expect(keepSectionFilters({ ...shown, depts: ['MLG'] }, withSections)).toEqual({ ...withSections, depts: ['MLG'] })
   })
 })

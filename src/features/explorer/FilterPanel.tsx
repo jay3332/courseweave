@@ -1,7 +1,7 @@
 import { Check } from 'lucide-react'
 import { useId, useMemo, useState, type ReactNode } from 'react'
 import { Chip } from '../../components/ui'
-import type { Term } from '../../lib/data'
+import type { Department, Term } from '../../lib/data'
 import { normalize } from '../../lib/search'
 import { DAY_LETTERS, DAY_LONG, formatTime } from '../../lib/time'
 import type { Day } from '../../lib/types'
@@ -23,6 +23,8 @@ export function FilterPanel({
   fceAvailable = false,
   showUnoffered,
   onShowUnofferedChange,
+  allSemesters = false,
+  departments = term.departments,
 }: {
   term: Term
   filters: Filters
@@ -33,6 +35,10 @@ export function FilterPanel({
   /** "Show courses not offered in <term>"; the option is left out without a handler. */
   showUnoffered?: boolean
   onShowUnofferedChange?(value: boolean): void
+  /** The all-semesters view: no sections, so only filters that work without them. */
+  allSemesters?: boolean
+  /** The departments to pick from; defaults to the semester's. */
+  departments?: Department[]
 }) {
   const set = <K extends keyof Filters>(key: K, value: Filters[K]) => onChange({ ...filters, [key]: value })
   const count = activeFilterCount(filters)
@@ -65,15 +71,19 @@ export function FilterPanel({
       ) : null}
 
       <div className="flex flex-col gap-2">
-        <Toggle checked={filters.fits} onChange={(v) => set('fits', v)}>
-          Fits my schedule
-        </Toggle>
+        {allSemesters ? null : (
+          <Toggle checked={filters.fits} onChange={(v) => set('fits', v)}>
+            Fits my schedule
+          </Toggle>
+        )}
         <Toggle checked={filters.saved} onChange={(v) => set('saved', v)}>
           Saved courses only
         </Toggle>
-        <Toggle checked={filters.scheduledOnly} onChange={(v) => set('scheduledOnly', v)}>
-          Has a scheduled time
-        </Toggle>
+        {allSemesters ? null : (
+          <Toggle checked={filters.scheduledOnly} onChange={(v) => set('scheduledOnly', v)}>
+            Has a scheduled time
+          </Toggle>
+        )}
       </div>
 
       <Group label="Counts toward a requirement">
@@ -111,7 +121,7 @@ export function FilterPanel({
       ) : null}
 
       <Group label="Department">
-        <DepartmentPicker term={term} selected={filters.depts} onChange={(v) => set('depts', v)} />
+        <DepartmentPicker departments={departments} selected={filters.depts} onChange={(v) => set('depts', v)} />
       </Group>
 
       <Group label="Level">
@@ -144,6 +154,15 @@ export function FilterPanel({
         </div>
       </Group>
 
+      {allSemesters ? null : <SectionFilters term={term} filters={filters} set={set} />}
+    </div>
+  )
+}
+
+/** Days, times, delivery and session: these need a semester's sections. */
+function SectionFilters({ term, filters, set }: { term: Term; filters: Filters; set<K extends keyof Filters>(key: K, value: Filters[K]): void }) {
+  return (
+    <>
       <Group label="Days">
         <div className="flex gap-1">
           {DAY_LETTERS.map((letter, i) => {
@@ -227,7 +246,7 @@ export function FilterPanel({
           </div>
         </Group>
       ) : null}
-    </div>
+    </>
   )
 }
 
@@ -343,17 +362,17 @@ function TimeSelect({ label, value, onChange }: { label: string; value: number |
   )
 }
 
-function DepartmentPicker({ term, selected, onChange }: { term: Term; selected: string[]; onChange(v: string[]): void }) {
+function DepartmentPicker({ departments, selected, onChange }: { departments: Department[]; selected: string[]; onChange(v: string[]): void }) {
   const [query, setQuery] = useState('')
 
   const items = useMemo(() => {
     const q = normalize(query.trim())
-    const matches = term.departments.filter(
+    const matches = departments.filter(
       (d) => !q || normalize(d.name).includes(q) || normalize(d.code) === q || d.prefixes.some((p) => p.startsWith(q)),
     )
     // Selected departments float to the top so they stay visible.
     return [...matches.filter((d) => selected.includes(d.code)), ...matches.filter((d) => !selected.includes(d.code))]
-  }, [term.departments, query, selected])
+  }, [departments, query, selected])
 
   return (
     <div className="rounded-lg border border-line-strong bg-surface">
