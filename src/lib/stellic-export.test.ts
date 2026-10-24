@@ -66,26 +66,78 @@ describe('export building', () => {
   })
 })
 
+/** A Stellic plan as /planner/getstudentplan/ returns it: plan years per semester, each with its courses. */
+function studentPlan(planId: string, opts: { springYear?: number | null } = {}) {
+  const spring = opts.springYear === null ? {} : { physical_year: opts.springYear ?? 2027 }
+  return {
+    success: true,
+    student_plan: {
+      plan_id: planId,
+      name: 'Primary Plan',
+      sem_content: [
+        { id: 1, content: { '1': { physical_year: 2026, campus_id: 1, courses: [] }, '2': { physical_year: 2027, campus_id: 1, courses: [] } } },
+        {
+          id: 2,
+          content: {
+            '1': {
+              ...spring,
+              campus_id: 1,
+              // Flat, or wrapped as { course } once Stellic's page has loaded them; removed courses don't count.
+              courses: [{ code: '21-127', name: 'Concepts of Mathematics', status: 'planned' }, { course: { code: '15-122', status: 'removed' }, type: 'course' }],
+            },
+          },
+        },
+        { id: 3, content: { '1': { physical_year: 2027, campus_id: 1, courses: [] } } },
+      ],
+    },
+  }
+}
+
 /** Runs the generated script against a fake Stellic and records what it sent. */
-async function runScript(terms: ExportTerm[], opts: { confirm?: boolean[]; origin?: string; addCourse?: (body: URLSearchParams, n: number) => object } = {}) {
+async function runScript(
+  terms: ExportTerm[],
+  opts: {
+    confirm?: boolean[]
+    origin?: string
+    addCourse?: (body: URLSearchParams, n: number) => object
+    /** plan id → getstudentplan response; plans not listed answer 404 (an HTML page). */
+    plans?: Record<string, object>
+    /** The plan open in Stellic's planner on the page (its Angular PlannerSrvc). */
+    openPlanId?: string
+  } = {},
+) {
   const calls: { method: string; url: string; body: URLSearchParams | null }[] = []
   const alerts: string[] = []
   const confirms = [...(opts.confirm ?? [true, true])]
+  const plans = opts.plans ?? { 'plan-1': studentPlan('plan-1') }
   let adds = 0
   const json = (value: object, status = 200) => ({ ok: status < 400, status, type: 'basic', text: async () => `)]}',\n${JSON.stringify(value)}` })
+  const notFound = { ok: false, status: 404, type: 'basic', text: async () => '<!doctype html><h1>Not Found</h1>' }
   const fetch = async (url: string, init: { method?: string; body?: URLSearchParams } = {}) => {
     calls.push({ method: init.method ?? 'GET', url, body: init.body ?? null })
     if (url === '/planner/getstudentprofile/') return json({ default_plan_id: 'plan-1', term_joined: { semester: 1, year: 2026 } })
-    if (url === '/plans/plan-1/overview') return json({ plan: { academic_years: [{ logical_year: 1, terms: [{ semester_id: 1, physical_year: 2026, logical_year: 1 }, { semester_id: 2, physical_year: 2027, logical_year: 1 }] }] } })
-    if (url === '/plans/plan-1/terms/2/1') return json({ term: { name: 'Spring 2027' }, courses: [{ id: 9, code: '21-127', name: 'Concepts of Mathematics' }] })
-    if (url.startsWith('/planner/getcoursesectionsforusems/?course_code=15-122&sem_id=2&physical_year=2027'))
-      return json({ data_list: [{ course: { code: '15-122' }, section_groups: [{ sections: [{ id: 101, name: '1' }, { id: 102, name: '2' }] }, { sections: [{ id: 201, name: 'A' }] }] }] })
+    if (url === '/planner/getstudentplan/') {
+      const plan = plans[init.body?.get('plan_id') ?? '']
+      return plan ? json(plan) : notFound
+    }
+    if (url.startsWith('/planner/getcoursesectionsforusems/?course_code=15-122&sem_id=2&physical_year=2027&campus_id=1'))
+      return json({
+        success: true,
+        available_sections: [
+          { group_name: 'Lecture', required: true, sections: [{ id: 101, name: '1' }, { id: 102, name: '2' }] },
+          { group_name: 'Recitation', required: true, sections: [{ id: 200, name: 'A', hidden: true }, { id: 201, name: 'A' }] },
+        ],
+      })
     if (url === '/planner/add-course/') return json(opts.addCourse ? opts.addCourse(init.body!, adds++) : { success: true })
-    return json({ success: false }, 404)
+    return notFound
   }
+  const angular = opts.openPlanId
+    ? { element: () => ({ injector: () => ({ get: (name: string) => (name === 'PlannerSrvc' ? { currentStudentPlanId: opts.openPlanId } : null) }) }) }
+    : undefined
   const result = runInNewContext(buildStellicScript(terms), {
     location: { origin: opts.origin ?? 'https://academicaudit.andrew.cmu.edu' },
-    document: { cookie: 'sessionid=x; csrftoken=tok%3D' },
+    document: { cookie: 'sessionid=x; csrftoken=tok%3D', body: {} },
+    ...(angular ? { angular } : {}),
     fetch,
     confirm: () => confirms.shift() ?? false,
     alert: (m: string) => alerts.push(m),
@@ -109,8 +161,38 @@ describe('generated Stellic script', () => {
     const { adds, alerts, calls } = await runScript(terms)
     expect(adds).toHaveLength(1)
     expect(Object.fromEntries(adds[0].body!)).toEqual({ plan_id: 'plan-1', course_code: '15-122', sem_id: '2', year: '1', campus_id: '1', section_ids: '101,201' })
-    expect(calls.every((c) => c.method === 'GET' || c.url === '/planner/getstudentprofile/' || c.url === '/planner/add-course/')).toBe(true)
-    expect(alerts.at(-1)).toMatch(/^Added 1 of 1 course/)
+    expect(Object.fromEntries(calls.find((c) => c.url === '/planner/getstudentplan/')!.body!)).toEqual({ plan_id: 'plan-1' })
+    const posts = new Set(['/planner/getstudentprofile/', '/planner/getstudentplan/', '/planner/add-course/'])
+    expect(calls.every((c) => c.method === 'GET' || posts.has(c.url))).toBe(true)
+    expect(alerts.at(-1)).toMatch(/^Added 1 of 1 course.* to "Primary Plan"/)
+  })
+
+  it("never calls the newer planner's /plans endpoints, which CMU's Stellic doesn't serve", async () => {
+    const { calls } = await runScript(terms)
+    expect(calls.some((c) => c.url.startsWith('/plans/'))).toBe(false)
+  })
+
+  it("works out a term's calendar year from the first term when the plan leaves it out", async () => {
+    const { adds } = await runScript(terms, { plans: { 'plan-1': studentPlan('plan-1', { springYear: null }) } })
+    expect(adds.map((c) => [c.body!.get('course_code'), c.body!.get('year')])).toEqual([['15-122', '1']])
+  })
+
+  it("falls back to the plan open in Stellic's planner when the default plan can't be read", async () => {
+    const { adds } = await runScript(terms, { plans: { 'plan-2': studentPlan('plan-2') }, openPlanId: 'plan-2' })
+    expect(adds.map((c) => c.body!.get('plan_id'))).toEqual(['plan-2'])
+  })
+
+  it("stops, changing nothing, when no plan can be read", async () => {
+    const { adds, alerts } = await runScript(terms, { plans: {} })
+    expect(adds).toHaveLength(0)
+    expect(alerts.at(-1)).toMatch(/Couldn't read your Stellic plan/)
+  })
+
+  it("skips terms that aren't in the plan", async () => {
+    const fall = exportSchedule({ ...schedule, termId: 'F29' }, titleOf)!
+    const { adds, alerts } = await runScript([fall])
+    expect(adds).toHaveLength(0)
+    expect(alerts.at(-1)).toMatch(/^Nothing to add/)
   })
 
   it('changes nothing when the preview is cancelled', async () => {
@@ -127,7 +209,10 @@ describe('generated Stellic script', () => {
     const warn = await runScript(terms, {
       addCourse: (body) => (body.get('force') ? { success: true } : { success: false, message: { code: 494, text: 'Prerequisite not met' } }),
     })
-    expect(warn.adds.map((c) => c.body!.get('force'))).toEqual([null, 'true'])
+    expect(warn.adds.map((c) => [c.body!.get('force'), c.body!.get('force_integrated')])).toEqual([
+      [null, null],
+      ['true', 'true'],
+    ])
     expect(warn.alerts.at(-1)).toMatch(/^Added 1 of 1/)
 
     const declined = await runScript(terms, { confirm: [true, false], addCourse: () => ({ success: false, message: { code: 494, text: 'Prerequisite not met' } }) })

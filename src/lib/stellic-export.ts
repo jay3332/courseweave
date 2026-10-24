@@ -1,12 +1,15 @@
 // Sending schedules and degree plans to Stellic (academicaudit.andrew.cmu.edu), and schedules to SIO planned schedules.
 //
 // Neither system has an import, so for Stellic this builds a script the student pastes into the console of their own
-// signed-in Stellic tab. It calls the same endpoints Stellic's planner uses (found by reading its front-end code):
-//   POST /planner/getstudentprofile/                      the student's default plan id
-//   GET  /plans/<plan>/overview                           the plan's terms (semester id, calendar and plan year)
-//   GET  /plans/<plan>/terms/<semester>/<plan year>       courses already in a term (skipped)
-//   GET  /planner/getcoursesectionsforusems/?…            section ids by name, for the sections chosen here
+// signed-in Stellic tab. It calls the same endpoints Stellic's planner page uses (checked against the requests that
+// page makes, and its front-end code):
+//   POST /planner/getstudentprofile/                      the student's default plan id and first term
+//   POST /planner/getstudentplan/  plan_id                the plan: sem_content[{ id: semester id, content: { <plan
+//                                                         year>: { physical_year, campus_id, courses } } }]
+//   GET  /planner/getcoursesectionsforusems/?…            available_sections[{ sections[{ id, name }] }], for the
+//                                                         sections chosen here
 //   POST /planner/add-course/                             adds one course (with sections) to one term
+// CMU's Stellic runs the classic planner: the newer planner's /plans/<plan>/… endpoints answer 404 there.
 // It only ever adds courses: nothing is registered, dropped, swapped or removed, and nothing changes until the student
 // confirms the list it shows. For SIO's planned schedules, buildSioScript drives SIO's own page instead (its GWT-RPC
 // calls carry whole course objects), and schedules also export as plain course numbers and sections.
@@ -147,53 +150,84 @@ ${summary}
     return { ok: res.ok && !(json && json.success === false), json, code: Number(message.code) || null, text: message.text || '', blockers };
   }
 
-  // Every course code mentioned in a response (to tell which courses a term already has).
-  function codesIn(value, found = new Set()) {
-    if (Array.isArray(value)) value.forEach((v) => codesIn(v, found));
-    else if (value && typeof value === 'object') {
-      for (const [k, v] of Object.entries(value)) {
-        if ((k === 'code' || k === 'course_code') && typeof v === 'string' && /^\\d\\d-\\d\\d\\d$/.test(v)) found.add(v);
-        else codesIn(v, found);
+  // A plan's terms, keyed "<semester id>-<calendar year>". Stellic numbers plan years from the student's first year
+  // (1, 2, …); each term's content has its calendar year, worked out from the first term if it's ever missing.
+  function planTerms(plan, joined) {
+    const terms = new Map();
+    for (const sem of plan.sem_content || []) {
+      for (const [key, content] of Object.entries(sem.content || {})) {
+        const logicalYear = Number(key);
+        if (!content || !Number.isInteger(logicalYear)) continue;
+        let year = Number(content.physical_year);
+        if (!year && joined && joined.year) year = (joined.semester === 1 ? joined.year : joined.year - 1) + logicalYear - 1 + (sem.id === 1 ? 0 : 1);
+        if (!year) continue;
+        // Courses already in the term (wrapped as { course } once Stellic's page has loaded them), so they're skipped.
+        const codes = new Set();
+        for (const item of content.courses || []) {
+          const c = item && (item.course || item);
+          if (c && c.status !== 'removed' && typeof c.code === 'string') codes.add(c.code);
+        }
+        terms.set(sem.id + '-' + year, { logicalYear, campusId: content.campus_id || 1, codes });
       }
     }
-    return found;
+    return terms;
   }
 
+  // Section names as Courseweave and Stellic write them ("1", "Lec 1", "A").
+  const sectionKey = (name) => String(name).replace(/^lec(ture)?\\s*/i, '').trim().toUpperCase();
+
   try {
-    // 1. Your plan and its terms.
+    // 1. Your plan: your default (primary) plan, or else the plan open in Stellic's planner on this tab.
     const profile = (await call('POST', '/planner/getstudentprofile/', {})).json || {};
-    const planId = profile.default_plan_id;
-    if (!planId) throw new Error("Couldn't find your Stellic plan. Open your plan in Stellic once, then run this again.");
-    const overview = await call('GET', '/plans/' + encodeURIComponent(planId) + '/overview');
-    const planTerms = new Map();
-    for (const y of (overview.json && overview.json.plan && overview.json.plan.academic_years) || []) {
-      for (const t of y.terms || []) planTerms.set(t.semester_id + '-' + t.physical_year, t.logical_year);
+    let openPlanId = null;
+    try {
+      openPlanId = typeof angular !== 'undefined' ? angular.element(document.body).injector().get('PlannerSrvc').currentStudentPlanId || null : null;
+    } catch {
+      openPlanId = null;
     }
+    let plan = null;
+    let planId = null;
+    for (const id of [...new Set([profile.default_plan_id, openPlanId].filter(Boolean))]) {
+      let read = null;
+      try {
+        read = await call('POST', '/planner/getstudentplan/', { plan_id: id });
+      } catch (e) {
+        if (/sign in again/.test(e.message)) throw e;
+      }
+      const found = read && read.ok && read.json && read.json.student_plan;
+      if (found && Array.isArray(found.sem_content)) {
+        plan = found;
+        planId = found.plan_id || id;
+        break;
+      }
+    }
+    if (!plan) throw new Error("Couldn't read your Stellic plan. Open Plan your Path in Stellic, then run this again in that tab.");
+    const planName = plan.name || 'your Stellic plan';
+    const terms = planTerms(plan, profile.term_joined);
 
     // 2. What each course needs: its plan term, whether it's already there, and Stellic's ids for the chosen sections.
     const rows = [];
     for (const term of TERMS) {
-      const logicalYear = planTerms.get(term.semId + '-' + term.year);
-      let existing = new Set();
-      if (logicalYear != null) {
-        const read = await call('GET', '/plans/' + encodeURIComponent(planId) + '/terms/' + term.semId + '/' + logicalYear);
-        existing = codesIn(read.json);
-      }
+      const planTerm = terms.get(term.semId + '-' + term.year);
+      const logicalYear = planTerm ? planTerm.logicalYear : null;
+      const campusId = planTerm ? planTerm.campusId : 1;
       for (const course of term.courses) {
-        const row = { term: term.name, course: course.code, title: course.title, sections: course.sections.join(', '), action: 'add', note: '', logicalYear, semId: term.semId, sectionIds: [] };
-        if (logicalYear == null) {
+        const row = { term: term.name, course: course.code, title: course.title, sections: course.sections.join(', '), action: 'add', note: '', logicalYear, campusId, semId: term.semId, sectionIds: [] };
+        if (!planTerm) {
           row.action = 'skip';
-          row.note = term.name + " isn't in your Stellic plan";
-        } else if (existing.has(course.code)) {
+          row.note = term.name + " isn't in " + planName;
+        } else if (planTerm.codes.has(course.code)) {
           row.action = 'skip';
-          row.note = 'already in your plan';
+          row.note = 'already in ' + planName;
         } else if (course.sections.length) {
-          const found = await call('GET', '/planner/getcoursesectionsforusems/?course_code=' + encodeURIComponent(course.code) + '&sem_id=' + term.semId + '&physical_year=' + term.year + '&campus_id=1');
+          const found = await call('GET', '/planner/getcoursesectionsforusems/?course_code=' + encodeURIComponent(course.code) + '&sem_id=' + term.semId + '&physical_year=' + term.year + '&campus_id=' + campusId);
+          const sections = ((found.json && found.json.available_sections) || []).flatMap((group) => group.sections || []).filter((s) => !s.hidden);
+          // Full names first; short names only fill gaps, so one section's short name can't shadow another's name.
           const byName = new Map();
-          for (const entry of (found.json && found.json.data_list) || []) {
-            for (const group of entry.section_groups || []) for (const s of group.sections || []) if (!s.hidden && !byName.has(s.name)) byName.set(s.name, s.id);
+          for (const field of ['name', 'short_name']) {
+            for (const s of sections) if (s[field] != null && !byName.has(sectionKey(s[field]))) byName.set(sectionKey(s[field]), s.id);
           }
-          const ids = course.sections.map((n) => byName.get(n));
+          const ids = course.sections.map((n) => byName.get(sectionKey(n)));
           if (ids.every((id) => id != null)) row.sectionIds = ids;
           else row.note = "some sections aren't in Stellic yet; adding the course without them";
         }
@@ -204,11 +238,11 @@ ${summary}
     const toAdd = rows.filter((r) => r.action === 'add');
     console.table(rows.map(({ term, course, title, sections, action, note }) => ({ term, course, title, sections, action, note })));
     if (!toAdd.length) {
-      alert('Nothing to add: every course is already in your Stellic plan (or its term isn\\'t in your plan). See the console for details.');
+      alert('Nothing to add: every course is already in ' + planName + ' (or its term isn\\'t in the plan). See the console for details.');
       return;
     }
     const list = toAdd.map((r) => r.term + '  ' + r.course + (r.sectionIds.length ? ' (' + r.sections + ')' : '') + '  ' + r.title).join('\\n');
-    if (!confirm('Add ' + toAdd.length + ' course' + (toAdd.length === 1 ? '' : 's') + ' to your Stellic plan?\\n\\n' + list + '\\n\\nCancel changes nothing.')) {
+    if (!confirm('Add ' + toAdd.length + ' course' + (toAdd.length === 1 ? '' : 's') + ' to "' + planName + '" in Stellic?\\n\\n' + list + '\\n\\nCancel changes nothing.')) {
       console.log('Cancelled: nothing was changed.');
       return;
     }
@@ -220,9 +254,11 @@ ${summary}
         course_code: r.course,
         sem_id: r.semId,
         year: r.logicalYear,
-        campus_id: 1,
+        campus_id: r.campusId,
         section_ids: r.sectionIds.length ? r.sectionIds.join(',') : null,
+        // What Stellic's own "add anyway" sends after a warning.
         force: force ? true : null,
+        force_integrated: force ? true : null,
       });
     const warned = [];
     for (const r of toAdd) {
@@ -248,7 +284,7 @@ ${summary}
 
     console.table(toAdd.map(({ term, course, title, sections, result, note }) => ({ term, course, title, sections, result, note })));
     const added = toAdd.filter((r) => r.result === 'added').length;
-    alert('Added ' + added + ' of ' + toAdd.length + ' course' + (toAdd.length === 1 ? '' : 's') + ' to your Stellic plan.' + (added < toAdd.length ? ' See the console for the rest.' : '') + ' Reload Stellic to see them.');
+    alert('Added ' + added + ' of ' + toAdd.length + ' course' + (toAdd.length === 1 ? '' : 's') + ' to "' + planName + '".' + (added < toAdd.length ? ' See the console for the rest.' : '') + ' Reload Stellic to see them.');
   } catch (e) {
     console.error(e);
     alert('Courseweave export stopped: ' + (e && e.message ? e.message : e) + ' Nothing after this point was changed.');
