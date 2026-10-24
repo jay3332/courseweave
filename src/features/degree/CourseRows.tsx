@@ -242,7 +242,8 @@ export function PlanCourseRow(props: PlanCourseRowProps) {
     >
       <div className="flex min-h-9 items-center gap-1.5 md:min-h-7" {...coursePreview(course.courseId)}>
         {draggable ? <GripVertical aria-hidden className="size-3.5 shrink-0 cursor-grab text-line-strong group-hover:text-muted" /> : null}
-        <Link to={href(course.courseId, props.term)} className="course-code shrink-0 text-[14.5px] text-ink hover:text-accent">
+        {/* In a draggable row the link mustn't start its own (browser) drag: the row's drag moves the course. */}
+        <Link to={href(course.courseId, props.term)} draggable={draggable ? false : undefined} className="course-code shrink-0 text-[14.5px] text-ink hover:text-accent">
           {codeOf(course.courseId)}
         </Link>
         <span className="min-w-0 flex-1 truncate text-[13px] text-ink-2" title={title}>
@@ -357,7 +358,12 @@ export function PlanCourseTableRow(props: PlanCourseRowProps & TableExtras) {
         <td className="sticky left-0 z-[1] bg-surface py-1.5 pr-2 pl-2 align-top whitespace-nowrap group-hover:bg-surface-2">
           <span className="flex items-center gap-1">
             {draggable ? <GripVertical aria-hidden className="size-3.5 shrink-0 cursor-grab text-line-strong group-hover:text-muted" /> : <span aria-hidden className="w-3.5 shrink-0" />}
-            <Link to={href(course.courseId, term)} {...coursePreview(course.courseId)} className="course-code text-[14.5px] text-ink hover:text-accent">
+            <Link
+              to={href(course.courseId, term)}
+              draggable={draggable ? false : undefined}
+              {...coursePreview(course.courseId)}
+              className="course-code text-[14.5px] text-ink hover:text-accent"
+            >
               {code}
             </Link>
           </span>

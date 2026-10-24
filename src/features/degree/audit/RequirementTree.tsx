@@ -197,7 +197,8 @@ function CourseLeafRow({ r, ctx }: { r: RequirementResult; ctx: TreeContext }) {
     >
       <StateIcon state={state} className="size-4" />
       <span className="sr-only">{STATE_LABEL[state]}</span>
-      <Link to={ctx.href(id, a?.term)} className="course-code shrink-0 text-[14.5px] text-ink hover:text-accent">
+      {/* In a draggable row the link mustn't start its own (browser) drag: the row's drag adds the course. */}
+      <Link to={ctx.href(id, a?.term)} draggable={canDrag && ctx.dragCourses ? false : undefined} className="course-code shrink-0 text-[14.5px] text-ink hover:text-accent">
         {codeOf(id)}
       </Link>
       <span className={`min-w-0 flex-1 truncate text-[13.5px] ${state === 'skipped' ? 'text-muted' : 'text-ink-2'}`}>
@@ -252,7 +253,11 @@ function WaysToSatisfy({ node, ctx }: { node: ReqNode; ctx: TreeContext }) {
       <ul className="mt-1 flex flex-col">
         {shown.map((id) => (
           <li key={id} className={`flex min-h-10 items-center gap-2 md:min-h-8 ${ctx.dragCourses ? 'cursor-grab' : ''}`} {...coursePreview(id)} {...dragNew(id, ctx)}>
-            <Link to={ctx.href(id)} className={`course-code shrink-0 text-[13.5px] hover:text-accent ${ctx.offered(id) ? 'text-ink' : 'text-muted'}`}>
+            <Link
+              to={ctx.href(id)}
+              draggable={ctx.dragCourses ? false : undefined}
+              className={`course-code shrink-0 text-[13.5px] hover:text-accent ${ctx.offered(id) ? 'text-ink' : 'text-muted'}`}
+            >
               {codeOf(id)}
             </Link>
             <span className="min-w-0 flex-1 truncate text-[13px] text-ink-2">
