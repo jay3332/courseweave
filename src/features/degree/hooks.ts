@@ -194,11 +194,10 @@ export const DRAG_TYPE = 'application/x-courseweave-plan-course'
 /** A course dragged from the requirements panel onto a semester (adds it). */
 export const DRAG_NEW_COURSE = 'application/x-courseweave-course'
 
-/** Where a course link should go: its page in the routed term if offered there, else the requisite explorer. */
 /**
- * Where a course links from the degree planner: its course page in the semester it's planned for when that semester
- * offers it, else in the semester you're browsing, else in the nearest semester that offers it. Only a course no
- * semester here offers (catalog only) opens its requisite page.
+ * Where a course links from the degree planner: its full course page (which offers "Back to plan") in the semester
+ * it's planned for when that semester offers it, else in the semester you're browsing, else in the nearest semester
+ * that offers it. Only a course no semester here offers (catalog only) opens its requisite page.
  */
 export function useCourseHref(): (courseId: string, term?: string | null) => string {
   const routed = useTerm()
@@ -207,10 +206,10 @@ export function useCourseHref(): (courseId: string, term?: string | null) => str
     (id, term) => {
       const code = codeOf(id)
       const terms = offerings?.byId.get(id)?.terms ?? []
-      if (term && terms.includes(term)) return `/${term}/courses/${code}`
-      if (routed.courseById.has(id)) return `/${routed.meta.id}/courses/${code}`
+      if (term && terms.includes(term)) return `/${term}/courses/${code}/full`
+      if (routed.courseById.has(id)) return `/${routed.meta.id}/courses/${code}/full`
       const nearest = nearestTerm(terms, term ?? routed.meta.id)
-      return nearest ? `/${nearest}/courses/${code}` : `/${routed.meta.id}/requisites/${code}`
+      return nearest ? `/${nearest}/courses/${code}/full` : `/${routed.meta.id}/requisites/${code}`
     },
     [routed, offerings],
   )

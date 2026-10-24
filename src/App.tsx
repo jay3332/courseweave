@@ -5,6 +5,7 @@ import { CoursePreviewLayer } from './components/CoursePreview'
 import { PageErrorBoundary } from './components/PageErrorBoundary'
 import { Spinner } from './components/ui'
 import { lazyPage } from './lib/app-update'
+import { useTrackOrigin } from './state/nav-origin'
 import { ALL_SEMESTER_PAGES, ALL_SEMESTERS, lastVisitedTerm, rememberTerm } from './state/term-scope'
 import { useOnboardingDue } from './state/onboarding'
 import { useSession } from './state/session'
@@ -91,6 +92,7 @@ function TermLayout() {
   const { termId = '' } = useParams()
   // A page that failed gets another try on the next navigation.
   const { pathname, search } = useLocation()
+  useTrackOrigin()
   const terms = useTerms()
   const all = termId === ALL_SEMESTERS
   useEffect(() => {

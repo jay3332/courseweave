@@ -4,6 +4,7 @@ import { ArrowLeft, Star, X } from 'lucide-react'
 import { useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router'
 import { useHead } from '../../lib/head'
+import { planOrigin } from '../../state/nav-origin'
 import { Button, Spinner } from '../../components/ui'
 import { buildUnlocks, useCatalogIndex } from '../../lib/catalog'
 import { parseCourseCode } from '../../lib/data'
@@ -55,6 +56,8 @@ function CourseFull({ course, search }: { course: Course; search: string }) {
   const requisites = useRequisiteContext(termId)
   const chipStatus = useMemo(() => (requisites.ctx ? statusFnFor(requisites.ctx, false) : undefined), [requisites.ctx])
   const sched = useCourseSchedule(course)
+  // Opened from a degree plan: back (and close) return there instead of the course list.
+  const fromPlan = planOrigin()
   // Where the requisite details open: a header row below the title and actions.
   const [detailsSlot, setDetailsSlot] = useState<HTMLDivElement | null>(null)
   const index = useCatalogIndex()
@@ -71,11 +74,11 @@ function CourseFull({ course, search }: { course: Course; search: string }) {
     <article className="mx-auto flex w-full max-w-[1400px] flex-col gap-10 px-4 pt-3 pb-16 md:px-8 md:pt-5">
       <div className="flex items-center gap-2">
         <Link
-          to={`/${termId}/courses/${course.code}${search}`}
+          to={fromPlan ?? `/${termId}/courses/${course.code}${search}`}
           className="-ml-1 inline-flex min-h-9 items-center gap-1.5 rounded px-1 text-[14px] font-medium text-ink-2 hover:text-ink"
         >
           <ArrowLeft aria-hidden className="size-4" />
-          Back to results
+          {fromPlan ? 'Back to plan' : 'Back to results'}
         </Link>
         <div className="ml-auto flex items-center gap-1.5">
           <Button size="sm" variant="ghost" aria-pressed={saved} onClick={() => toggleBookmark(termId, course.id)}>
@@ -83,7 +86,7 @@ function CourseFull({ course, search }: { course: Course; search: string }) {
             {saved ? 'Saved' : 'Save'}
           </Button>
           <Link
-            to={`/${termId}/courses${search}`}
+            to={fromPlan ?? `/${termId}/courses${search}`}
             aria-label="Close course"
             title="Close"
             className="inline-grid size-9 place-items-center rounded-md text-muted hover:bg-surface-2 hover:text-ink md:size-7"
