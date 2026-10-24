@@ -13,15 +13,29 @@ const FILL: Record<'done' | 'inProgress' | 'planned' | 'needed', CSSProperties> 
 }
 
 /**
- * The plan's overall progress as one bar: done, in progress, planned and still needed. `outside` is units in the plan
- * that the degree doesn't count toward its total.
+ * The plan's overall progress as one bar: done, in progress, planned and still needed. The bar fills only when the
+ * plan reaches the unit total and meets every requirement. `outside` is units in the plan that the degree doesn't
+ * count toward its total.
  */
 export function DegreeProgressBar({ progress, outside = 0 }: { progress: DegreeProgress; outside?: number }) {
-  const { basis, done, credit, inProgress, planned, need } = progress
+  const { done, credit, inProgress, planned, unitTarget, needed, requirementUnits, unmet } = progress
   const withPlan = done + inProgress + planned
-  const needed = Math.max(0, need - withPlan)
-  const scale = Math.max(need, withPlan, 1e-9)
-  const unit = basis === 'units' ? 'units' : 'requirements'
+  const scale = Math.max(withPlan + needed, 1e-9)
+  const unitShort = unitTarget === null ? 0 : Math.max(0, unitTarget - withPlan)
+  // The unmet requirements decide how much is left (an estimate), or the unit total does (exact).
+  const forRequirements = requirementUnits > unitShort
+  const requirements = (n: number) => `${n} unmet ${n === 1 ? 'requirement' : 'requirements'}`
+  const neededNote = forRequirements
+    ? `for ${requirements(unmet)}, estimated`
+    : unitTarget !== null
+      ? `to reach ${fmt(unitTarget)} units${unmet ? `, including ${requirements(unmet)}` : ''}`
+      : null
+  const status =
+    needed > 0
+      ? `${forRequirements ? 'About ' : ''}${fmt(needed)} more ${needed === 1 ? 'unit' : 'units'} to finish`
+      : inProgress + planned > 0
+        ? 'Everything is planned'
+        : 'Complete'
   const segments = [
     { key: 'done', label: 'Done', value: done },
     { key: 'inProgress', label: 'In progress', value: inProgress },
@@ -30,17 +44,17 @@ export function DegreeProgressBar({ progress, outside = 0 }: { progress: DegreeP
   ] as const
   const summary = segments
     .filter((s) => s.value > 0 || s.key === 'done')
-    .map((s) => `${fmt(s.value)} ${s.label.toLowerCase()}`)
+    .map((s) => `${fmt(s.value)} units ${s.label.toLowerCase()}`)
     .join(', ')
 
   return (
     <div className="col-span-full grid grid-cols-[1fr_auto] items-baseline gap-x-3 gap-y-2 bg-surface px-3 pt-2.5 pb-3">
       <dt className="text-[12.5px] text-muted">Degree progress</dt>
       <dd className="text-right text-[12.5px] text-ink-2">
-        <span className="font-semibold text-ink tabular-nums">{fmt(withPlan)}</span> of {fmt(need)} {unit} with this plan
+        <span className="font-semibold text-ink">{status}</span>
       </dd>
       <dd className="col-span-2">
-        <div role="img" aria-label={`Degree progress: ${summary}, of ${fmt(need)} ${unit}.`} className="flex h-3 gap-[2px] overflow-hidden rounded-full">
+        <div role="img" aria-label={`Degree progress: ${summary}.`} className="flex h-3 gap-[2px] overflow-hidden rounded-full">
           {segments.map((s) =>
             s.value > 0 ? (
               <div
@@ -62,6 +76,7 @@ export function DegreeProgressBar({ progress, outside = 0 }: { progress: DegreeP
                 {s.label}
                 <span className="font-semibold text-ink tabular-nums">{fmt(s.value)}</span>
                 {s.key === 'done' && credit > 0 ? <span className="text-muted">({fmt(credit)} from AP and transfer credit)</span> : null}
+                {s.key === 'needed' && neededNote ? <span className="text-muted">({neededNote})</span> : null}
               </li>
             ) : null,
           )}

@@ -338,10 +338,17 @@ function inherit(node: ReqNode, parent: Inherited): Inherited {
   }
 }
 
+/** How many of a group's `of` options its rule asks for. */
+function ruleNeed(node: ReqNode, of: number): { children: number; of: number } {
+  return { children: node.rule.kind === 'all' ? of : Math.min(node.rule.kind === 'any' ? 1 : node.rule.n, of), of }
+}
+
 /** An untouched copy of a subtree, for alternatives that weren't used. */
 function emptyEval(node: ReqNode, skipped: boolean): Eval {
   const kind = node.course ? 'course' : node.children.length ? 'group' : 'pool'
   return {
+    // Groups still say how many options they need, so what's left can be sized.
+    ...(kind === 'group' ? { need: ruleNeed(node, node.children.filter((c) => !c.manual && !c.onlyIfAttempted).length) } : {}),
     node,
     state: 'missing',
     kind,
@@ -629,22 +636,21 @@ function evalGroup(node: ReqNode, inh: Inherited, st: State, ctx: ProgramContext
 
   // Options that count toward the rule: unused alternatives still count as options.
   const evaluable = children.filter((e) => active.includes(e.node) && !e.manual && !(e.node.onlyIfAttempted && !e.subtree.length))
-  const ruleOf = evaluable.length
-  const ruleNeed = node.rule.kind === 'all' ? ruleOf : Math.min(node.rule.kind === 'any' ? 1 : node.rule.n, ruleOf)
+  const need = ruleNeed(node, evaluable.length)
   const doneCount = evaluable.filter((e) => e.state === 'complete').length
   const planCount = evaluable.filter((e) => RANK[e.state] >= 2).length
   const done = subtree.filter((i) => i.done)
   const hasTargets = Boolean(node.minUnits || node.minCourses || node.conditions?.some((r) => r.min))
-  const manualOnly = ruleOf === 0 && !hasTargets && children.some((e) => e.manual)
+  const manualOnly = need.of === 0 && !hasTargets && children.some((e) => e.manual)
 
-  const haveOk = doneCount >= ruleNeed && targetsMet(node, done, ctx.eq) && (ruleOf > 0 || hasTargets)
-  const planOk = planCount >= ruleNeed && targetsMet(node, subtree, ctx.eq) && (ruleOf > 0 || hasTargets)
+  const haveOk = doneCount >= need.children && targetsMet(node, done, ctx.eq) && (need.of > 0 || hasTargets)
+  const planOk = planCount >= need.children && targetsMet(node, subtree, ctx.eq) && (need.of > 0 || hasTargets)
   const childProgress = evaluable.length
     ? evaluable
         .map((e) => e.progress)
         .sort((a, b) => b - a)
-        .slice(0, Math.max(1, ruleNeed))
-        .reduce((a, b) => a + b, 0) / Math.max(1, ruleNeed)
+        .slice(0, Math.max(1, need.children))
+        .reduce((a, b) => a + b, 0) / Math.max(1, need.children)
     : 0
   return {
     node,
@@ -653,7 +659,7 @@ function evalGroup(node: ReqNode, inh: Inherited, st: State, ctx: ProgramContext
     assigned: [],
     subtree,
     children,
-    need: { children: ruleNeed, of: ruleOf },
+    need,
     manual: manualOnly || undefined,
     progress: hasTargets ? (childProgress + progressOf(node, subtree, ctx.eq)) / 2 : childProgress,
     viaEquivalent: chosen.reduce((n, e) => n + e.viaEquivalent, 0),

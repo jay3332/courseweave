@@ -41,9 +41,9 @@ export function PlanHeader({ plan, derived, audit }: { plan: Plan; derived: Plan
   const program = audit?.programs[0]
   const requirements = audit?.programs.reduce((acc, p) => tallyRequirements(p.root, acc), { done: 0, inProgress: 0, planned: 0, total: 0 })
   const needUnits = program?.totalUnits?.need
-  const progress = degreeProgress(audit)
+  const progress = degreeProgress(audit, derived.auditInput.courses, derived.unitsOf)
   // Units in the plan the degree leaves out of its total (StuCo and the like).
-  const outside = progress?.basis === 'units' ? derived.totalUnits - (progress.done + progress.inProgress + progress.planned) : 0
+  const outside = progress && progress.unitTarget !== null ? derived.totalUnits - (progress.done + progress.inProgress + progress.planned) : 0
 
   return (
     <header className="flex flex-col gap-4">

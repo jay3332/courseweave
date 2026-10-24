@@ -364,6 +364,20 @@ describe('runAudit: conditional and manual rules', () => {
   })
 })
 
+describe('untouched requirements', () => {
+  it('still say how many of their options they need', () => {
+    const optionA = group('Option A', { kind: 'all' }, [leaf('03121'), leaf('03122')])
+    const optionB = group('Option B', { kind: 'atLeast', n: 2 }, [leaf('09105'), leaf('09106'), leaf('09217')])
+    const root = group('Major', { kind: 'all' }, [group('Science', { kind: 'any' }, [optionA, optionB])])
+    const science = find(audit([version(1, root)], []).programs[0].root, 'Science')
+    expect(science.need).toEqual({ children: 1, of: 2 })
+    expect(science.children.map((c) => c.need)).toEqual([
+      { children: 2, of: 2 },
+      { children: 2, of: 3 },
+    ])
+  })
+})
+
 describe('helpers', () => {
   it('describes targets and lists options', () => {
     const n = pool('Electives', { pool: [{ sets: [{ depts: ['15'] }], units: true, min: 18 }], exclude: [{ courses: ['15351'] }], minGrade: 'C' })
