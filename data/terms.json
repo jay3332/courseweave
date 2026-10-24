@@ -97,7 +97,6 @@
       {
         "type": "stellic",
         "role": "supplement",
-        "dir": "exported/jgtsao/courses_history",
         "lyear": 1,
         "sem": 1,
         "optional": true,
@@ -199,7 +198,6 @@
       {
         "type": "stellic",
         "role": "supplement",
-        "dir": "exported/jgtsao/courses_history",
         "lyear": 0,
         "sem": 2,
         "optional": true,
@@ -258,7 +256,6 @@
       {
         "type": "stellic",
         "role": "supplement",
-        "dir": "exported/jgtsao/courses_history",
         "lyear": 0,
         "sem": 1,
         "optional": true,

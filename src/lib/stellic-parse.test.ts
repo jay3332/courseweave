@@ -1,5 +1,5 @@
 /// <reference types="node" />
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
@@ -119,7 +119,10 @@ describe('stellic parsing', () => {
     expect(grad.level).toBe('G')
   })
 
-  const real = join(homedir(), 'Projects/scottylabs/courses/exported/jgtsao/courses_history/15122/ly1_sm1.json')
+  // The Fall 2026 15-122 file from a local ScottyLabs export, when there's one.
+  const exported = join(homedir(), 'Projects/scottylabs/courses/exported')
+  const user = existsSync(exported) ? readdirSync(exported).find((u) => existsSync(join(exported, u, 'courses_history/15122/ly1_sm1.json'))) : undefined
+  const real = join(exported, user ?? '-', 'courses_history/15122/ly1_sm1.json')
   it.skipIf(!existsSync(real))('parses a real Fall 2026 export', () => {
     const course = parseStellicCourse('15122', JSON.parse(readFileSync(real, 'utf8')), F26)!
     const lectures = course.sections.filter((s) => s.parent === null)

@@ -94,7 +94,7 @@ export function CourseAbout({ courseId, status, onShowTree }: { courseId: string
       {e ? (
         <dl className="grid grid-cols-1 gap-x-3 gap-y-1.5 text-[13.5px] sm:grid-cols-[8rem_minmax(0,1fr)]">
           <Row label="Prerequisites">
-            {e.prereqs ? <RequisiteExpression req={e.prereqs} status={status} /> : <span className="text-ink-2">None listed</span>}
+            {e.prereqs ? <RequisiteExpression req={e.prereqs} status={status} /> : <p className="text-ink-2">None listed</p>}
             {e.prereqText ? <p className="mt-1 text-[12.5px] text-muted">Schedule of Classes: {e.prereqText}</p> : null}
             {onShowTree ? (
               <button type="button" onClick={onShowTree} className={`mt-1 ${TREE_LINK}`}>

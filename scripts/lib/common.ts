@@ -1,5 +1,5 @@
 // Helpers shared by every data source adapter and build script.
-import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -48,6 +48,21 @@ export function scottylabsDir(): string {
     if (dir) return resolve(dir.replace(/^~(?=\/|$)/, homedir()))
   }
   return join(homedir(), 'Projects', 'scottylabs', 'courses')
+}
+
+/**
+ * The Stellic course export (`exported/<andrew id>/courses_history`) in the ScottyLabs checkout. Stellic numbers years
+ * from the exporting account's first term (`lyear` in terms.json), so this must be one account's export: the only one
+ * there, or the one STELLIC_EXPORT_USER names. Null when there's none.
+ */
+export function stellicExportDir(scottylabs = scottylabsDir()): string | null {
+  const exported = join(scottylabs, 'exported')
+  const named = process.env.STELLIC_EXPORT_USER?.trim()
+  if (named) return join(exported, named, 'courses_history')
+  if (!existsSync(exported)) return null
+  const users = readdirSync(exported).filter((u) => existsSync(join(exported, u, 'courses_history')))
+  if (users.length > 1) throw new Error(`Several Stellic exports in ${exported} (${users.join(', ')}); set STELLIC_EXPORT_USER to the one terms.json's lyear values are for.`)
+  return users.length ? join(exported, users[0], 'courses_history') : null
 }
 
 export function parseCsv(text: string): string[][] {
