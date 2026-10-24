@@ -253,6 +253,12 @@ export function useCourseFce(courseId: string | null): FceRow[] | undefined {
 }
 
 /** undefined while loading; null when no FCE history matches this (schedule-style) name. */
+/** The whole instructor FCE index (undefined while loading, null when FCE data isn't available). */
+export function useInstructorFceIndex(enabled = true): NameIndex<InstructorFce> | null | undefined {
+  const generation = useFceState((s) => s.generation)
+  return usePromise(enabled ? `instructors#${generation}` : null, loadInstructorIndex)
+}
+
 export function useInstructorFce(name: string | null): InstructorFce | null | undefined {
   const generation = useFceState((s) => s.generation)
   const index = usePromise(name === null ? null : `instructors#${generation}`, loadInstructorIndex)

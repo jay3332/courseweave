@@ -5,7 +5,8 @@
 import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import type { Course, OfferingsData, Section, TermData, TermIndexEntry, TermMeta } from '../src/lib/types.ts'
+import { teachesSection } from '../src/lib/sections.ts'
+import type { Course, OfferingsData, Section, TeachingData, TermData, TermIndexEntry, TermMeta } from '../src/lib/types.ts'
 import { DATA_INPUT_PATHS, dataDir, derivedDir, finalizeCourse, meetingKey, publicDataDir, root, scottylabsDir } from './lib/common.ts'
 import { mergeSupplement } from './lib/merge.ts'
 import { csvSource } from './sources/csv.ts'
@@ -110,6 +111,8 @@ const only = process.argv.slice(2)
 const configs: TermConfig[] = JSON.parse(readFileSync(join(dataDir, 'terms.json'), 'utf8'))
 /** Course id → the terms offering it (with that term's title), for public/data/offerings.json. */
 const offered = new Map<string, { dept: string; level: string; titles: Map<string, string> }>()
+/** Instructor → term → courses and section count, and sections per department, for public/data/teaching.json. */
+const teaching = new Map<string, { depts: Map<string, number>; terms: Map<string, { courses: Set<string>; sections: number }> }>()
 mkdirSync(publicDataDir, { recursive: true })
 const passFail = readPassFail()
 
@@ -126,6 +129,17 @@ for (const config of configs) {
   for (const c of data.courses) {
     const o = offered.get(c.id) ?? offered.set(c.id, { dept: c.dept, level: c.level, titles: new Map() }).get(c.id)!
     o.titles.set(data.term.id, c.title)
+    for (const section of c.sections) {
+      for (const name of section.instructors) {
+        // Recitations that only repeat their lecture's instructors aren't extra teaching (as in the app's term index).
+        if (!teachesSection(c, section, name)) continue
+        const t = teaching.get(name) ?? teaching.set(name, { depts: new Map(), terms: new Map() }).get(name)!
+        t.depts.set(c.dept, (t.depts.get(c.dept) ?? 0) + 1)
+        const inTerm = t.terms.get(data.term.id) ?? t.terms.set(data.term.id, { courses: new Set(), sections: 0 }).get(data.term.id)!
+        inTerm.courses.add(c.id)
+        inTerm.sections++
+      }
+    }
   }
   const sectionCount = data.courses.reduce((n, c) => n + c.sections.length, 0)
   index.push({ ...data.term, courseCount: data.courses.length, sectionCount })
@@ -146,6 +160,19 @@ for (const [id, o] of [...offered].sort(([a], [b]) => a.localeCompare(b))) {
 }
 writeFileSync(join(publicDataDir, 'offerings.json'), JSON.stringify(offerings))
 console.log(`offerings: ${Object.keys(offerings.courses).length} courses across ${termOrder.length} terms`)
+
+// Who teaches what in each term, so the instructor list can span every semester without loading them all.
+const teachingData: TeachingData = { terms: termOrder, instructors: {} }
+for (const [name, t] of [...teaching].sort(([a], [b]) => a.localeCompare(b))) {
+  teachingData.instructors[name] = {
+    depts: [...t.depts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([d]) => d),
+    terms: Object.fromEntries(
+      termOrder.filter((id) => t.terms.has(id)).map((id) => [id, { courses: [...t.terms.get(id)!.courses].sort(), sections: t.terms.get(id)!.sections }]),
+    ),
+  }
+}
+writeFileSync(join(publicDataDir, 'teaching.json'), JSON.stringify(teachingData))
+console.log(`teaching: ${teaching.size} instructors across ${termOrder.length} terms`)
 
 // Which commit of the data inputs this build reflects, so the weekly data check can tell when merged updates aren't
 // deployed yet. `dirty` marks builds with uncommitted input changes.

@@ -5,7 +5,7 @@ import { CoursePreviewLayer } from './components/CoursePreview'
 import { PageErrorBoundary } from './components/PageErrorBoundary'
 import { Spinner } from './components/ui'
 import { lazyPage } from './lib/app-update'
-import { ALL_SEMESTERS, lastVisitedTerm, rememberTerm } from './state/term-scope'
+import { ALL_SEMESTER_PAGES, ALL_SEMESTERS, lastVisitedTerm, rememberTerm } from './state/term-scope'
 import { useOnboardingDue } from './state/onboarding'
 import { useSession } from './state/session'
 import { startSync, stopSync } from './state/sync'
@@ -97,8 +97,8 @@ function TermLayout() {
     if (!all && termId) rememberTerm(termId)
   }, [all, termId])
 
-  // "All semesters" is a view of the Courses page. Underneath, the app runs on the semester last visited (or the
-  // latest), and every other page goes back to it.
+  // "All semesters" is a view of the Courses and Instructors pages. Underneath, the app runs on the semester last
+  // visited (or the latest), and every other page goes back to it.
   let base = termId
   if (all) {
     if (terms.status === 'loading') return <Loading />
@@ -107,8 +107,8 @@ function TermLayout() {
     base = remembered && ids.includes(remembered) ? remembered : (ids[0] ?? '')
     const [page, code, extra] = pathname.split('/').slice(2)
     if (!base) return <FullMessage title="No semesters yet">There's no course data to show.</FullMessage>
-    if (page && page !== 'courses') return <Navigate to={`/${base}/${pathname.split('/').slice(2).join('/')}${search}`} replace />
-    if (extra === 'full') return <Navigate to={`/${ALL_SEMESTERS}/courses/${code}${search}`} replace />
+    if (page && !ALL_SEMESTER_PAGES.includes(page)) return <Navigate to={`/${base}/${pathname.split('/').slice(2).join('/')}${search}`} replace />
+    if (page === 'courses' && extra === 'full') return <Navigate to={`/${ALL_SEMESTERS}/courses/${code}${search}`} replace />
   }
 
   return (

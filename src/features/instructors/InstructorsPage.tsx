@@ -2,15 +2,22 @@ import { ArrowLeft } from 'lucide-react'
 import { useEffect, useMemo, useRef } from 'react'
 import { Link, useLocation, useParams } from 'react-router'
 import { useTerm } from '../../state/term'
+import { ALL_SEMESTERS } from '../../state/term-scope'
+import { AllInstructorDetail } from './AllInstructorDetail'
+import { useAllInstructors, type AllInstructors } from './allInstructors'
 import { InstructorDetail } from './InstructorDetail'
 import { InstructorList } from './InstructorList'
 
 export function InstructorsPage() {
   const term = useTerm()
-  const { slug } = useParams()
+  const { termId: routeTermId, slug } = useParams()
   const { search } = useLocation()
-  const inst = slug ? term.instructorBySlug.get(slug) : undefined
-  const listHref = `/${term.meta.id}/instructors${search}`
+  // "All semesters": everyone teaching in any semester here, and everyone in the FCE history.
+  const allMode = routeTermId === ALL_SEMESTERS
+  const all = useAllInstructors(allMode)
+  const inst = slug && !allMode ? term.instructorBySlug.get(slug) : undefined
+  const allInst = slug && allMode ? all?.bySlug.get(slug) : undefined
+  const listHref = `/${allMode ? ALL_SEMESTERS : term.meta.id}/instructors${search}`
 
   const detailRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -19,11 +26,12 @@ export function InstructorsPage() {
 
   useEffect(() => {
     const previous = document.title
-    document.title = inst ? `${inst.name} · Courseweave` : `Instructors · ${term.meta.name} · Courseweave`
+    const name = (inst ?? allInst)?.name
+    document.title = name ? `${name} · Courseweave` : `Instructors · ${allMode ? 'All semesters' : term.meta.name} · Courseweave`
     return () => {
       document.title = previous
     }
-  }, [inst, term.meta.name])
+  }, [inst, allInst, allMode, term.meta.name])
 
   return (
     <div className="flex h-full min-h-0">
@@ -43,10 +51,20 @@ export function InstructorsPage() {
             </Link>
           </div>
         ) : null}
-        {inst ? (
+        {allMode ? (
+          all === undefined ? (
+            <div className="min-h-60" aria-busy />
+          ) : allInst ? (
+            <AllInstructorDetail key={allInst.slug} inst={allInst} />
+          ) : slug ? (
+            <NotFound slug={slug} listHref={listHref} where="any semester here or in the course evaluations" />
+          ) : all ? (
+            <AllOverview all={all} />
+          ) : null
+        ) : inst ? (
           <InstructorDetail key={inst.slug} inst={inst} />
         ) : slug ? (
-          <NotFound slug={slug} listHref={listHref} />
+          <NotFound slug={slug} listHref={listHref} where={term.meta.name} />
         ) : (
           <Overview />
         )}
@@ -55,15 +73,13 @@ export function InstructorsPage() {
   )
 }
 
-function NotFound({ slug, listHref }: { slug: string; listHref: string }) {
-  const term = useTerm()
+function NotFound({ slug, listHref, where }: { slug: string; listHref: string; where: string }) {
   return (
     <div className="grid min-h-[60%] place-items-center p-8">
       <div className="max-w-md text-center">
         <h1 className="display text-3xl text-ink">No instructor at this link</h1>
         <p className="mt-2 text-ink-2">
-          Nobody named “{slug.replace(/-/g, ' ')}” teaches in {term.meta.name}. They may teach in a different semester, or the link may be
-          misspelled.
+          Nobody named “{slug.replace(/-/g, ' ')}” teaches in {where}. They may teach in a different semester, or the link may be misspelled.
         </p>
         <Link to={listHref} className="mt-4 inline-block font-medium text-accent underline underline-offset-2">
           Browse all instructors
@@ -101,6 +117,41 @@ function Overview() {
           title="Most courses"
           rows={mostCourses.map((i) => ({ slug: i.slug, name: i.name, value: `${i.courseIds.length} courses` }))}
           termId={termId}
+        />
+      </div>
+    </div>
+  )
+}
+
+/** The all-semesters overview: who teaches the most, across every semester here. */
+function AllOverview({ all }: { all: AllInstructors }) {
+  const { teaching, mostSemesters, mostCourses } = useMemo(() => {
+    const teaching = all.list.filter((i) => i.terms.length)
+    const bySemesters = [...teaching].sort((a, b) => b.terms.length - a.terms.length || b.sectionCount - a.sectionCount).slice(0, 6)
+    const byCourses = [...teaching].sort((a, b) => b.courseIds.length - a.courseIds.length || b.sectionCount - a.sectionCount).slice(0, 6)
+    return { teaching: teaching.length, mostSemesters: bySemesters, mostCourses: byCourses }
+  }, [all])
+  const fceOnly = all.list.length - teaching
+
+  return (
+    <div className="mx-auto max-w-3xl px-6 py-10 sm:px-10 sm:py-14">
+      <h1 className="display text-[40px] text-ink">Instructors</h1>
+      <p className="mt-2 max-w-xl text-[15.5px] text-ink-2">
+        {teaching.toLocaleString()} people teach in the semesters here
+        {fceOnly ? `, and ${fceOnly.toLocaleString()} more appear only in past course evaluations` : ''}. Pick someone to see what they teach each
+        semester and their full evaluation history.
+      </p>
+
+      <div className="mt-10 grid gap-8 sm:grid-cols-2">
+        <Leaderboard
+          title="Most semesters"
+          rows={mostSemesters.map((i) => ({ slug: i.slug, name: i.name, value: `${i.terms.length} semesters` }))}
+          termId={ALL_SEMESTERS}
+        />
+        <Leaderboard
+          title="Most courses"
+          rows={mostCourses.map((i) => ({ slug: i.slug, name: i.name, value: `${i.courseIds.length} courses` }))}
+          termId={ALL_SEMESTERS}
         />
       </div>
     </div>

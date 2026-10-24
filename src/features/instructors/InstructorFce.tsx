@@ -8,9 +8,16 @@ import { LineChart } from '../fce/LineChart'
 
 const RECENT_TERMS = 4
 
+/** Where a course row links and what it's titled: the routed semester's course pages by default. */
+export interface FceCourseLinks {
+  title(courseId: string): string | undefined
+  href(code: string): string
+}
+
 /** An instructor's FCE history: recent ratings, teaching rating over time, and per-course results. */
-export function InstructorFce({ name }: { name: string }) {
+export function InstructorFce({ name, links }: { name: string; links?: FceCourseLinks }) {
   const term = useTerm()
+  const courseLinks: FceCourseLinks = links ?? { title: (id) => term.courseById.get(id)?.title, href: (code) => `/${term.meta.id}/courses/${code}` }
   const fce = useInstructorFce(name)
   const access = useFceAccess()
 
@@ -28,13 +35,13 @@ export function InstructorFce({ name }: { name: string }) {
       ) : fce === null ? (
         <p className="mt-2 text-[14px] text-ink-2">No FCE history matches {name}. New instructors, and anyone whose name is spelled differently in FCEs, won’t have any.</p>
       ) : (
-        <Body fce={fce} termId={term.meta.id} courseById={term.courseById} />
+        <Body fce={fce} links={courseLinks} />
       )}
     </section>
   )
 }
 
-function Body({ fce, termId, courseById }: { fce: NonNullable<ReturnType<typeof useInstructorFce>>; termId: string; courseById: ReturnType<typeof useTerm>['courseById'] }) {
+function Body({ fce, links }: { fce: NonNullable<ReturnType<typeof useInstructorFce>>; links: FceCourseLinks }) {
   const recent = fce.terms.slice(-RECENT_TERMS)
   const recentRating = weightedMean(recent, (t) => t.teachingRate, (t) => t.responses)
   const responses = fce.terms.reduce((n, t) => n + t.responses, 0)
@@ -101,13 +108,13 @@ function Body({ fce, termId, courseById }: { fce: NonNullable<ReturnType<typeof 
           </thead>
           <tbody className="tabular-nums">
             {fce.courses.map((c) => {
-              const course = courseById.get(c.courseId)
+              const title = links.title(c.courseId)
               const code = `${c.courseId.slice(0, 2)}-${c.courseId.slice(2)}`
               return (
                 <tr key={c.courseId} className="border-b border-line/70 align-top last:border-b-0">
                   <td className="px-3 py-1.5">
-                    {course ? (
-                      <Link {...coursePreview(code)} to={`/${termId}/courses/${code}`} className="course-code text-[14px] text-ink hover:text-accent">
+                    {title ? (
+                      <Link {...coursePreview(code)} to={links.href(code)} className="course-code text-[14px] text-ink hover:text-accent">
                         {code}
                       </Link>
                     ) : (
@@ -115,7 +122,7 @@ function Body({ fce, termId, courseById }: { fce: NonNullable<ReturnType<typeof 
                         {code}
                       </span>
                     )}
-                    {course ? <div className="max-w-[16rem] truncate text-[12px] text-muted">{course.title}</div> : null}
+                    {title ? <div className="max-w-[16rem] truncate text-[12px] text-muted">{title}</div> : null}
                     <div className="text-[12px] text-muted sm:hidden">
                       {c.terms} {c.terms === 1 ? 'term' : 'terms'}, last {c.last}
                     </div>

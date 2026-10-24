@@ -1,4 +1,5 @@
-import type { Course, Section } from './types'
+// Imports use explicit .ts extensions so Node can run scripts/build-data.ts, which shares teachesSection.
+import type { Course, Section } from './types.ts'
 
 /** Lectures and standalone sections: what a student picks first. */
 export function topSections(course: Course): Section[] {

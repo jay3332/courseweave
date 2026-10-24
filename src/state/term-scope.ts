@@ -1,7 +1,11 @@
-// "All semesters" (/all/courses) stands in for a semester on the Courses page only; everything else needs a real one.
+// "All semesters" (/all/courses, /all/instructors) stands in for a semester on the Courses and Instructors pages only;
+// everything else needs a real one.
 
 /** The route segment standing in for a semester. */
 export const ALL_SEMESTERS = 'all'
+
+/** Pages with an all-semesters view. */
+export const ALL_SEMESTER_PAGES = ['courses', 'instructors']
 
 let lastTerm: string | null = null
 

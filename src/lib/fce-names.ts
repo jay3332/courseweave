@@ -152,6 +152,11 @@ export class NameIndex<T> {
     this.byLast.set(last, list)
   }
 
+  /** Every value, in the order added. */
+  values(): T[] {
+    return [...this.byFull.values()]
+  }
+
   get(scheduleName: string): T | undefined {
     const candidates = scheduleNameCandidates(scheduleName)
     for (const c of candidates) {

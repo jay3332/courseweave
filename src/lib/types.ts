@@ -23,6 +23,22 @@ export interface OfferingsData {
   courses: Record<string, { title: string; dept: string; level: string; terms: string[] }>
 }
 
+/** public/data/teaching.json: who teaches what in each built term, for the all-semesters instructor list. */
+export interface TeachingData {
+  /** Every built term, newest first. */
+  terms: string[]
+  /** Keyed by name as the Schedule of Classes prints it. */
+  instructors: Record<
+    string,
+    {
+      /** Departments of the courses they teach, most sections first. */
+      depts: string[]
+      /** Term id → the course ids they teach that term and how many sections. */
+      terms: Record<string, { courses: string[]; sections: number }>
+    }
+  >
+}
+
 export interface TermMeta {
   /** SIO-style code, e.g. "S27". Used in URLs. */
   id: string

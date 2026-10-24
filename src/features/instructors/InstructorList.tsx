@@ -1,17 +1,27 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
 import { Chip, SearchInput } from '../../components/ui'
 import { lastName } from '../../lib/data'
+import { departmentName } from '../../lib/departments'
+import { termLabel } from '../../lib/requisites'
 import { useTerm } from '../../state/term'
+import { ALL_SEMESTERS } from '../../state/term-scope'
+import { useAllInstructors, type AllInstructor } from './allInstructors'
 import { buildInstructorDocs, scoreInstructor, type InstructorDoc } from './instructorData'
 
 export type SortKey = 'name' | 'sections'
+
+const NO_DOCS: InstructorDoc[] = []
 
 const PAGE = 120
 
 export function InstructorList({ selectedSlug }: { selectedSlug: string | undefined }) {
   const term = useTerm()
-  const termId = term.meta.id
+  const { termId: routeTermId } = useParams()
+  // "All semesters": everyone teaching in any semester here, and everyone in the FCE history.
+  const allMode = routeTermId === ALL_SEMESTERS
+  const all = useAllInstructors(allMode)
+  const termId = allMode ? ALL_SEMESTERS : term.meta.id
   const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
   const query = params.get('q') ?? ''
@@ -31,12 +41,18 @@ export function InstructorList({ selectedSlug }: { selectedSlug: string | undefi
     )
   }
 
-  const docs = useMemo(() => buildInstructorDocs(term), [term])
+  const termDocs = useMemo(() => (allMode ? [] : buildInstructorDocs(term)), [allMode, term])
+  const docs = allMode ? (all?.docs ?? NO_DOCS) : termDocs
+  const total = allMode ? (all?.list.length ?? 0) : term.instructors.length
 
   const deptOptions = useMemo(() => {
+    if (allMode) {
+      const used = [...new Set((all?.list ?? []).flatMap((i) => i.depts))]
+      return used.map((code) => ({ code, name: departmentName(code) })).sort((a, b) => a.name.localeCompare(b.name))
+    }
     const used = new Set(term.instructors.flatMap((i) => i.depts))
     return term.departments.filter((d) => used.has(d.code))
-  }, [term])
+  }, [allMode, all, term])
 
   const results = useMemo(() => {
     const scored: { doc: InstructorDoc; score: number }[] = []
@@ -183,14 +199,18 @@ export function InstructorList({ selectedSlug }: { selectedSlug: string | undefi
           </div>
         </div>
         <p className="text-[12.5px] text-muted" aria-live="polite">
-          {results.length === term.instructors.length
-            ? `${term.instructors.length.toLocaleString()} instructors`
-            : `${results.length.toLocaleString()} of ${term.instructors.length.toLocaleString()} instructors`}
+          {allMode && all === undefined
+            ? 'Loading instructors from every semester…'
+            : results.length === total
+              ? `${total.toLocaleString()} instructors${allMode ? ' across all semesters' : ''}`
+              : `${results.length.toLocaleString()} of ${total.toLocaleString()} instructors`}
         </p>
       </div>
 
       <div ref={scrollRef} className="scrollbar-thin min-h-0 flex-1 overflow-y-auto">
-        {results.length === 0 ? (
+        {allMode && all === null ? (
+          <div className="px-5 py-10 text-center text-[14px] text-ink-2">All semesters isn’t available: this build has no list of who teaches what.</div>
+        ) : allMode && all === undefined ? null : results.length === 0 ? (
           <div className="px-5 py-10 text-center text-[14px] text-ink-2">
             <p className="font-medium text-ink">No instructors match.</p>
             <p className="mt-1">Try a last name, a course number like 15-122, or clear the department filter.</p>
@@ -213,6 +233,7 @@ export function InstructorList({ selectedSlug }: { selectedSlug: string | undefi
                     selected={doc.inst.slug === selectedSlug}
                     active={i === active}
                     showSections={sort === 'sections'}
+                    allSemesters={allMode}
                   />
                 </li>
               )
@@ -232,6 +253,7 @@ function Row({
   selected,
   active,
   showSections,
+  allSemesters,
 }: {
   doc: InstructorDoc
   index: number
@@ -239,8 +261,10 @@ function Row({
   selected: boolean
   active: boolean
   showSections: boolean
+  allSemesters: boolean
 }) {
   const { inst } = doc
+  const terms = allSemesters ? (inst as AllInstructor).terms : null
   const count = showSections ? inst.sectionCount : inst.courseIds.length
   const unit = showSections ? (count === 1 ? 'section' : 'sections') : count === 1 ? 'course' : 'courses'
   return (
@@ -256,7 +280,10 @@ function Row({
       {selected ? <span aria-hidden className="absolute inset-y-0 left-0 w-[3px] bg-accent" /> : null}
       <div className="min-w-0 flex-1">
         <div className={`truncate text-[14.5px] ${selected ? 'font-semibold text-ink' : 'font-medium text-ink'}`}>{inst.name}</div>
-        <div className="truncate text-[12px] text-muted">{inst.depts.join(', ')}</div>
+        <div className="flex min-w-0 gap-2 text-[12px] text-muted">
+          {inst.depts.length ? <span className="shrink-0">{inst.depts.join(', ')}</span> : null}
+          {terms ? <span className="truncate">{terms.length ? `${termLabel(terms[0].term)}${terms.length > 1 ? ` and ${terms.length - 1} more` : ''}` : 'FCE history only'}</span> : null}
+        </div>
       </div>
       <div className="shrink-0 text-right text-[12px] text-ink-2 tabular-nums">
         {count} {unit}

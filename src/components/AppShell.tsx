@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate, useParams } from 'react-router'
 import { useSession } from '../state/session'
 import { useStore } from '../state/store'
-import { ALL_SEMESTERS } from '../state/term-scope'
+import { ALL_SEMESTER_PAGES, ALL_SEMESTERS } from '../state/term-scope'
 import { useTerms } from '../state/term'
 import { AccountMenu } from './AccountMenu'
 import { SettingsDialog } from './SettingsDialog'
@@ -96,8 +96,8 @@ function TermSelect({ termId }: { termId: string }) {
   const location = useLocation()
   const options = terms.status === 'ready' ? terms.value : []
   const page = location.pathname.split('/')[2] || 'courses'
-  // "All semesters" only means something for browsing courses.
-  const offerAll = page === 'courses'
+  // "All semesters" only means something for browsing courses and instructors.
+  const offerAll = ALL_SEMESTER_PAGES.includes(page)
   const known = options.some((t) => t.id === termId) || (offerAll && termId === ALL_SEMESTERS)
 
   return (
@@ -107,7 +107,7 @@ function TermSelect({ termId }: { termId: string }) {
         value={termId}
         onChange={(e) => {
           // Comparing semesters keeps the search and filters.
-          navigate(`/${e.target.value}/${page}${page === 'courses' ? location.search : ''}`)
+          navigate(`/${e.target.value}/${page}${offerAll ? location.search : ''}`)
         }}
         className="h-9 w-auto max-w-[9.5rem] rounded-lg border border-line-strong bg-surface pr-7 pl-2.5 text-[13px] font-medium text-ink md:max-w-none md:text-[14px]"
       >

@@ -1,6 +1,6 @@
 // The explorer's "All semesters" view (/all/courses): every course any built semester offers or the catalog lists,
 // with FCEs and the semesters that offer it, but no sections. The rest of the app still runs on a real semester (the
-// last one visited), so /all only exists for the Courses page.
+// last one visited); see state/term-scope.ts.
 import { useMemo } from 'react'
 import { useCatalogIndex } from '../../lib/catalog'
 import { departmentName } from '../../lib/departments'
