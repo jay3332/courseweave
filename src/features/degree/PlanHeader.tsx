@@ -1,4 +1,4 @@
-import { ChevronDown, Copy, MoreHorizontal, Pencil, Plus, Send, Trash2 } from 'lucide-react'
+import { ChevronDown, Copy, FileUp, MoreHorizontal, Pencil, Plus, Send, Trash2 } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router'
 import { Button, Dialog } from '../../components/ui'
@@ -10,6 +10,7 @@ import { useTerm } from '../../state/term'
 import { ProgramsField } from './AuditArea'
 import { entryYearOf, useStartTermOptions, type PlanDerived } from './hooks'
 import { MenuItem, Popover } from './Popover'
+import { SioImportButton } from '../record/SioImport'
 import { SendToStellicDialog } from '../schedule-tools/SendToStellic'
 
 function countRequirements(r: RequirementResult): { done: number; total: number } {
@@ -79,6 +80,9 @@ export function PlanHeader({ plan, derived, audit }: { plan: Plan; derived: Plan
             <Plus aria-hidden className="size-4" />
             <span className="hidden sm:inline">New plan</span>
           </Button>
+          {/* The import's file picker and review live outside the menu, which closes when an item is chosen. */}
+          <SioImportButton onImported={() => {}} onPlanCreated={go}>
+            {(choose) => (
           <Popover label="Plan options" button={<MoreHorizontal />}>
             {(close) => (
               <>
@@ -111,6 +115,15 @@ export function PlanHeader({ plan, derived, audit }: { plan: Plan; derived: Plan
                   Send to Stellic
                 </MenuItem>
                 <MenuItem
+                  onClick={() => {
+                    choose()
+                    close()
+                  }}
+                >
+                  <FileUp aria-hidden />
+                  Import from Stellic
+                </MenuItem>
+                <MenuItem
                   danger
                   onClick={() => {
                     setConfirmDelete(true)
@@ -123,6 +136,8 @@ export function PlanHeader({ plan, derived, audit }: { plan: Plan; derived: Plan
               </>
             )}
           </Popover>
+            )}
+          </SioImportButton>
         </div>
       </div>
 

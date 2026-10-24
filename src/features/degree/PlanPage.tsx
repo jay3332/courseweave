@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
-import { Maximize2 } from 'lucide-react'
-import { Button, Dialog } from '../../components/ui'
+import { FileUp, Maximize2 } from 'lucide-react'
+import { Button, Dialog, Spinner } from '../../components/ui'
 import { PHONE_FULLSCREEN } from '../schedule-tools/dialog'
 import { academicYearStart, defaultTerms, isSummer, suggestTerm, type Plan } from '../../lib/plan'
 import type { ProgramSelection } from '../../lib/plan-types'
@@ -10,6 +10,7 @@ import { usePlanList, usePlans } from '../../state/plan'
 import { useRecord } from '../../state/record'
 import { useStore } from '../../state/store'
 import { RecordPrompt } from '../record/RecordStart'
+import { SioImportButton } from '../record/SioImport'
 import { useTerm } from '../../state/term'
 import { useMediaQuery } from '../planner/hooks'
 import { AuditColumn, ProgramsField, useAuditResult } from './AuditArea'
@@ -213,8 +214,19 @@ function StartPlan() {
           <Button variant="primary" onClick={create}>
             Create plan
           </Button>
+          <SioImportButton onImported={() => {}} onPlanCreated={(id) => navigate(`/${term.meta.id}/plan/${id}`)}>
+            {(choose, reading) => (
+              <Button onClick={choose} disabled={reading}>
+                {reading ? <Spinner label="Reading the PDF" /> : <FileUp aria-hidden className="size-4" />}
+                Import from Stellic
+              </Button>
+            )}
+          </SioImportButton>
           <span className="text-[13px] text-muted">You can change programs any time.</span>
         </div>
+        <p className="-mt-2 text-[12.5px] text-muted">
+          To import, download your plan in Stellic: in Plan your Path, select Download Plan, then Create plan report.
+        </p>
       </div>
 
       {recordCount > 0 ? (

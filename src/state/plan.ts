@@ -13,7 +13,8 @@ interface PlanState {
   plans: Record<string, Plan>
   activePlanId: string | null
 
-  createPlan(opts?: { name?: string; startTerm?: string; programs?: ProgramSelection[]; terms?: string[] }): string
+  /** `terms` lists the semesters (default: eight from `startTerm`), each a term code or a term with its courses. */
+  createPlan(opts?: { name?: string; startTerm?: string; programs?: ProgramSelection[]; terms?: (string | { term: string; courses: SnapshotCourse[] })[] }): string
   duplicatePlan(id: string): string
   renamePlan(id: string, name: string): void
   deletePlan(id: string): void
@@ -102,7 +103,9 @@ export const usePlans = create<PlanState>()(
               name: opts.name ?? nextPlanName(Object.values(s.plans)),
               programs: opts.programs ?? [],
               startTerm,
-              terms: sortTerms((opts.terms ?? defaultTerms(startTerm)).map((term) => ({ term, courses: [] }))),
+              terms: sortTerms(
+                (opts.terms ?? defaultTerms(startTerm)).map((t) => (typeof t === 'string' ? { term: t, courses: [] } : { term: t.term, courses: t.courses.map(toPlanCourse) })),
+              ),
               createdAt: now,
               updatedAt: now,
             }

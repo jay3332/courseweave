@@ -140,3 +140,22 @@ describe('reordering courses in a semester', () => {
     expect(effective(id, 'S27')).toEqual(['99101', '15213'])
   })
 })
+
+describe('createPlan', () => {
+  it('takes semesters with their courses, as an import gives them', () => {
+    usePlans.setState({ plans: {}, activePlanId: null })
+    const id = usePlans.getState().createPlan({
+      name: 'Stellic plan',
+      startTerm: 'F26',
+      terms: [{ term: 'S27', courses: [{ courseId: '15213' }, { courseId: '10999', units: 12 }] }, 'F26'],
+    })
+    const p = plan(id)
+    expect(usePlans.getState().activePlanId).toBe(id)
+    expect(p.name).toBe('Stellic plan')
+    expect(p.terms.map((t) => [t.term, t.courses.map((c) => [c.courseId, c.units])])).toEqual([
+      ['F26', []],
+      ['S27', [['15213', undefined], ['10999', 12]]],
+    ])
+    expect(new Set(p.terms[1].courses.map((c) => c.id)).size).toBe(2)
+  })
+})

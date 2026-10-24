@@ -129,13 +129,14 @@ export default function RecordOnboarding({ onClose }: { onClose(): void }) {
               {(choose, reading) => (
                 <ChoiceCard
                   icon={FileText}
-                  title="Import from SIO"
+                  title="Import from SIO or Stellic"
                   primary
                   busy={reading}
                   onClick={choose}
-                  note="In SIO, open Academic Record and select PDF under Unofficial Academic Record. It's read on this device, never uploaded."
+                  note="SIO: Academic Record, then PDF under Unofficial Academic Record. Stellic: Plan your Path, then Download Plan. It's read on this device, never uploaded."
                 >
-                  Add courses and credit from your unofficial academic record PDF. You pick what to bring in.
+                  Add courses and credit from your SIO academic record PDF or your Stellic plan PDF, which also becomes a degree plan. You pick what to
+                  bring in.
                 </ChoiceCard>
               )}
             </SioImportButton>
@@ -174,8 +175,8 @@ export function RecordEmptyStart({ onImported }: { onImported(message: string): 
             Start with your SIO record
           </h2>
           <p className="mt-1 mb-2 max-w-[62ch] text-[14.5px] text-ink-2">
-            Import your unofficial academic record to add your CMU courses, AP and IB credit and transfer credit in one go. You choose what to bring
-            in.
+            Import your unofficial academic record, or your Stellic plan, to add your CMU courses, AP and IB credit and transfer credit in one go. You
+            choose what to bring in.
           </p>
           <HowTo />
         </div>

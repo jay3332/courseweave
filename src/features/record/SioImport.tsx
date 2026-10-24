@@ -1,18 +1,36 @@
-// "Import from SIO": read the unofficial academic record PDF in the browser and choose what to add to the record.
+// "Import from SIO or Stellic": read an SIO unofficial academic record PDF, or a Stellic plan PDF, in the browser and
+// choose what to add to the record. A Stellic plan also becomes a new degree plan.
 import { FileText, Upload } from 'lucide-react'
-import { useMemo, useRef, useState, type ReactNode } from 'react'
+import { Fragment, useMemo, useRef, useState, type ReactNode } from 'react'
 import { coursePreview } from '../../components/CoursePreview'
 import { Button, Dialog, Spinner, type ButtonProps } from '../../components/ui'
+import { loadCatalogIndex } from '../../lib/catalog'
+import { loadProgramsIndex } from '../../lib/programs'
 import { codeOf } from '../../lib/requisite-format'
 import { termLabel } from '../../lib/requisites'
-import { NotSioRecordError, type SioRecord } from '../../lib/sio-record'
+import { NotSioRecordError } from '../../lib/sio-record'
+import { usePlans } from '../../state/plan'
 import { COLLEGES, useRecord } from '../../state/record'
 import { useTerm } from '../../state/term'
 import { PHONE_FULLSCREEN } from '../schedule-tools/dialog'
 import { useCourseLookup } from './hooks'
 import { planSioImport, type ImportItem, type ImportPlan } from './SioImportPlan'
+import { planStellicImport, type DegreePlanDraft } from './StellicImportPlan'
 
-type State = { kind: 'closed' } | { kind: 'reading' } | { kind: 'error'; message: string } | { kind: 'review'; record: SioRecord; plan: ImportPlan }
+interface Review {
+  kind: 'review'
+  source: 'sio' | 'stellic'
+  intro: string
+  /** Lines that couldn't be read or weren't imported. */
+  warnings: string[]
+  plan: ImportPlan
+  /** A Stellic plan's semesters, offered as a new degree plan. */
+  draft: DegreePlanDraft | null
+}
+
+type State = { kind: 'closed' } | { kind: 'reading' } | { kind: 'error'; message: string } | Review
+
+const FROM = { sio: 'your SIO record', stellic: 'your Stellic plan' } as const
 
 const STATUS_TEXT: Record<ImportItem['status'], string> = {
   graded: '',
@@ -26,16 +44,19 @@ const BAD_FILE_ERRORS = new Set(['InvalidPDFException', 'PasswordException', 'Fo
 
 function importErrorMessage(e: unknown): string {
   if (e instanceof NotSioRecordError) return e.message
-  if (e instanceof Error && BAD_FILE_ERRORS.has(e.name)) return "That PDF couldn't be read. Download it from SIO again and retry."
+  if (e instanceof Error && BAD_FILE_ERRORS.has(e.name)) return "That PDF couldn't be read. Download it again and retry."
   return "This browser couldn't read the PDF. Update it, or try again in another browser such as Chrome or Firefox."
 }
 
 export function SioImportButton({
   onImported,
+  onPlanCreated,
   variant = 'secondary',
   children,
 }: {
   onImported(message: string): void
+  /** After a Stellic plan was imported as a new degree plan. */
+  onPlanCreated?(planId: string): void
   variant?: ButtonProps['variant']
   /** A custom trigger in place of the default button. */
   children?: (choose: () => void, reading: boolean) => ReactNode
@@ -46,26 +67,47 @@ export function SioImportButton({
   const profile = useRecord((s) => s.profile)
   const addEntries = useRecord((s) => s.addEntries)
   const setProfile = useRecord((s) => s.setProfile)
+  const createPlan = usePlans((s) => s.createPlan)
   const fileRef = useRef<HTMLInputElement>(null)
   const [state, setState] = useState<State>({ kind: 'closed' })
   const [checked, setChecked] = useState<Set<string>>(new Set())
   const [useProfile, setUseProfile] = useState(true)
+  const [useDraft, setUseDraft] = useState(true)
 
   const onFile = async (file: File) => {
     setState({ kind: 'reading' })
     try {
-      const { readSioRecord } = await import('./SioImportPdf')
-      const record = await readSioRecord(file)
-      const plan = planSioImport(record, entries, {
-        knows: (id) => Boolean(lookup(id).title),
-        currentTerm: term.meta.id,
-        profile: { college: profile.college, entryTerm: profile.entryTerm },
-      })
-      setChecked(new Set(plan.groups.flatMap((g) => g.items.filter((i) => !i.already).map((i) => i.key))))
+      const { readImportPdf } = await import('./SioImportPdf')
+      const pdf = await readImportPdf(file)
+      let review: Review
+      if (pdf.kind === 'sio') {
+        const plan = planSioImport(pdf.record, entries, {
+          knows: (id) => Boolean(lookup(id).title),
+          currentTerm: term.meta.id,
+          profile: { college: profile.college, entryTerm: profile.entryTerm },
+        })
+        const intro = `${pdf.record.asOf ? `Your unofficial academic record as of ${pdf.record.asOf}. ` : ''}Choose what to add to your Courseweave record. Items already in it start unchecked.`
+        review = { kind: 'review', source: 'sio', intro, warnings: pdf.record.warnings, plan, draft: null }
+      } else {
+        // Units and program versions need the catalog and the programs list, so wait for them here.
+        const [catalog, programs] = await Promise.all([loadCatalogIndex().catch(() => null), loadProgramsIndex().catch(() => null)])
+        const imported = planStellicImport(pdf.plan, entries, {
+          knows: (id) => Boolean(catalog?.courses[id] ?? lookup(id).title),
+          catalogUnits: (id) => catalog?.courses[id]?.units ?? lookup(id).units,
+          programs,
+          existingPlanNames: Object.values(usePlans.getState().plans).map((p) => p.name),
+          currentTerm: term.meta.id,
+          profile: { entryTerm: profile.entryTerm },
+        })
+        const intro = 'Your Stellic plan becomes a new degree plan. Credit and courses Stellic marks as taken can go in your record too; items already in it start unchecked.'
+        review = { kind: 'review', source: 'stellic', intro, warnings: imported.skipped, plan: imported, draft: imported.draft }
+      }
+      setChecked(new Set(review.plan.groups.flatMap((g) => g.items.filter((i) => !i.already).map((i) => i.key))))
       setUseProfile(true)
-      setState({ kind: 'review', record, plan })
+      setUseDraft(true)
+      setState(review)
     } catch (e) {
-      console.error('SIO import failed', e)
+      console.error('PDF import failed', e)
       setState({ kind: 'error', message: importErrorMessage(e) })
     }
   }
@@ -78,22 +120,30 @@ export function SioImportButton({
     if (chosen.length) addEntries(chosen.map((i) => i.entry))
     const profilePatch = useProfile ? state.plan.profile : {}
     if (profilePatch.college || profilePatch.entryTerm) setProfile(profilePatch)
+    const draft = useDraft ? state.draft : null
+    const planId = draft ? createPlan({ name: draft.name, startTerm: draft.startTerm, programs: draft.programs, terms: draft.terms }) : null
     close()
+    const items = `${chosen.length} ${chosen.length === 1 ? 'item' : 'items'}`
     onImported(
-      chosen.length
-        ? `Imported ${chosen.length} ${chosen.length === 1 ? 'item' : 'items'} from your SIO record.`
-        : 'Updated your profile from your SIO record.',
+      draft
+        ? `Created the degree plan “${draft.name}”${chosen.length ? ` and added ${items} to your record` : ''}.`
+        : chosen.length
+          ? `Imported ${items} from ${FROM[state.source]}.`
+          : `Updated your profile from ${FROM[state.source]}.`,
     )
+    if (planId) onPlanCreated?.(planId)
   }
+
+  const choose = () => fileRef.current?.click()
 
   return (
     <>
       {children ? (
-        children(() => fileRef.current?.click(), state.kind === 'reading')
+        children(choose, state.kind === 'reading')
       ) : (
-        <Button variant={variant} onClick={() => fileRef.current?.click()} disabled={state.kind === 'reading'}>
+        <Button variant={variant} onClick={choose} disabled={state.kind === 'reading'}>
           {state.kind === 'reading' ? <Spinner label="Reading the PDF" /> : <FileText aria-hidden className="size-4" />}
-          Import from SIO
+          Import from SIO or Stellic
         </Button>
       )}
       <input
@@ -111,7 +161,7 @@ export function SioImportButton({
       <Dialog
         open={state.kind === 'error' || state.kind === 'review'}
         onClose={close}
-        title="Import from SIO"
+        title={state.kind === 'review' && state.source === 'stellic' ? 'Import from Stellic' : 'Import a PDF'}
         className={`w-[min(94vw,760px)] ${PHONE_FULLSCREEN}`}
       >
         {state.kind === 'error' ? (
@@ -124,20 +174,21 @@ export function SioImportButton({
               <Button variant="ghost" onClick={close}>
                 Close
               </Button>
-              <Button variant="primary" onClick={() => fileRef.current?.click()}>
+              <Button variant="primary" onClick={choose}>
                 <Upload aria-hidden className="size-4" />
                 Choose another file
               </Button>
             </div>
           </div>
         ) : state.kind === 'review' ? (
-          <Review
-            record={state.record}
-            plan={state.plan}
+          <ReviewPanel
+            review={state}
             checked={checked}
             setChecked={setChecked}
             useProfile={useProfile}
             setUseProfile={setUseProfile}
+            useDraft={useDraft}
+            setUseDraft={setUseDraft}
             onCancel={close}
             onImport={doImport}
           />
@@ -151,30 +202,36 @@ export function HowTo() {
   return (
     <p className="text-[13px] text-muted">
       In SIO, open <span className="text-ink-2">Academic Record</span> and select <span className="text-ink-2">PDF</span> under Unofficial
-      Academic Record. The file is read on this device and never uploaded.
+      Academic Record. A Stellic plan works too, and also becomes a degree plan: in <span className="text-ink-2">Plan your Path</span>, select{' '}
+      <span className="text-ink-2">Download Plan</span>, then <span className="text-ink-2">Create plan report</span>. The file is read on this
+      device and never uploaded.
     </p>
   )
 }
 
-function Review({
-  record,
-  plan,
+function ReviewPanel({
+  review,
   checked,
   setChecked,
   useProfile,
   setUseProfile,
+  useDraft,
+  setUseDraft,
   onCancel,
   onImport,
 }: {
-  record: SioRecord
-  plan: ImportPlan
+  review: Review
   checked: Set<string>
   setChecked(next: Set<string>): void
   useProfile: boolean
   setUseProfile(v: boolean): void
+  useDraft: boolean
+  setUseDraft(v: boolean): void
   onCancel(): void
   onImport(): void
 }) {
+  const { plan, draft, warnings } = review
+  const creating = Boolean(draft && useDraft)
   const total = useMemo(() => plan.groups.reduce((n, g) => n + g.items.filter((i) => checked.has(i.key)).length, 0), [plan, checked])
   const profileText = [
     plan.profile.college ? `college to ${COLLEGES.find((c) => c.code === plan.profile.college)?.name ?? plan.profile.college}` : null,
@@ -192,10 +249,9 @@ function Review({
   return (
     <div className="flex flex-col">
       <div className="flex flex-col gap-4 px-5 pt-4 pb-5">
-        <p className="text-[14px] text-ink-2">
-          {record.asOf ? `Your unofficial academic record as of ${record.asOf}. ` : ''}Choose what to add to your Courseweave record. Items
-          already in it start unchecked.
-        </p>
+        <p className="text-[14px] text-ink-2">{review.intro}</p>
+
+        {draft ? <DraftOption draft={draft} on={useDraft} setOn={setUseDraft} /> : null}
 
         {profileText ? (
           <label className="flex min-h-10 cursor-pointer items-start gap-3 rounded-lg border border-line px-3 py-2.5">
@@ -204,11 +260,13 @@ function Review({
           </label>
         ) : null}
 
-        {plan.groups.length === 0 ? (
+        {plan.groups.length === 0 && !draft ? (
           <p className="rounded-lg bg-surface-2 px-3 py-2.5 text-[14px] text-ink-2">
-            {record.warnings.length ? 'No courses or credit could be read from this record.' : 'This record has no courses or credit yet.'}
+            {warnings.length ? 'No courses or credit could be read from this record.' : 'This record has no courses or credit yet.'}
           </p>
         ) : null}
+
+        {draft && plan.groups.length ? <h3 className="-mb-2 text-[13px] font-medium text-ink-2">Add to your record</h3> : null}
 
         {plan.groups.map((group) => {
           const keys = group.items.map((i) => i.key)
@@ -249,13 +307,13 @@ function Review({
           )
         })}
 
-        {record.warnings.length ? (
+        {warnings.length ? (
           <details className="text-[13px] text-muted">
             <summary className="cursor-pointer">
-              {record.warnings.length} {record.warnings.length === 1 ? 'line' : 'lines'} couldn't be read
+              {warnings.length} {warnings.length === 1 ? 'line' : 'lines'} {review.source === 'stellic' ? "weren't imported" : "couldn't be read"}
             </summary>
             <ul className="mt-1 list-disc pl-5">
-              {record.warnings.map((w, i) => (
+              {warnings.map((w, i) => (
                 <li key={i}>{w}</li>
               ))}
             </ul>
@@ -270,8 +328,14 @@ function Review({
         <Button variant="ghost" onClick={onCancel}>
           Cancel
         </Button>
-        <Button variant="primary" onClick={onImport} disabled={total === 0 && !(useProfile && profileText)}>
-          {total ? `Import ${total} ${total === 1 ? 'item' : 'items'}` : 'Update profile'}
+        <Button variant="primary" onClick={onImport} disabled={total === 0 && !creating && !(useProfile && profileText)}>
+          {creating
+            ? total
+              ? `Create plan and import ${total}`
+              : 'Create plan'
+            : total
+              ? `Import ${total} ${total === 1 ? 'item' : 'items'}`
+              : 'Update profile'}
         </Button>
       </div>
     </div>
@@ -304,5 +368,53 @@ function ItemRow({ item, checked, onChange }: { item: ImportItem; checked: boole
         </span>
       </label>
     </li>
+  )
+}
+
+/** The "create a degree plan" choice for a Stellic plan: its name, span and programs, with the semesters on demand. */
+function DraftOption({ draft, on, setOn }: { draft: DegreePlanDraft; on: boolean; setOn(v: boolean): void }) {
+  const withCourses = draft.terms.filter((t) => t.courses.length)
+  const found = draft.programNames.filter((p) => p.found).map((p) => p.name)
+  const missing = draft.programNames.filter((p) => !p.found).map((p) => p.name)
+  const span = withCourses.length ? `${termLabel(withCourses[0].term)} to ${termLabel(withCourses.at(-1)!.term)}` : null
+  return (
+    <div className="rounded-lg border border-line px-3 py-2.5">
+      <label className="flex min-h-10 cursor-pointer items-start gap-3">
+        <input type="checkbox" checked={on} onChange={(e) => setOn(e.target.checked)} className="mt-0.5 size-4 shrink-0 accent-[var(--ink)]" />
+        <span className="min-w-0 text-[14px]">
+          <span className="font-medium text-ink">Create the degree plan “{draft.name}”</span>
+          <span className="block text-ink-2">
+            {draft.courseCount} {draft.courseCount === 1 ? 'course' : 'courses'}
+            {span ? `, ${span}` : ''}
+            {found.length ? `. Programs: ${found.join(', ')}` : ''}.
+          </span>
+          {missing.length ? (
+            <span className="block text-[13px] text-muted">
+              Not found in Courseweave: {missing.join(', ')}. You can pick programs in the plan.
+            </span>
+          ) : null}
+        </span>
+      </label>
+      {withCourses.length ? (
+        <details className="mt-1 pl-7 text-[13px]">
+          <summary className="min-h-8 cursor-pointer py-1 text-ink-2 md:min-h-0">Show semesters</summary>
+          <dl className="mt-1 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
+            {withCourses.map((t) => (
+              <div key={t.term} className="contents">
+                <dt className="text-muted">{termLabel(t.term)}</dt>
+                <dd className="course-code min-w-0 text-ink-2">
+                  {t.courses.map((c, i) => (
+                    <Fragment key={c.courseId}>
+                      {i ? ', ' : ''}
+                      <span className="whitespace-nowrap">{codeOf(c.courseId)}</span>
+                    </Fragment>
+                  ))}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </details>
+      ) : null}
+    </div>
   )
 }
