@@ -352,8 +352,15 @@ describe('runAudit: conditional and manual rules', () => {
   it('checks the degree unit total', () => {
     const v = version(1, group('Major', { kind: 'all' }, [leaf('15122')]), { totalUnits: 30 })
     const r = audit([v], [done('15122'), done('76101', 9), planned('15150')])
-    expect(r.programs[0].totalUnits).toEqual({ have: 21, planned: 12, need: 30 })
+    expect(r.programs[0].totalUnits).toEqual({ have: 21, credit: 0, planned: 12, inProgress: 0, need: 30 })
     expect(r.programs[0].state).toBe('complete-with-plan')
+  })
+
+  it("splits out credit and this semester's units, and leaves excluded courses out of the total", () => {
+    const v = version(1, group('Major', { kind: 'all' }, [leaf('15122')], { exclude: [{ courses: ['98008'] }] }), { totalUnits: 60 })
+    const now: PlannedCourse = { ...planned('15150'), term: 'F26', status: 'in-progress' }
+    const r = audit([v], [done('15122'), credit('21120'), now, planned('21127', 10), planned('98008', 3)])
+    expect(r.programs[0].totalUnits).toEqual({ have: 22, credit: 10, planned: 22, inProgress: 12, need: 60 })
   })
 })
 

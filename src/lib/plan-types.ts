@@ -70,8 +70,12 @@ export interface ProgramAuditResult {
   name: string
   state: RequirementState
   root: RequirementResult
-  /** Overall unit target for the degree, if the program defines one (have/planned as in RequirementResult). */
-  totalUnits?: { have: number; planned: number; need: number }
+  /**
+   * Overall unit target for the degree, if the program defines one (have/planned as in RequirementResult). Only units
+   * the degree counts: courses the program excludes (StuCo, for one) are left out. `credit` is the part of `have`
+   * from AP, IB and transfer credit; `inProgress` is the part of `planned` taken this semester.
+   */
+  totalUnits?: { have: number; credit: number; planned: number; inProgress: number; need: number }
   /** Program and version names, e.g. "BS in Computer Science", "EY2025 Pittsburgh". */
   programName?: string
   versionName?: string

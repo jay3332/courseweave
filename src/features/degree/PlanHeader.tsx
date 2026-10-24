@@ -3,26 +3,17 @@ import { useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router'
 import { Button, Dialog } from '../../components/ui'
 import type { Plan } from '../../lib/plan'
-import type { AuditResult, RequirementResult } from '../../lib/plan-types'
+import type { AuditResult } from '../../lib/plan-types'
 import { termLabel } from '../../lib/requisites'
 import { usePlanList, usePlans } from '../../state/plan'
 import { useTerm } from '../../state/term'
 import { ProgramsField } from './AuditArea'
+import { DegreeProgressBar } from './DegreeProgressBar'
 import { entryYearOf, useStartTermOptions, type PlanDerived } from './hooks'
 import { MenuItem, Popover } from './Popover'
+import { degreeProgress, tallyRequirements } from './progress'
 import { SioImportButton } from '../record/SioImport'
 import { SendToStellicDialog } from '../schedule-tools/SendToStellic'
-
-function countRequirements(r: RequirementResult): { done: number; total: number } {
-  if (!r.children.length) return { done: r.state === 'complete' || r.state === 'complete-with-plan' ? 1 : 0, total: 1 }
-  return r.children.reduce(
-    (acc, c) => {
-      const x = countRequirements(c)
-      return { done: acc.done + x.done, total: acc.total + x.total }
-    },
-    { done: 0, total: 0 },
-  )
-}
 
 export function PlanHeader({ plan, derived, audit }: { plan: Plan; derived: PlanDerived; audit: AuditResult | null }) {
   const term = useTerm()
@@ -48,14 +39,11 @@ export function PlanHeader({ plan, derived, audit }: { plan: Plan; derived: Plan
   }
 
   const program = audit?.programs[0]
-  const requirements = audit?.programs.reduce(
-    (acc, p) => {
-      const x = countRequirements(p.root)
-      return { done: acc.done + x.done, total: acc.total + x.total }
-    },
-    { done: 0, total: 0 },
-  )
+  const requirements = audit?.programs.reduce((acc, p) => tallyRequirements(p.root, acc), { done: 0, inProgress: 0, planned: 0, total: 0 })
   const needUnits = program?.totalUnits?.need
+  const progress = degreeProgress(audit)
+  // Units in the plan the degree leaves out of its total (StuCo and the like).
+  const outside = progress?.basis === 'units' ? derived.totalUnits - (progress.done + progress.inProgress + progress.planned) : 0
 
   return (
     <header className="flex flex-col gap-4">
@@ -149,7 +137,11 @@ export function PlanHeader({ plan, derived, audit }: { plan: Plan; derived: Plan
       <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-4">
         <Stat label="Units planned" value={String(derived.totalUnits)} sub={needUnits ? `of ${needUnits} required` : undefined} />
         <Stat label="Units completed" value={String(derived.completedUnits)} sub="Record and credit" />
-        <Stat label="Requirements" value={requirements ? `${requirements.done}/${requirements.total}` : '—'} sub={requirements ? 'met or planned' : 'Pick a program'} />
+        <Stat
+          label="Requirements"
+          value={requirements ? `${requirements.done + requirements.inProgress + requirements.planned}/${requirements.total}` : '—'}
+          sub={requirements ? 'met or planned' : 'Pick a program'}
+        />
         <Stat
           label="Semesters"
           value={String(derived.columns.length)}
@@ -173,6 +165,7 @@ export function PlanHeader({ plan, derived, audit }: { plan: Plan; derived: Plan
             </label>
           }
         />
+        {progress ? <DegreeProgressBar progress={progress} outside={outside > 0.01 ? outside : 0} /> : null}
       </dl>
 
       <Dialog open={renaming} onClose={() => setRenaming(false)} title="Rename plan">

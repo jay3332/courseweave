@@ -793,7 +793,8 @@ export function runAudit(input: AuditInput, versions: Map<number, ProgramVersion
       const excluded = (i: Inst) => (v.root.exclude ?? []).some((s) => matchesSet(s, i, eq))
       const eligible = insts.filter((i) => !excluded(i))
       const have = sumUnits(eligible, true)
-      totalUnits = { have, planned: sumUnits(eligible, false) - have, need: v.totalUnits }
+      const unitsWith = (status: PlannedCourse['status']) => eligible.reduce((n, i) => n + (i.course.status === status ? i.units : 0), 0)
+      totalUnits = { have, credit: unitsWith('credit'), planned: sumUnits(eligible, false) - have, inProgress: unitsWith('in-progress'), need: v.totalUnits }
       if (state === 'complete' && have + 1e-9 < v.totalUnits) state = have + totalUnits.planned + 1e-9 >= v.totalUnits ? 'complete-with-plan' : 'in-progress'
       else if (state === 'complete-with-plan' && have + totalUnits.planned + 1e-9 < v.totalUnits) state = 'in-progress'
     }
