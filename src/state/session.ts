@@ -4,6 +4,7 @@ import { create } from 'zustand'
 import { deleteAccount, getMe, logout, signInUrl } from '../lib/api'
 import type { Me } from '../lib/api-types'
 import { resetFceCaches } from '../lib/fce'
+import { resetSyllabiCaches } from '../lib/syllabi'
 
 export type SessionStatus = 'loading' | 'signed-in' | 'anonymous' | 'unavailable'
 export type AuthError = 'domain' | 'failed'
@@ -26,8 +27,11 @@ export const useSession = create<SessionState>()((set, get) => {
   const setStatus = (status: SessionStatus, user: Me | null) => {
     const was = get().status
     set({ status, user })
-    // Gated data (FCEs) depends on the session: reload it after signing in or out.
-    if ((was === 'signed-in') !== (status === 'signed-in') && was !== 'loading') resetFceCaches()
+    // Gated data (FCEs, syllabi) depends on the session: reload it after signing in or out.
+    if ((was === 'signed-in') !== (status === 'signed-in') && was !== 'loading') {
+      resetFceCaches()
+      resetSyllabiCaches()
+    }
   }
 
   return {

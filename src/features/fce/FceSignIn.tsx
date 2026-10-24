@@ -2,8 +2,8 @@ import { LockKeyhole, LogIn } from 'lucide-react'
 import { Button } from '../../components/ui'
 import { startSignIn, useSession } from '../../state/session'
 
-/** Shown where FCE data would be when the deployment gates it behind CMU sign-in. */
-export function FceSignIn({ compact = false, className = '' }: { compact?: boolean; className?: string }) {
+/** Shown where FCE data (or other CMU-only data, `subject`) would be when the deployment gates it behind CMU sign-in. */
+export function FceSignIn({ compact = false, className = '', subject = 'course evaluations' }: { compact?: boolean; className?: string; subject?: string }) {
   const status = useSession((s) => s.status)
   // A signed-in user getting 401s means the session lapsed; the session check will catch up.
   const canSignIn = status === 'anonymous' || status === 'signed-in'
@@ -13,8 +13,8 @@ export function FceSignIn({ compact = false, className = '' }: { compact?: boole
       <LockKeyhole aria-hidden className="size-4 shrink-0 text-muted" />
       <p className={`min-w-0 flex-1 text-ink-2 ${compact ? 'text-[12.5px]' : 'text-[13.5px]'}`}>
         {status === 'unavailable'
-          ? 'Course evaluations need CMU sign-in, which isn’t set up on this site yet.'
-          : 'Sign in with your CMU account to see course evaluations.'}
+          ? `${subject[0].toUpperCase()}${subject.slice(1)} need CMU sign-in, which isn’t set up on this site yet.`
+          : `Sign in with your CMU account to see ${subject}.`}
       </p>
       {canSignIn ? (
         <Button size="sm" variant="secondary" onClick={startSignIn}>

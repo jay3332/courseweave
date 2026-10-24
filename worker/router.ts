@@ -1,6 +1,7 @@
-// Request routing. wrangler.jsonc sends /api/*, /auth/* and /data/fce/* here first; everything else is served as static
-// assets (with the SPA fallback) without running the Worker.
+// Request routing. wrangler.jsonc sends /api/*, /auth/*, /data/fce/* and /data/syllabi/* here first; everything else is
+// served as static assets (with the SPA fallback) without running the Worker.
 import { SYNC_MAX_BYTES, type Me, type SyncConflict } from '../src/lib/api-types.ts'
+import { isSyllabusKey, PREVIEWABLE_TYPES, SYLLABUS_CONTENT_TYPES, syllabusType } from '../src/lib/syllabus-files.ts'
 import * as auth from './auth.ts'
 import { d1Store, type Store } from './db.ts'
 import { authConfig, devOrigins, type Env } from './env.ts'
@@ -26,12 +27,13 @@ export async function handle(request: Request, env: Env, deps: Deps = {}): Promi
 
 async function route(request: Request, url: URL, env: Env, deps: Deps): Promise<Response> {
   const path = url.pathname
-  const dynamic = path.startsWith('/auth/') || path.startsWith('/api/') || path.startsWith('/data/fce/')
+  const dynamic = path.startsWith('/auth/') || path.startsWith('/api/') || path.startsWith('/data/fce/') || path.startsWith('/data/syllabi/')
   // Per-IP burst limit on everything that runs Worker logic, before any database read or provider call.
   if (dynamic && !(await allow(env.RL_IP, `ip:${clientIp(request)}`))) return tooMany(60)
   if (path.startsWith('/auth/')) return handleAuth(request, env, deps)
   if (path.startsWith('/api/')) return handleApi(request, env, deps)
-  if (path.startsWith('/data/fce/')) return handleFce(request, env, deps)
+  if (path.startsWith('/data/fce/')) return handlePrivateData(request, env, deps, PRIVATE_DATA.fce)
+  if (path.startsWith('/data/syllabi/')) return handlePrivateData(request, env, deps, PRIVATE_DATA.syllabi)
   if (path.startsWith('/data/')) return handleData(request, env)
   return env.ASSETS.fetch(request)
 }
@@ -86,6 +88,8 @@ async function handleApi(request: Request, env: Env, deps: Deps): Promise<Respon
     if (!(await allow(env.RL_WRITE, `user:${session.user.id}`))) return done(tooMany(60, 'Too many changes at once; syncing will resume shortly.'))
   }
 
+  if (pathname.startsWith('/api/syllabi/')) return done(await serveSyllabus(request, url, env))
+
   if (pathname === '/api/me') {
     if (request.method !== 'GET') return apiError(405, 'bad_request', 'Method not allowed.', { Allow: 'GET' })
     const me: Me = { email: session.user.email, name: session.user.name, picture: session.user.picture }
@@ -135,9 +139,15 @@ async function handleApi(request: Request, env: Env, deps: Deps): Promise<Respon
   return apiError(404, 'not_found', 'No such route.')
 }
 
-/** FCE results are CMU-internal: only signed-in CMU users get them, and never from a shared cache. */
-async function handleFce(request: Request, env: Env, deps: Deps): Promise<Response> {
-  const locked = () => apiError(401, 'auth', 'Sign in with your CMU account to see course evaluations.', { 'Cache-Control': 'private, no-store' })
+/** CMU-internal data files and what to say about them. */
+const PRIVATE_DATA = {
+  fce: { locked: 'Sign in with your CMU account to see course evaluations.', missing: 'Course evaluation data isn’t deployed.' },
+  syllabi: { locked: 'Sign in with your CMU account to see past syllabi.', missing: 'No syllabi for these courses.' },
+}
+
+/** FCE results and the syllabus index are CMU-internal: only signed-in CMU users get them, never from a shared cache. */
+async function handlePrivateData(request: Request, env: Env, deps: Deps, what: { locked: string; missing: string }): Promise<Response> {
+  const locked = () => apiError(401, 'auth', what.locked, { 'Cache-Control': 'private, no-store' })
   if (request.method !== 'GET' && request.method !== 'HEAD') return apiError(405, 'bad_request', 'Method not allowed.', { Allow: 'GET, HEAD' })
   const store = storeFor(env, deps)
   if (!authConfig(env) || !store) return locked()
@@ -155,7 +165,47 @@ async function handleFce(request: Request, env: Env, deps: Deps): Promise<Respon
   if (asset.status === 304) return privately(asset)
   // A missing file comes back as the SPA's index.html; report it as missing instead.
   if (isSpaFallback(asset)) {
-    return withCookies(apiError(404, 'not_found', 'Course evaluation data isn’t deployed.', { 'Cache-Control': 'private, no-store' }), [session.setCookie])
+    return withCookies(apiError(404, 'not_found', what.missing, { 'Cache-Control': 'private, no-store' }), [session.setCookie])
   }
   return privately(asset)
+}
+
+/**
+ * A past syllabus from R2, for a signed-in user (the caller checked). PDFs open in the page unless `?download=1`;
+ * every other type (Word files, HTML someone uploaded) is only ever a download, so nothing from the registry runs on
+ * this site.
+ */
+async function serveSyllabus(request: Request, url: URL, env: Env): Promise<Response> {
+  if (request.method !== 'GET' && request.method !== 'HEAD') return apiError(405, 'bad_request', 'Method not allowed.', { Allow: 'GET, HEAD' })
+  let key: string
+  try {
+    key = decodeURIComponent(url.pathname.slice('/api/syllabi/'.length))
+  } catch {
+    return apiError(400, 'bad_request', 'Bad syllabus address.')
+  }
+  const type = syllabusType(key)
+  if (!type || !isSyllabusKey(key)) return apiError(404, 'not_found', 'No such syllabus.')
+  if (!env.SYLLABI) return apiError(503, 'unavailable', 'Syllabus files aren’t set up on this deployment.')
+  const object = await env.SYLLABI.get(key)
+  if (!object) return apiError(404, 'not_found', 'No such syllabus.')
+
+  const inline = PREVIEWABLE_TYPES.has(type) && url.searchParams.get('download') !== '1'
+  const name = key.slice(key.lastIndexOf('/') + 1)
+  // The registry's term goes in the saved name, so downloads from different semesters don't collide.
+  const saveAs = `${key.slice(0, key.indexOf('/'))}-${name}`.replace(/["\\\r\n]/g, '_')
+  const headers = new Headers({
+    'Content-Type': SYLLABUS_CONTENT_TYPES[type],
+    'Content-Length': String(object.size),
+    'Content-Disposition': `${inline ? 'inline' : 'attachment'}; filename="${saveAs}"`,
+    'Cache-Control': 'private, max-age=3600',
+    Vary: 'Cookie',
+    ETag: object.httpEtag,
+  })
+  if (inline) {
+    // Previewed in a frame on this site only. (No CSP sandbox: some browsers' PDF viewers won't render under it, and a
+    // PDF viewer runs the document's scripts, if any, in its own sandbox anyway.)
+    headers.set('X-Frame-Options', 'SAMEORIGIN')
+    headers.set('Content-Security-Policy', "default-src 'none'; frame-ancestors 'self'")
+  }
+  return new Response(request.method === 'HEAD' ? null : object.body, { headers })
 }

@@ -17,10 +17,17 @@ export interface Env {
   ALLOWED_EMAIL_DOMAINS?: string
   /** Extra origins allowed to send JSON writes (the Vite dev server in front of wrangler dev). Local http only. */
   DEV_ORIGINS?: string
+  /** R2 bucket of past syllabi (scripts/upload-syllabi.ts). Missing means syllabus files aren't available. */
+  SYLLABI?: R2BucketLike
   /** Workers Rate Limiting bindings (wrangler.jsonc "ratelimits"). Missing bindings mean no limit. */
   RL_IP?: RateLimiter
   RL_AUTH?: RateLimiter
   RL_WRITE?: RateLimiter
+}
+
+/** The part of R2's bucket API the Worker uses. */
+export interface R2BucketLike {
+  get(key: string): Promise<{ body: ReadableStream; size: number; httpEtag: string } | null>
 }
 
 export const DEFAULT_ISSUER = 'https://accounts.google.com'

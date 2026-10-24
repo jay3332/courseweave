@@ -21,9 +21,12 @@
     // missing file, so public /data files stay free, uncounted static asset requests.
     "not_found_handling": "single-page-application",
     // These always go through the Worker (each counts as an invocation), even when a matching file exists:
-    // FCE files are only served to signed-in CMU users.
-    "run_worker_first": ["/api/*", "/auth/*", "/data/fce/*"],
+    // FCE files and the syllabus index are only served to signed-in CMU users.
+    "run_worker_first": ["/api/*", "/auth/*", "/data/fce/*", "/data/syllabi/*"],
   },
+  // Past syllabi (CMU-internal; the Worker serves them to signed-in CMU users at /api/syllabi/<key>). Created with
+  // `npx wrangler r2 bucket create courseweave-syllabi`; filled with `node scripts/upload-syllabi.ts --remote`.
+  "r2_buckets": [{ "binding": "SYLLABI", "bucket_name": "courseweave-syllabi" }],
   "d1_databases": [
     {
       "binding": "DB",

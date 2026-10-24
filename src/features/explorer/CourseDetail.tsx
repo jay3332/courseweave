@@ -21,6 +21,7 @@ import { childForSection, initialChoice, joinList, PASS_FAIL_ONLY_HELP, partBloc
 import { CountsToward } from './CountsToward'
 import { courseMini, miniName, unitsText } from './summary'
 import { CourseAbout } from '../catalog/CourseAbout'
+import { CourseSyllabi } from '../catalog/CourseSyllabi'
 import { CourseFcePanel } from '../fce/CourseFcePanel'
 import { InstructorFceBadge } from '../fce/InstructorFceBadge'
 import { statusFnFor } from '../record/check-summary'
@@ -172,6 +173,8 @@ export function CourseDetail({ course, closeHref, search }: { course: Course; cl
         <CourseSections course={course} sched={sched} />
 
         <CourseFcePanel courseId={course.id} units={course.units} currentInstructors={course.instructors} />
+
+        <CourseSyllabi courseId={course.id} code={course.code} />
       </div>
     </article>
   )

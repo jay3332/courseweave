@@ -6,7 +6,7 @@
   "scripts": {
     "predev": "npm run data",
     "dev": "vite",
-    "data": "node scripts/build-catalog.ts && node scripts/build-fce.ts && node scripts/build-programs.ts && node scripts/build-data.ts",
+    "data": "node scripts/build-catalog.ts && node scripts/build-fce.ts && node scripts/build-programs.ts && node scripts/build-data.ts && node scripts/build-syllabi.ts",
     "build": "npm run data && tsc -b && vite build",
     "typecheck": "tsc -b",
     "test": "vitest run",
@@ -17,6 +17,7 @@
     "deploy": "npm run build && node scripts/prune-dist.ts --deploy && wrangler deploy",
     "deploy:dry-run": "npm run build && node scripts/prune-dist.ts && wrangler deploy --dry-run",
     "preview:worker": "npm run build && node scripts/prune-dist.ts && npm run db:migrate:local && wrangler dev",
+    "syllabi:upload": "node scripts/upload-syllabi.ts",
     "dev:worker": "npm run db:migrate:local && wrangler dev --port 8787",
     "db:migrate:local": "wrangler d1 migrations apply courseweave --local",
     "db:migrate:remote": "wrangler d1 migrations apply courseweave --remote"

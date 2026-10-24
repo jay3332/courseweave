@@ -18,10 +18,20 @@ const assets = (files: Record<string, string>) => ({
   },
 })
 
+/** R2 stub holding a few syllabi. */
+const bucket = (files: Record<string, string>) => ({
+  async get(key: string) {
+    if (!(key in files)) return null
+    const bytes = new TextEncoder().encode(files[key])
+    return { body: new Response(bytes).body!, size: bytes.length, httpEtag: `"${key.length}"` }
+  },
+})
+
 function setup(configured = true) {
   const store = memoryStore()
   const env: Env = {
-    ASSETS: assets({ '/data/fce/summary.json': '{"ok":true}', '/data/S27.json': '{}' }),
+    ASSETS: assets({ '/data/fce/summary.json': '{"ok":true}', '/data/syllabi/21.json': '{"21241":[]}', '/data/S27.json': '{}' }),
+    SYLLABI: bucket({ 'F25/MSC/21241-1.pdf': '%PDF-1.4 syllabus', 'F25/MSC/21241-2.docx': 'docx bytes', 'F25/HCI/05391-A.html': '<script>alert(1)</script>' }),
     DB: configured ? ({} as Env['DB']) : undefined,
     ...(configured ? { OIDC_CLIENT_ID: 'client', OIDC_CLIENT_SECRET: 'secret', SESSION_SECRET: 'session-secret' } : {}),
   }
@@ -185,5 +195,64 @@ describe('putDoc', () => {
   it('reports a missing doc as rev 0 when the client expected one', async () => {
     const store = memoryStore()
     expect(await putDoc(store, 'u', 'plan', { data: 1, baseRev: 3 }, 5)).toEqual({ status: 409, current: { data: null, rev: 0, updatedAt: 0 } })
+  })
+})
+
+describe('syllabi', () => {
+  it('gates the index like FCEs', async () => {
+    const { call, signIn } = setup()
+    expect((await call('/data/syllabi/21.json')).status).toBe(401)
+    const { cookie } = await signIn()
+    const ok = await call('/data/syllabi/21.json', { cookie })
+    expect(ok.status).toBe(200)
+    expect(ok.headers.get('Cache-Control')).toBe('private, max-age=300')
+    expect((await call('/data/syllabi/15.json', { cookie })).status).toBe(404)
+  })
+
+  it('serves files only to signed-in users', async () => {
+    const { call } = setup()
+    expect((await call('/api/syllabi/F25/MSC/21241-1.pdf')).status).toBe(401)
+  })
+
+  it('shows PDFs in the page, framed only by this site, and downloads them on request', async () => {
+    const { call, signIn } = setup()
+    const { cookie } = await signIn()
+    const res = await call('/api/syllabi/F25/MSC/21241-1.pdf', { cookie })
+    expect(res.status).toBe(200)
+    expect(await res.text()).toBe('%PDF-1.4 syllabus')
+    expect(res.headers.get('Content-Type')).toBe('application/pdf')
+    expect(res.headers.get('Content-Disposition')).toBe('inline; filename="F25-21241-1.pdf"')
+    expect(res.headers.get('X-Frame-Options')).toBe('SAMEORIGIN')
+    expect(res.headers.get('Content-Security-Policy')).toContain("frame-ancestors 'self'")
+    expect(res.headers.get('Cache-Control')).toBe('private, max-age=3600')
+    const download = await call('/api/syllabi/F25/MSC/21241-1.pdf?download=1', { cookie })
+    expect(download.headers.get('Content-Disposition')).toBe('attachment; filename="F25-21241-1.pdf"')
+    expect(download.headers.get('X-Frame-Options')).toBe('DENY')
+  })
+
+  it('only ever downloads other types, and never runs uploaded HTML here', async () => {
+    const { call, signIn } = setup()
+    const { cookie } = await signIn()
+    const docx = await call('/api/syllabi/F25/MSC/21241-2.docx', { cookie })
+    expect(docx.headers.get('Content-Disposition')).toBe('attachment; filename="F25-21241-2.docx"')
+    const html = await call('/api/syllabi/F25/HCI/05391-A.html', { cookie })
+    expect(html.headers.get('Content-Disposition')).toMatch(/^attachment;/)
+    expect(html.headers.get('X-Frame-Options')).toBe('DENY')
+  })
+
+  it('refuses keys outside the registry layout and missing files', async () => {
+    const { call, signIn } = setup()
+    const { cookie } = await signIn()
+    expect((await call('/api/syllabi/F25/MSC/21241-9.pdf', { cookie })).status).toBe(404)
+    expect((await call('/api/syllabi/..%2F..%2Fsecret.pdf', { cookie })).status).toBe(404)
+    expect((await call('/api/syllabi/F25/MSC/notes.exe', { cookie })).status).toBe(404)
+    expect((await call('/api/syllabi/F25/MSC/21241-1.pdf', { cookie, method: 'POST', headers: { 'Content-Type': 'application/json', Origin: ORIGIN } })).status).toBe(405)
+  })
+
+  it('says when the bucket isn’t bound', async () => {
+    const { call, signIn, env } = setup()
+    const { cookie } = await signIn()
+    delete env.SYLLABI
+    expect((await call('/api/syllabi/F25/MSC/21241-1.pdf', { cookie })).status).toBe(503)
   })
 })

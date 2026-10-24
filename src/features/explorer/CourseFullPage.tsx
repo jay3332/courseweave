@@ -11,6 +11,7 @@ import type { Course } from '../../lib/types'
 import { useBookmarks, useStore } from '../../state/store'
 import { useTerm } from '../../state/term'
 import { CourseAbout } from '../catalog/CourseAbout'
+import { CourseSyllabi } from '../catalog/CourseSyllabi'
 import { useChipContext } from '../catalog/chip-context'
 import { RequiresAndUnlocks } from '../catalog/RequiresAndUnlocks'
 import { CourseFcePanel } from '../fce/CourseFcePanel'
@@ -126,6 +127,10 @@ function CourseFull({ course, search }: { course: Course; search: string }) {
 
       <div className="border-t border-line pt-8">
         <CourseFcePanel courseId={course.id} units={course.units} currentInstructors={course.instructors} wide />
+      </div>
+
+      <div className="max-w-3xl border-t border-line pt-8">
+        <CourseSyllabi courseId={course.id} code={course.code} />
       </div>
 
       <section ref={treeRef} aria-labelledby="full-requisites" className="scroll-mt-6 border-t border-line pt-8">

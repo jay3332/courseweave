@@ -1,7 +1,8 @@
 // Runs before `wrangler deploy` / `wrangler dev`: decides what data ships in dist/ and checks Cloudflare's limits.
 //
-// FCE results are CMU-internal. The Worker only serves them to signed-in CMU users, so they're kept when sign-in is
-// configured (OIDC_CLIENT_ID set in wrangler.jsonc) and removed otherwise. INCLUDE_FCE=1 / INCLUDE_FCE=0 overrides.
+// FCE results and the syllabus index are CMU-internal. The Worker only serves them to signed-in CMU users, so they're
+// kept when sign-in is configured (OIDC_CLIENT_ID set in wrangler.jsonc) and removed otherwise. INCLUDE_FCE=1/0 and
+// INCLUDE_SYLLABI=1/0 override.
 //
 // Usage: node scripts/prune-dist.ts [--deploy]   (--deploy also refuses the placeholder D1 database id)
 
@@ -62,20 +63,25 @@ if (!existsSync(dist)) {
   process.exit(1)
 }
 
-const override = process.env.INCLUDE_FCE
-const keepFce = override === '1' ? true : override === '0' ? false : signInConfigured
-const fce = join(dist, 'data', 'fce')
-if (keepFce) {
-  if (existsSync(fce)) {
+// CMU-internal data: kept only when the Worker can gate it behind sign-in. INCLUDE_FCE / INCLUDE_SYLLABI override.
+for (const { dir, label, env } of [
+  { dir: 'fce', label: 'FCE data', env: 'INCLUDE_FCE' },
+  { dir: 'syllabi', label: 'the syllabus index', env: 'INCLUDE_SYLLABI' },
+]) {
+  const override = process.env[env]
+  const keep = override === '1' ? true : override === '0' ? false : signInConfigured
+  const path = join(dist, 'data', dir)
+  if (!existsSync(path)) continue
+  if (keep) {
     console.log(
       signInConfigured
-        ? 'prune-dist: keeping FCE data; the Worker serves it only to signed-in CMU users.'
-        : 'prune-dist: keeping FCE data (INCLUDE_FCE=1) without sign-in configured; the Worker will refuse to serve it until sign-in is set up.',
+        ? `prune-dist: keeping ${label}; the Worker serves it only to signed-in CMU users.`
+        : `prune-dist: keeping ${label} (${env}=1) without sign-in configured; the Worker will refuse to serve it until sign-in is set up.`,
     )
+  } else {
+    rmSync(path, { recursive: true })
+    console.log(`prune-dist: removed dist/data/${dir} (${override === '0' ? `${env}=0` : 'sign-in isn’t configured: set OIDC_CLIENT_ID in wrangler.jsonc'}).`)
   }
-} else if (existsSync(fce)) {
-  rmSync(fce, { recursive: true })
-  console.log(`prune-dist: removed dist/data/fce (${override === '0' ? 'INCLUDE_FCE=0' : 'sign-in isn’t configured: set OIDC_CLIENT_ID in wrangler.jsonc'}).`)
 }
 
 // Cloudflare's per-file limit for static assets is 25 MiB; fail early rather than mid-upload.

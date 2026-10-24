@@ -32,7 +32,8 @@ export function withSecurityHeaders(response: Response, url: URL): Response {
   const out = new Response(response.body, response)
   const h = out.headers
   h.set('X-Content-Type-Options', 'nosniff')
-  h.set('X-Frame-Options', 'DENY')
+  // A response may allow its own site to frame it (a syllabus PDF previewed in the page); nothing else may.
+  if (h.get('X-Frame-Options') !== 'SAMEORIGIN') h.set('X-Frame-Options', 'DENY')
   h.set('Referrer-Policy', 'strict-origin-when-cross-origin')
   if (url.protocol === 'https:') h.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
   const type = h.get('Content-Type') ?? ''

@@ -8,6 +8,7 @@ import { formatUnits } from '../../lib/time'
 import type { Course } from '../../lib/types'
 import { useTerm, useTerms } from '../../state/term'
 import { CourseAbout } from '../catalog/CourseAbout'
+import { CourseSyllabi } from '../catalog/CourseSyllabi'
 import { CourseFcePanel } from '../fce/CourseFcePanel'
 import { statusFnFor } from '../record/check-summary'
 import { useRequisiteContext } from '../record/context'
@@ -95,6 +96,8 @@ export function AllSemestersDetail({ course, terms, closeHref, search }: { cours
         <CountsToward courseId={course.id} termId={termId} />
 
         <CourseFcePanel courseId={course.id} units={course.units} currentInstructors={[]} />
+
+        <CourseSyllabi courseId={course.id} code={course.code} />
       </div>
     </article>
   )
