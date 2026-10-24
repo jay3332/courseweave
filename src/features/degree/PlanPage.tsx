@@ -104,6 +104,12 @@ function PlanView({ plan }: { plan: Plan }) {
   )
   const auditPanel = <AuditColumn input={derived.auditInput} onAddCourse={addFromAudit} termLabel={termLabel} />
   const dragFromAudit = finePointer && !isPhone
+  const note = (
+    <p className="text-[12.5px] text-muted">
+      Courses from your <Link to={`/${term.meta.id}/record`} className="underline decoration-line-strong underline-offset-2 hover:text-ink">academic record</Link> appear in
+      their semesters automatically. Unit limits and FCE comparisons are guidance; your college's rules and your advisor have the final say.
+    </p>
+  )
 
   return (
     <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-5 px-4 py-5 md:px-6 md:py-6">
@@ -114,9 +120,18 @@ function PlanView({ plan }: { plan: Plan }) {
       <RequisiteProblems derived={derived} onJump={jumpTo} />
 
       {isWide ? (
-        <div className={`grid items-start gap-6 ${detailed ? 'grid-cols-[minmax(0,1fr)_340px]' : 'grid-cols-[minmax(0,1fr)_400px]'}`}>
-          {grid}
-          <aside aria-label="Requirements" className="sticky top-4 flex max-h-[calc(100dvh-10rem)] flex-col gap-3 overflow-y-auto">
+        <div
+          className={`grid items-start gap-6 ${detailed ? 'grid-cols-[minmax(0,1fr)_clamp(340px,26vw,420px)]' : 'grid-cols-[minmax(0,1fr)_clamp(400px,31vw,500px)]'}`}
+        >
+          {/* The note sits under the semesters so the grid runs to the page's bottom padding, and the sticky column can
+              stay put all the way down. */}
+          <div className="flex min-w-0 flex-col gap-5">
+            {grid}
+            {note}
+          </div>
+          {/* Fills the scroll area below the app header (66px at this width): 1rem above, and the page's 1.5rem bottom
+              padding below. */}
+          <aside aria-label="Requirements" className="sticky top-4 flex max-h-[calc(100dvh-66px-2.5rem)] flex-col gap-3 overflow-y-auto">
             <div className="flex items-center gap-2">
               <h2 className="display text-[22px] text-ink">Requirements</h2>
               <Button size="sm" variant="ghost" className="ml-auto" onClick={() => setRequirementsOpen(true)} title="Open the requirements in a larger view">
@@ -153,10 +168,7 @@ function PlanView({ plan }: { plan: Plan }) {
       <Dialog open={requirementsOpen} onClose={() => setRequirementsOpen(false)} title="Requirements" className={`w-[min(96vw,1040px)] ${PHONE_FULLSCREEN}`}>
         <div className="p-5">{auditPanel}</div>
       </Dialog>
-      <p className="text-[12.5px] text-muted">
-        Courses from your <Link to={`/${term.meta.id}/record`} className="underline decoration-line-strong underline-offset-2 hover:text-ink">academic record</Link> appear
-        in their semesters automatically. Unit limits and FCE comparisons are guidance; your college's rules and your advisor have the final say.
-      </p>
+      {isWide ? null : note}
     </div>
   )
 }
