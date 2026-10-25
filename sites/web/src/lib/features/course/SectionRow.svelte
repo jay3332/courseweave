@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ArrowLeftRight, Check, Plus, TriangleAlert } from "@lucide/svelte";
+  import { ArrowLeftRight, Check, Plus, TriangleAlert, X } from "@lucide/svelte";
   import type { Attachment } from "svelte/attachments";
   import InstructorFceBadge from "$lib/components/course/InstructorFceBadge.svelte";
   import Button from "$lib/components/ui/Button.svelte";
@@ -92,6 +92,27 @@
       stop();
     };
   };
+
+  // The chosen section's "Added" turns into Remove under a mouse or keyboard focus. A touch has no hover, so its
+  // first tap shows Remove and a second one removes.
+  let armed = $state(false);
+  let touched = false;
+  let disarm: ReturnType<typeof setTimeout> | undefined;
+  function removeChosen(event: MouseEvent): void {
+    if (touched && event.detail > 0 && !armed) {
+      armed = true;
+      clearTimeout(disarm);
+      disarm = setTimeout(() => (armed = false), 4000);
+      return;
+    }
+    clearTimeout(disarm);
+    armed = false;
+    sched.remove();
+  }
+  $effect(() => () => clearTimeout(disarm));
+
+  /** Every state of the action column shares one pill size, so their labels line up row to row. */
+  const PILL = "h-8 min-w-24 rounded-full border px-3 text-label-md max-sm:h-10 [&_svg]:size-4";
 </script>
 
 <div
@@ -160,20 +181,37 @@
     <SectionSeats {section} />
   </div>
 
-  <div class="flex flex-col items-end gap-0.5">
-    {#if isChosen}
-      <span class="inline-flex h-8 items-center gap-1 text-label-md text-ok">
-        <Check aria-hidden="true" class="size-4" /> Added
+  <div class="flex flex-col items-end">
+    {#if isChosen && isChild}
+      <span class="inline-flex items-center justify-center gap-1.5 border-transparent text-ok {PILL}">
+        <Check aria-hidden="true" /> Added
       </span>
-      {#if !isChild}
-        <button
-          type="button"
-          onclick={() => sched.remove()}
-          class="min-h-8 rounded-tag px-1 text-label-md text-muted underline-offset-2 hover:text-danger hover:underline"
+    {:else if isChosen}
+      <button
+        type="button"
+        aria-label="Added. Remove {course.code}"
+        onpointerdown={(event) => (touched = event.pointerType !== "mouse")}
+        onblur={() => (armed = false)}
+        onclick={removeChosen}
+        class="group/added grid place-items-center border-transparent transition-colors duration-150 select-none pointer-fine:hover:border-danger/35 pointer-fine:hover:bg-danger-bg focus-visible:border-danger/35 focus-visible:bg-danger-bg {armed
+          ? 'border-danger/35 bg-danger-bg'
+          : ''} {PILL}"
+      >
+        <span
+          class="col-start-1 row-start-1 inline-flex items-center gap-1.5 text-ok group-focus-visible/added:invisible pointer-fine:group-hover/added:invisible {armed
+            ? 'invisible'
+            : ''}"
         >
-          Remove
-        </button>
-      {/if}
+          <Check aria-hidden="true" /> Added
+        </span>
+        <span
+          class="col-start-1 row-start-1 inline-flex items-center gap-1.5 text-danger group-focus-visible/added:visible pointer-fine:group-hover/added:visible {armed
+            ? ''
+            : 'invisible'}"
+        >
+          <X aria-hidden="true" /> Remove
+        </span>
+      </button>
     {:else}
       <Button
         size="sm"
@@ -181,7 +219,7 @@
         icon={entry ? ArrowLeftRight : Plus}
         aria-label={actionLabel}
         title={actionLabel}
-        class="max-sm:h-10"
+        class="min-w-24 max-sm:h-10"
         onclick={() => sched.choose(section)}
       >
         {entry ? "Switch" : "Add"}

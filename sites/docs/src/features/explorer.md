@@ -100,6 +100,8 @@ dialog, downloads), and the prerequisite tree beside what it unlocks. Beside the
 narrower screens) the semester's active schedule shows as a week calendar (`ScheduleCalendar.svelte`, on the shared
 `WeekGrid`): the course placed, or previewed hatched while the student points at, focuses or (on a touch screen) taps a
 section row, else the section it would be added with; a line under it says what it shows and names conflicts.
+Each section row ends in one pill-sized action: Add, Switch, or the chosen section's "Added", which turns into Remove
+under the pointer or keyboard focus (on a touch screen, the first tap shows Remove and a second removes).
 
 Signed out, public term documents have no instructors or rooms, so the sections say "Sign in to see instructors and
 rooms" once; FCEs, syllabi and requirement matches show a sign-in prompt (`MemberSignIn`) in place of the data.
