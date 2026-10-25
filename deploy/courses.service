@@ -1,0 +1,15 @@
+[Unit]
+Description=CMU Courses (personal instance at courses.jay3332.tech)
+After=network-online.target
+
+[Service]
+WorkingDirectory=%h/courses
+EnvironmentFile=%h/courses/courses.env
+EnvironmentFile=%h/courses/secrets.env
+ExecStart=%h/courses/bin/courses-web-api
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+
+[Install]
+WantedBy=default.target

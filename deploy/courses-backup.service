@@ -1,0 +1,7 @@
+[Unit]
+Description=Back up the CMU Courses user database
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/courses
+ExecStart=/usr/bin/python3 %h/courses/backup.py

@@ -1,0 +1,9 @@
+[Unit]
+Description=Back up the CMU Courses user database nightly
+
+[Timer]
+OnCalendar=*-*-* 04:30
+Persistent=true
+
+[Install]
+WantedBy=timers.target
