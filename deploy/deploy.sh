@@ -3,6 +3,8 @@
 #   CATALOG=path/to/catalog.sqlite deploy/deploy.sh
 # The server needs nothing installed beyond systemd; secrets live only there, in ~/courses/secrets.env.
 set -eu
+# macOS tar would otherwise send its extended attributes, which the server's tar warns about.
+export COPYFILE_DISABLE=1
 root=$(cd "$(dirname "$0")/.." && pwd)
 host=${DEPLOY_HOST:-adapt}
 catalog=${CATALOG:-$root/data/catalog/catalog.sqlite}
@@ -12,11 +14,11 @@ catalog=${CATALOG:-$root/data/catalog/catalog.sqlite}
 ssh "$host" 'mkdir -p ~/courses/bin ~/courses/catalog ~/courses/data ~/courses/backups ~/.config/systemd/user'
 
 # The site replaces the old one whole; the binary and the catalog land beside the running ones, then swap in.
-tar -C "$root/deploy/out" -czf - site | ssh "$host" 'rm -rf ~/courses/site.new && mkdir ~/courses/site.new && tar -C ~/courses/site.new --strip-components=1 -xzf -'
+tar --no-xattrs -C "$root/deploy/out" -czf - site | ssh "$host" 'rm -rf ~/courses/site.new && mkdir ~/courses/site.new && tar -C ~/courses/site.new --strip-components=1 -xzf -'
 ssh "$host" 'cat > ~/courses/bin/courses-web-api.new && chmod +x ~/courses/bin/courses-web-api.new' < "$root/deploy/out/courses-web-api"
 ssh "$host" 'cat > ~/courses/catalog/catalog.sqlite.new' < "$catalog"
-tar -C "$root/deploy" -czf - courses.env secrets.env.example backup.py | ssh "$host" 'tar -C ~/courses -xzf -'
-tar -C "$root/deploy" -czf - courses.service courses-backup.service courses-backup.timer \
+tar --no-xattrs -C "$root/deploy" -czf - courses.env secrets.env.example backup.py | ssh "$host" 'tar -C ~/courses -xzf -'
+tar --no-xattrs -C "$root/deploy" -czf - courses.service courses-backup.service courses-backup.timer \
   | ssh "$host" 'tar -C ~/.config/systemd/user -xzf -'
 
 ssh "$host" 'set -e
