@@ -10,6 +10,7 @@ mod db;
 mod error;
 mod finals;
 mod friends;
+mod imports;
 mod ratelimit;
 mod records;
 mod seo;
@@ -120,7 +121,10 @@ async fn sign_in(app_url: &str) -> Result<(AuthMode, SignIn)> {
         warn!("DEV_USER is set but this build lacks the dev-auth feature; using Keycloak");
     }
     // OIDC_ISSUER names any provider (Google for a personal instance); otherwise Keycloak's realm.
-    let issuer = match std::env::var("OIDC_ISSUER").ok().filter(|v| !v.trim().is_empty()) {
+    let issuer = match std::env::var("OIDC_ISSUER")
+        .ok()
+        .filter(|v| !v.trim().is_empty())
+    {
         Some(issuer) => issuer.trim().trim_end_matches('/').to_owned(),
         None => format!("{}/realms/{}", env("KEYCLOAK_URL")?, env("KEYCLOAK_REALM")?),
     };

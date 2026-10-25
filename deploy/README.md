@@ -12,6 +12,7 @@ with `git fetch scottylabs && git merge scottylabs/courseweave`.
 - Syllabi come from Courseweave's R2 bucket through R2's S3 API, at the bucket's root (`SYLLABI_PREFIX=`).
 - The server listens on `127.0.0.1` (`HOST`), reached only through the Cloudflare Tunnel.
 - The footer says it's an unofficial instance and links this repository.
+- Accounts carried over from Courseweave wait under their email until that member first signs in (below).
 
 ## How it runs
 
@@ -47,3 +48,22 @@ Logs: `ssh adapt journalctl --user -u courses -f`.
 4. In Cloudflare R2, create an API token with read access to `courseweave-syllabi`.
 5. On the server, fill in `~/courses/secrets.env` (the OAuth client secret and the R2 token's key ID and secret), then
    `systemctl --user restart courses`.
+
+## Accounts from Courseweave
+
+Courseweave knew accounts by email and never kept Google's subject, the owner key here. So its accounts are staged
+under their email in `account_imports`, already in this app's record formats, and each moves to its owner the first
+time they sign in (`src/imports.rs`). Members who already used this instance were skipped, and anyone who has records
+here by the time they sign in keeps them; their staged copy is left alone.
+
+```sh
+npx wrangler d1 execute courseweave --remote --json \
+  --command "SELECT u.email AS email, d.key AS key, d.data AS data FROM docs d JOIN users u ON u.id = d.user_id" > export.json
+python3 deploy/import-courseweave.py convert export.json path/to/catalog.sqlite staged.json
+scp staged.json adapt:courses/staged.json
+ssh adapt 'cd ~/courses && systemctl --user start courses-backup && python3 - stage staged.json data/users.sqlite; rm staged.json' \
+  < deploy/import-courseweave.py
+```
+
+Both files hold personal data: keep them private (`umask 077`) and delete them afterwards. Schedules keep only courses
+the catalog offers in their semester, and sections it lists; the rest is left out and counted.

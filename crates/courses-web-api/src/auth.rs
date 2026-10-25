@@ -146,10 +146,20 @@ async fn identify<S: Send + Sync>(
                 claims.additional_claims().groups.clone(),
             )?;
             if let Some(session) = session
-                && session.get::<CurrentUser>(SESSION_MEMBER).await.ok().flatten().as_ref() != Some(&user)
-                && let Err(e) = session.insert(SESSION_MEMBER, &user).await
+                && session
+                    .get::<CurrentUser>(SESSION_MEMBER)
+                    .await
+                    .ok()
+                    .flatten()
+                    .as_ref()
+                    != Some(&user)
             {
-                tracing::warn!(error = %e, "keeping the member in the session failed");
+                // Signing in: first, a Courseweave account staged for this email moves over. The session learns the
+                // member only after, so no request sees them before their records are in place.
+                crate::imports::claim_at_sign_in(&app.db, &user).await;
+                if let Err(e) = session.insert(SESSION_MEMBER, &user).await {
+                    tracing::warn!(error = %e, "keeping the member in the session failed");
+                }
             }
             Ok(user)
         }
