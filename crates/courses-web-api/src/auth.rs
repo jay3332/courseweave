@@ -1,4 +1,4 @@
-//! Who is calling. Keycloak OIDC establishes identity, and only a verified CMU email makes a member. `CurrentUser`
+//! Who is calling. OIDC (Keycloak, or Google for a personal instance) establishes identity, and only a verified CMU email makes a member. `CurrentUser`
 //! requires a member (401 or 403 otherwise), `Viewer` reports what kind of caller this is, and `Writer` is a member
 //! within the per-user write limit.
 
@@ -22,8 +22,8 @@ use crate::{
 };
 
 pub struct OidcConfig {
-    pub keycloak_url: String,
-    pub keycloak_realm: String,
+    /// The provider's issuer: `OIDC_ISSUER` (such as `https://accounts.google.com`), or Keycloak's realm URL.
+    pub issuer: String,
     pub client_id: String,
     pub client_secret: String,
     pub oauth_relay_url: String,
@@ -54,8 +54,12 @@ pub enum AuthMode {
 /// The session key holding the signed-in subject, so the session store can find a user's sessions.
 pub const SESSION_SUBJECT: &str = "subject";
 
+/// The session key holding the member verified at sign-in. Google's ID tokens last an hour and come without a refresh
+/// token, so after one expires the session vouches for the member it verified, for as long as the session lasts.
+const SESSION_MEMBER: &str = "member";
+
 /// A signed-in CMU member.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct CurrentUser {
     /// The OIDC subject: the owner key of every personal record.
     pub subject: String,
@@ -117,21 +121,37 @@ async fn identify<S: Send + Sync>(
 ) -> ApiResult<CurrentUser> {
     match &app.auth {
         AuthMode::Oidc => {
-            let claims = axum_oidc::OidcClaims::<GroupClaims>::from_request_parts(parts, state)
-                .await
-                .map_err(|_| ApiError::auth())?;
+            let session = parts.extensions.get::<Session>().cloned();
+            let Ok(claims) =
+                axum_oidc::OidcClaims::<GroupClaims>::from_request_parts(parts, state).await
+            else {
+                // The ID token expired: the member this session verified, if any.
+                if let Some(session) = session
+                    && let Ok(Some(user)) = session.get::<CurrentUser>(SESSION_MEMBER).await
+                {
+                    return Ok(user);
+                }
+                return Err(ApiError::auth());
+            };
             let name = claims
                 .name()
                 .and_then(|n| n.get(None))
                 .map(|n| n.as_str().to_owned())
                 .or_else(|| claims.preferred_username().map(|u| u.as_str().to_owned()));
-            member(
+            let user = member(
                 claims.subject().to_string(),
                 claims.email().map(|e| e.as_str()),
                 claims.email_verified() == Some(true),
                 name,
                 claims.additional_claims().groups.clone(),
-            )
+            )?;
+            if let Some(session) = session
+                && session.get::<CurrentUser>(SESSION_MEMBER).await.ok().flatten().as_ref() != Some(&user)
+                && let Err(e) = session.insert(SESSION_MEMBER, &user).await
+            {
+                tracing::warn!(error = %e, "keeping the member in the session failed");
+            }
+            Ok(user)
         }
         #[cfg(feature = "dev-auth")]
         AuthMode::Dev(dev) => dev.user(parts),

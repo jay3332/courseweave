@@ -82,11 +82,7 @@ async fn oidc_client(
     config: OidcConfig,
     app_url: &str,
 ) -> Result<axum_oidc::OidcClient<GroupClaims>> {
-    let issuer = IssuerUrl::new(format!(
-        "{}/realms/{}",
-        config.keycloak_url, config.keycloak_realm
-    ))
-    .context("KEYCLOAK_URL and KEYCLOAK_REALM must form a URL")?;
+    let issuer = IssuerUrl::new(config.issuer).context("the OIDC issuer must be a URL")?;
     let callback = format!("{app_url}/auth/callback");
     let client = axum_oidc::OidcClient::<GroupClaims>::builder()
         .with_default_http_client()
@@ -123,9 +119,13 @@ async fn sign_in(app_url: &str) -> Result<(AuthMode, SignIn)> {
     if std::env::var_os("DEV_USER").is_some() && !cfg!(feature = "dev-auth") {
         warn!("DEV_USER is set but this build lacks the dev-auth feature; using Keycloak");
     }
+    // OIDC_ISSUER names any provider (Google for a personal instance); otherwise Keycloak's realm.
+    let issuer = match std::env::var("OIDC_ISSUER").ok().filter(|v| !v.trim().is_empty()) {
+        Some(issuer) => issuer.trim().trim_end_matches('/').to_owned(),
+        None => format!("{}/realms/{}", env("KEYCLOAK_URL")?, env("KEYCLOAK_REALM")?),
+    };
     let config = OidcConfig {
-        keycloak_url: env("KEYCLOAK_URL")?,
-        keycloak_realm: env("KEYCLOAK_REALM")?,
+        issuer,
         client_id: env("OIDC_CLIENT_ID")?,
         client_secret: env("OIDC_CLIENT_SECRET")?,
         oauth_relay_url: env("OAUTH_RELAY_URL")?,
@@ -188,7 +188,9 @@ async fn serve() -> Result<()> {
         "starting"
     );
     let router = app::router(state, sign_in);
-    let addr = format!("0.0.0.0:{port}");
+    // HOST=127.0.0.1 keeps a personal instance reachable only through its tunnel or proxy.
+    let host = std::env::var("HOST").unwrap_or_else(|_| "0.0.0.0".into());
+    let addr = format!("{host}:{port}");
     let listener = TcpListener::bind(&addr).await?;
     info!(addr = %addr, "listening");
     axum::serve(listener, router).await?;

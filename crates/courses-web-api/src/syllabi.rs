@@ -127,7 +127,8 @@ impl SyllabusStore {
         Ok(Some(Self::S3 {
             client: Client::from_conf(config),
             bucket,
-            prefix: var("SYLLABI_PREFIX").unwrap_or_else(|| "syllabi/".into()),
+            // Empty is a real value: Courseweave's bucket keeps syllabi at its root.
+            prefix: std::env::var("SYLLABI_PREFIX").unwrap_or_else(|_| "syllabi/".into()),
         }))
     }
 
