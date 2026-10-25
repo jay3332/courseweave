@@ -45,5 +45,5 @@ Logs: `ssh adapt journalctl --user -u courses -f`.
    `http://127.0.0.1:8130`.
 3. In the GCP console, add `https://courses.jay3332.tech/auth/callback` to the OAuth client's authorized redirect URIs.
 4. In Cloudflare R2, create an API token with read access to `courseweave-syllabi`.
-5. On the server, fill in `~/courses/secrets.env` (the OAuth client secret, the R2 endpoint and token), then
+5. On the server, fill in `~/courses/secrets.env` (the OAuth client secret and the R2 token's key ID and secret), then
    `systemctl --user restart courses`.
