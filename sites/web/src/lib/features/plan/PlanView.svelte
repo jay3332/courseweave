@@ -26,7 +26,7 @@
   import { courseLookup } from "$lib/core/record/hooks";
   import { codeOf } from "$lib/core/requisite-format";
   import { termLabel } from "$lib/core/requisites";
-  import { coursePath, profilePath } from "$lib/core/routes";
+  import { coursePath } from "$lib/core/routes";
   import type { TermIndexEntry } from "$lib/core/types";
   import { catalog, resource, session } from "$lib/data";
   import RecordPrompt from "$lib/features/record/RecordPrompt.svelte";
@@ -294,17 +294,16 @@
           ? 'grid-cols-[minmax(0,1fr)_clamp(300px,30%,560px)]'
           : 'grid-cols-[minmax(0,1fr)_clamp(320px,34%,600px)]'}"
       >
-        <!-- The note sits under the semesters so the grid runs to the page's end and the sticky column stays put. -->
         <div class="flex min-w-0 flex-col gap-5">
           <PlanHeader />
           <SemesterGrid />
-          {@render note()}
         </div>
         <!-- The column scrolls, so it reaches 12px left and 4px up into the gap, padded back, to keep the focus rings
-             of the rows' chevrons and the Expand button inside its scroll box. -->
+             of the rows' chevrons and the Expand button inside its scroll box; and down through the page's bottom
+             padding, so at the page's end it meets the footer. -->
         <aside
           aria-labelledby="requirements-heading"
-          class="scrollbar-thin sticky top-[calc(var(--header-h)+0.75rem)] -mt-1 -ml-3 flex max-h-[calc(100dvh-var(--header-h)-2.25rem)] flex-col gap-3 overflow-y-auto overscroll-contain pt-1 pr-1 pb-1 pl-3"
+          class="scrollbar-thin sticky top-[calc(var(--header-h)+0.75rem)] -mt-1 -mb-5 -ml-3 flex max-h-[calc(100dvh-var(--header-h)-2.25rem)] flex-col gap-3 overflow-y-auto overscroll-contain pt-1 pr-1 pb-5 pl-3 lg:-mb-8 lg:pb-8"
         >
           <div class="flex items-center gap-2">
             <h2 id="requirements-heading" class="text-heading-5 text-strong">Requirements</h2>
@@ -319,18 +318,9 @@
     {:else}
       <PlanHeader />
       <SemesterGrid />
-      {@render note()}
     {/if}
   </div>
 </RailLayout>
-
-{#snippet note()}
-  <p class="text-label-md font-normal text-muted">
-    Courses from your <a href={profilePath("taken")} class="text-accent-ink hover:underline">academic record</a> appear in
-    their semesters automatically. Unit limits and FCE comparisons are guidance; your college's rules and your advisor have
-    the final say.
-  </p>
-{/snippet}
 
 <Dialog bind:open={expanded} title="Requirements" size="lg">
   <RequirementsPanel {data} status={versions.status} error={auditError} />

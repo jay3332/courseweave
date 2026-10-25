@@ -146,7 +146,8 @@ Import primitives from `$lib/components/ui`, layouts from `$lib/components/layou
 
 ## Layout patterns
 
-The root layout renders the header, `<main>` and the footer around every page. Pages pick one of three patterns.
+The root layout renders the header, `<main>` and the footer around every page; the footer folds to a one-line bar,
+remembered on the device. Pages pick one of three patterns.
 
 **Rail layout** (courses, instructors, schedules, plan). A white rail on the left with a title and a Hide
 button, and the page on the right: a white toolbar band, then content on the page background. The rail is 340, 380 and

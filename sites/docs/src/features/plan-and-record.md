@@ -42,7 +42,8 @@ beside its requirements:
   pass/fail, offering warnings, the requisite state (its issues and "Mark requisites as waived" on click), FCE hours,
   units (editable for variable-unit courses) and a menu: move up or down, move to another semester, pass/fail, units,
   view, remove. "Add a course" searches the whole catalog and says whether the semester offers each result. The
-  footer has factorable and pass/fail units, FCE hours a week (at the busier half when minis run) and load guidance.
+  footer has factorable and pass/fail units and FCE hours a week (at the busier half when minis run); either turns the
+  warning color with an icon when it's past its guidance, and says why on hover.
   The semester's menu syncs it with one of its schedules (`links` store: the semester then shows the schedule's
   courses, and edits go to the schedule, with a section picked for added courses), copies a schedule's courses,
   opens the semester on the schedules page, or removes it.
