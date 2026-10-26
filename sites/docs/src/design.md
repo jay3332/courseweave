@@ -122,7 +122,7 @@ Import primitives from `$lib/components/ui`, layouts from `$lib/components/layou
 | `Switch` | `bind:checked`, `label`, `hideLabel`, `icon`, `tone` accent, neutral | |
 | `RangeSlider` | `bind:low`, `bind:high`, `min`, `max`, `step`, `label`, `presets` | Two thumbs; presets are the unit pills |
 | `ToggleChips` | `bind:value` (array), `options` (with `fullLabel` for a shortened label), `multiple`, `label`, `stretch`, `check` | Pressable pills that stay on one line, such as sessions; `check` marks pressed ones with a check (the plan's concentrations) |
-| `Chip` | `tone` outline, soft, neutral, ok, warn, accent, strong; `size` xs, sm, md; `icon`, `href`, `onremove`, `onclick`, `pressed`, `attrs` | `onremove` makes a removable filter chip; `pressed` takes a pressed ToggleChips pill's look in place of the tone; `attrs` adds attributes such as `coursePreview()` |
+| `Chip` | `tone` outline, soft, neutral, ok, warn, accent, strong; `size` xs, sm, md, lg; `icon`, `href`, `onremove`, `onclick`, `pressed`, `attrs` | `onremove` makes a removable filter chip; `pressed` takes a pressed ToggleChips pill's look in place of the tone; `attrs` adds attributes such as `coursePreview()` |
 | `StatusChip` | `status` satisfied, planned, in-progress, unsatisfied | Check, arrow or x on the status colors |
 | `CourseChip` | `code`, `title`, `status`, `tone`, `href`, `link` | Links to `/course/[code]`; shows the course preview |
 | `Card` | `as`, `href`, `padding` none, sm, md, lg; `interactive` | White card with the Figma border |

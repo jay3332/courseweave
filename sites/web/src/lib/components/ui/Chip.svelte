@@ -1,6 +1,6 @@
 <script lang="ts" module>
   export type ChipTone = "outline" | "soft" | "neutral" | "ok" | "warn" | "accent" | "strong";
-  export type ChipSize = "xs" | "sm" | "md";
+  export type ChipSize = "xs" | "sm" | "md" | "lg";
 </script>
 
 <script lang="ts">
@@ -30,7 +30,11 @@
      * strong: inverted (active "Filter 3" pill).
      */
     tone?: ChipTone;
-    /** xs: 20px, 10px text (phone tags); sm: 20px, 12px text; md: 25px (the Figma default). */
+    /**
+     * xs: 20px, 10px text (phone tags); sm: 20px, 12px text; md: 25px (the Figma default); lg: 32px, 40px on phones
+     * (pills to tap, such as the semesters offering a course). Pick a size rather than setting a height with `class`:
+     * the two heights' order in the stylesheet, not in the class list, decides which one applies.
+     */
     size?: ChipSize;
     shape?: "tag" | "pill";
     icon?: IconComponent;
@@ -65,6 +69,7 @@
     xs: "h-5 gap-1 px-1.5 text-label-sm [&_svg]:size-3",
     sm: "h-5 gap-1 px-1.5 text-label-md [&_svg]:size-3",
     md: "h-[25px] gap-1 px-2 text-label-md [&_svg]:size-4",
+    lg: "h-10 gap-1 px-3 text-label-md sm:h-8 [&_svg]:size-4",
   };
   const interactive = $derived(
     href !== undefined || onremove !== undefined || onclick !== undefined,

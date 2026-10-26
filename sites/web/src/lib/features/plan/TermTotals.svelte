@@ -23,7 +23,8 @@
     title={flags.overUnits ? overTitle : "Factorable units count toward your QPA"}
   >
     {#if flags.overUnits}<TriangleAlert aria-hidden="true" class="size-3.5 shrink-0" />{/if}
-    <span class="tabular font-semibold {flags.overUnits ? '' : 'text-strong'}">{totals.factorable}</span> factorable
+    <!-- One flex item with its word, so the number is a space from it rather than the warning row's gap. -->
+    <span><span class="tabular font-semibold {flags.overUnits ? '' : 'text-strong'}">{totals.factorable}</span> factorable</span>
     {#if flags.overUnits}<span class="sr-only">, {overTitle.toLowerCase()}</span>{/if}
   </span>
   {#if totals.nonFactorable > 0}
@@ -37,8 +38,10 @@
       title={flags.heavyHours ? `${flags.heavyHours}. ${fceTitle}` : fceTitle}
     >
       {#if flags.heavyHours}<TriangleAlert aria-hidden="true" class="size-3.5 shrink-0" />{/if}
-      <span class="tabular font-semibold {flags.heavyHours ? '' : 'text-strong'}">{Math.round(totals.peakHours)}</span>
-      FCE hrs/wk{totals.peakHalf ? " at peak" : ""}
+      <span
+        ><span class="tabular font-semibold {flags.heavyHours ? '' : 'text-strong'}">{Math.round(totals.peakHours)}</span>
+        FCE hrs/wk{totals.peakHalf ? " at peak" : ""}</span
+      >
       <span class="sr-only">. {flags.heavyHours ? `${flags.heavyHours}. ` : ""}{fceTitle}</span>
     </span>
   {/if}

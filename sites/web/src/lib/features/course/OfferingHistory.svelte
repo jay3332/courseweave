@@ -45,11 +45,11 @@
         {#each offered as t (t)}
           <li>
             {#if t === currentTerm}
-              <Chip tone="strong" shape="pill" size="md" class="h-8 px-3">
+              <Chip tone="strong" shape="pill" size="lg">
                 {termLabel(t)}<span class="sr-only"> (shown)</span>
               </Chip>
             {:else}
-              <Chip tone="outline" shape="pill" size="md" href={courseHref(courseId, t)} class="h-10 px-3 sm:h-8">
+              <Chip tone="outline" shape="pill" size="lg" href={courseHref(courseId, t)}>
                 {termLabel(t)}
               </Chip>
             {/if}

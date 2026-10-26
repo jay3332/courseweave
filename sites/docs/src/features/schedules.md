@@ -57,10 +57,11 @@ so visiting creates nothing. `?schedule=<id>` shows a particular one (the profil
 - **Picking sections**: with the `sectionPicker` preference set to `dropdown` (the default), a course with a choice
   has a dropdown for its lecture or section and one for its recitation (`SectionPicker.svelte`); each button names
   the chosen section's instructors (a recitation's only when they aren't its lecture's). Set to `compact`
-  (`SectionButtons.svelte`), the choices are letters in one run: the recitations when the course has them, each
+  (`SectionButtons.svelte`), the choices are letters on one line: the recitations when the course has them, each
   lecture's after the last's with a rule between (a recitation stands for its lecture, so choosing one sets both),
-  otherwise its lectures or sections. A conflicting lecture's letters are tinted red, and a letter that conflicts on
-  its own is red with a dot.
+  otherwise its lectures or sections. Letters that fit stretch to fill the line; more scroll sideways, the line faded
+  at an edge with letters past it, the chosen letter scrolled into view and arrow keys keeping the focused one clear of
+  the fades. A conflicting lecture's letters are tinted red, and a letter that conflicts on its own is red with a dot.
   Hovering or focusing a letter previews it on the calendar and in the lines under the letters (times, room,
   instructors and what it would conflict with), which sit below the letters so they never move under the pointer;
   arrows move between letters from one tab stop. A course with a single way to take it shows its sections as text.

@@ -1,5 +1,6 @@
 <script lang="ts">
-  // A requirement for one specific course: done, planned, or an "Add" (and drag) when it's still needed.
+  // A requirement for one specific course: done, planned, or an "Add" (and drag) when it's still needed. An option the
+  // requirement doesn't need (under "other options not needed") has no Add but still drags onto a semester.
   import { Info } from "@lucide/svelte";
   import { displayState, fmt, STATE_LABEL } from "$lib/core/degree/audit/format";
   import type { RequirementResult } from "$lib/core/plan-types";
@@ -17,7 +18,7 @@
   const a = $derived(r.assigned.at(0));
   const counted = $derived(a !== undefined && a.courseId !== id ? a.courseId : null);
   const done = $derived(state === "complete" || state === "complete-with-plan");
-  const canDrag = $derived(a === undefined && !done && state !== "skipped" && !ctx.inPlan.has(id));
+  const canDrag = $derived(a === undefined && !done && !ctx.inPlan.has(id));
   const drag = $derived(canDrag ? dragNew(id, ctx) : {});
   const units = $derived(ctx.units(id));
   const canAdd = $derived(!a && !done && state !== "skipped" && ctx.onAddCourse !== undefined && !ctx.inPlan.has(id));

@@ -58,9 +58,13 @@
 {#snippet factorableCount()}
   {#if heavy}
     <span class="inline-flex items-center gap-1 text-warn" title="Exceeds {HEAVY_UNITS} factorable units">
-      <TriangleAlert aria-hidden="true" class="size-3.5 shrink-0" /><strong class="font-semibold"
-        >{units.factorable}</strong
-      >&nbsp;factorable<span class="sr-only">, exceeds {HEAVY_UNITS} factorable units</span>
+      <TriangleAlert aria-hidden="true" class="size-3.5 shrink-0" />
+      <!-- One flex item, so the row's gap is only the icon's and the number is a space from its word. -->
+      <span
+        ><strong class="font-semibold">{units.factorable}</strong> factorable<span class="sr-only"
+          >, exceeds {HEAVY_UNITS} factorable units</span
+        ></span
+      >
     </span>
   {:else}
     <span><strong class="font-semibold text-ink">{units.factorable}</strong> factorable</span>

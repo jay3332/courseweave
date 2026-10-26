@@ -62,7 +62,7 @@ Requirement rows are one line at any width: the status icon, the number, the tit
 then the semester a course counted in ("F27") and its units. Add appears over the row's end when the row is hovered or
 focused; on touch, where nothing hovers, it's a + in the row (`AddButton.svelte`). Drag and drop
 (HTML drag events, `DRAG_TYPE` and `DRAG_NEW_COURSE`) moves courses between and within semesters and adds courses
-from the requirements; it's on with a fine pointer from 768px. The course menus and "Add" do the same from the
+from the requirements, the options a requirement doesn't need included; it's on with a fine pointer from 768px. The course menus and "Add" do the same from the
 keyboard or a touch screen. On phones, past semesters start collapsed.
 
 Course links go to `/course/<code>?term=<semester>` (`courseHref()`), so the course page offers "Back to plan"
