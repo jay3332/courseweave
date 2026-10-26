@@ -358,7 +358,8 @@
             <colgroup>
               <col class="w-[92px]" />
               <col class="min-w-[180px]" />
-              <col class="w-[52px]" />
+              <!-- Wide enough for a variable-units course's 56px field and the cell's padding. -->
+              <col class="w-[64px]" />
               <col class="w-[170px]" />
               <col class="w-[110px]" />
               <col class="w-[260px]" />
