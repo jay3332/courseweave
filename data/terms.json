@@ -34,15 +34,22 @@
     ],
     "sources": [
       {
-        "type": "csv",
-        "path": "raw/S27.csv"
+        "type": "soc",
+        "term": "S27"
       },
       {
         "type": "stellic",
         "role": "supplement",
         "root": "data",
         "dir": "raw/stellic/S27",
-        "optional": true
+        "optional": true,
+        "addMissingSections": false
+      },
+      {
+        "type": "csv",
+        "role": "supplement",
+        "path": "raw/S27.csv",
+        "addMissingSections": false
       }
     ]
   },
