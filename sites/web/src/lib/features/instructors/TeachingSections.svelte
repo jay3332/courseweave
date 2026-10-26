@@ -106,8 +106,8 @@
 
   <!-- Wider screens: a table. -->
   <div class="hidden md:block">
-    <div class="data-table-scroll rounded-tag border border-line-strong bg-surface">
-      <table class="data-table-outline">
+    <div class="data-table-scroll rounded-card border border-pressed bg-surface">
+      <table class="data-table-outline data-table-card">
         <caption class="sr-only">Sections {inst.name} teaches in {term.meta.name}</caption>
         <thead>
           <tr>

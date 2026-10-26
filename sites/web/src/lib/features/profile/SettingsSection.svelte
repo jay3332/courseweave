@@ -139,7 +139,7 @@
   {#if signedIn}
     <section aria-labelledby="settings-sharing">
       <h2 id="settings-sharing" class="text-heading-6 text-strong">Friends and sharing</h2>
-      <p class="mt-1 text-body-2 text-muted">What your accepted friends can see. Being friends shares nothing by itself.</p>
+      <p class="mt-1 text-body-2 text-muted">What your accepted friends can see.</p>
       <dl class="mt-3 grid grid-cols-[1fr_auto] gap-x-6 gap-y-1 text-body-2 sm:max-w-sm">
         <dt class="text-ink">The courses you're taking</dt>
         <dd class="text-ink">{friends.sharing ? onOff(friends.sharing.shareCourses) : "Loading"}</dd>

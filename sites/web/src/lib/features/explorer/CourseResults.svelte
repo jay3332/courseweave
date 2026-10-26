@@ -19,6 +19,7 @@
     contextTermId = null,
     offeredOf,
     hrefFor,
+    keepList = true,
     selectedId = null,
     active = -1,
     limit = $bindable(0),
@@ -40,6 +41,8 @@
     /** All-semesters view: the semesters offering a course, newest first. */
     offeredOf?: (courseId: string) => readonly string[];
     hrefFor: (course: Course) => string;
+    /** Courses open in the detail panel beside the list, so opening one keeps the list's scroll and focus. */
+    keepList?: boolean;
     /** The course open in the detail panel. */
     selectedId?: string | null;
     /** Highlighted by keyboard navigation from the search field. */
@@ -74,8 +77,8 @@
     termId ?? offeredOf?.(course.id)[0] ?? contextTermId ?? "";
 </script>
 
-<!-- Opening a course keeps the list where it is. -->
-<div data-sveltekit-noscroll data-sveltekit-keepfocus>
+<!-- Opening a course in the panel keeps the list where it is; the full page starts at its top. -->
+<div data-sveltekit-noscroll={keepList ? "" : "off"} data-sveltekit-keepfocus={keepList ? "" : "off"}>
   {#if chart && fce}
     <HoursScatter courses={results} {fce} {highlight} {hrefFor} fill />
   {:else if view === "cards"}

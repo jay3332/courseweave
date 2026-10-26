@@ -69,8 +69,8 @@
     {/if}
   </div>
 
-  <div class="data-table-scroll rounded-tag border border-line-strong bg-surface">
-    <table class="data-table-outline">
+  <div class="data-table-scroll rounded-card border border-pressed bg-surface">
+    <table class="data-table-outline data-table-card">
       <caption class="sr-only">Course evaluations for {fce.name}, by course</caption>
       <thead>
         <tr>

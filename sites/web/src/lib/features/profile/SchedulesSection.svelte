@@ -127,12 +127,15 @@
         </h2>
         <ul class="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 xl:grid-cols-3">
           {#each group.schedules as s (s.id)}
+            {@const term = terms.value?.get(s.termId)}
             <li>
               <SchedulePreviewCard
                 schedule={s}
-                term={terms.value?.get(s.termId)}
+                {term}
                 semester={name}
                 loading={terms.status === "loading"}
+                units={term ? scheduleUnits(s, term) : null}
+                hours={hours(s, term)}
               />
             </li>
           {/each}

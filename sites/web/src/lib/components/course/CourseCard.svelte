@@ -262,7 +262,7 @@
       class="-ml-3 inline-flex h-10 items-center gap-2 rounded-full pr-4 pl-3 text-body-1 text-muted hover:bg-hover hover:text-ink"
     >
       <ChevronDown aria-hidden="true" class="size-5 transition-transform {expanded ? 'rotate-180' : ''}" />
-      {expanded ? "Show less" : "Expand all"}
+      {expanded ? "Show less" : "Show more"}
     </button>
     {#if expanded}
       <a href={pageHref} data-course-preview="off" class="text-body-2 text-accent-ink underline-offset-4 hover:underline">

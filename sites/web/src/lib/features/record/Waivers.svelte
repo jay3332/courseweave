@@ -55,7 +55,6 @@
 <RecordSection
   id="record-waivers"
   title="Placements and overrides"
-  description="A placement counts as having taken a course; an override lets you take one without its requisites."
 >
   <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
     <section aria-labelledby="record-placements" class="flex flex-col gap-4 rounded-card border border-pressed bg-surface p-5">

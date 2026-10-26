@@ -86,10 +86,8 @@
       <p class="text-body-2" aria-live="polite">
         {#if added !== null}
           <span class="text-ok">{added}</span>
-        {:else if draft === null && unitsMessage === null}
-          <span class="text-muted">
-            {general ? "Describe the credit and enter its units." : "Pick the CMU course it counts as."}
-          </span>
+        {:else if draft === null && unitsMessage === null && general}
+          <span class="text-muted">Describe the credit and enter its units.</span>
         {/if}
       </p>
     </div>

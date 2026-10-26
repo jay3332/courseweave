@@ -31,10 +31,6 @@
   <svelte:element this={`h${headingLevel}`} id="{id}-heading" class="text-heading-6 text-strong">
     What friends can see
   </svelte:element>
-  <p class="mt-1 text-body-2 text-muted">
-    Being friends shares nothing by itself. Choose what your accepted friends see; this doesn't change what they share
-    with you.
-  </p>
   {#if sharing === null}
     <p class="mt-4 text-body-2 text-muted" aria-live="polite">Loading your sharing settings&hellip;</p>
   {:else}

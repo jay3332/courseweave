@@ -514,6 +514,31 @@
   .data-table-outline a:hover {
     text-decoration: underline;
   }
+
+  /*
+   * `.data-table-card` (with `.data-table-outline`): an outlined table inside one of the site's cards (the wrapper
+   * gives the card's corners and border), with headers as in the FCE tables, smaller and bold, and tighter cells.
+   */
+  .data-table-card th {
+    padding: 12px 16px;
+    color: var(--color-ink);
+    font-size: var(--text-body-2);
+    font-weight: 600;
+    line-height: var(--text-body-2--line-height);
+  }
+
+  .data-table-card td {
+    padding: 10px 16px;
+  }
+
+  .data-table-card th:first-child,
+  .data-table-card td:first-child {
+    padding-left: 20px;
+  }
+
+  .data-table-card a {
+    font-size: var(--text-body-2);
+  }
 }
 
 /*

@@ -20,8 +20,10 @@ course components other pages reuse. They port Courseweave's explorer, catalog a
 
 Selecting a course opens it in the detail panel (`?course=15-122`) beside the list from 1024px wide. Below 1440px the
 filter rail collapses to its strip while a course is open (`RailLayout`'s `autoCollapse`); showing the rail again puts
-the course in place of the list. Below 1024px the course replaces the list. The panel's Expand goes to the full course page. "/" focuses the search, the arrow keys move through
-the results from the search field and Enter opens the highlighted one.
+the course in place of the list. Below 1024px, where the panel would take the whole screen, selecting a course opens the
+full course page instead (a `?course=` link still opens the panel, in place of the list). The panel's Expand goes to
+the full course page. "/" focuses the search, the arrow keys move through the results from the search field and Enter
+opens the highlighted one.
 
 Signed out, the requirement filter, FCE filters and the FCE parts of cards are replaced by sign-in prompts; the list,
 search and the other filters work on the public documents.
@@ -115,10 +117,10 @@ the canonical `/course/<code>` link; the web API renders the same tags on the se
 ([decision 25](../decisions/0025-render-course-head-tags-on-the-server.md)).
 
 `CourseDetailPanel.svelte` stacks the same sections into a side panel for the Courses page (`?course=` there), with
-the calendar before the sections. Its header matches the page's narrow layout: the number with its star, the title,
-the same actions card (without the semester select, which the Courses toolbar has), then the facts. The panel's top
-bar holds Expand and Close ("All courses" on phones); the small code and the star come up in it once the big ones
-have scrolled under it. The bar sticks to the panel's top where the panel scrolls on its own, and under the site
+the calendar before the sections. Its header matches the page's narrow layout: the number, the title, the same
+actions card (without the semester select, which the Courses toolbar has), then the facts. The panel's top bar holds
+the save star at its left, and Expand and Close ("All courses" on phones); the small code comes up beside the star once
+the big one has scrolled under it. The bar sticks to the panel's top where the panel scrolls on its own, and under the site
 header where it scrolls with the page; the panel clips its content to its rounded corners. Course
 links inside a view go through `setCourseHref()` (`links.ts`), so the panel can open them in place.
 

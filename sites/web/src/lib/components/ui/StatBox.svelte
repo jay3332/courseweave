@@ -15,7 +15,7 @@
     unit?: string;
     /** What the figure is, such as "Workload". */
     label: string;
-    /** outline: bordered box (instructor cards); plain: white box inside a well (course card FCEs). */
+    /** outline: a small card (instructor pages); plain: white box inside a well (course card FCEs). */
     variant?: "outline" | "plain";
     class?: string;
     /** Custom value line, such as a StarRating. */
@@ -24,9 +24,9 @@
 </script>
 
 <div
-  class="flex min-w-0 flex-col justify-center rounded-tag bg-surface px-3 py-1.5 {variant === 'outline'
-    ? 'border border-line-strong'
-    : ''} {className}"
+  class="flex min-w-0 flex-col justify-center bg-surface {variant === 'outline'
+    ? 'rounded-card border border-pressed px-4 py-2.5'
+    : 'rounded-tag px-3 py-1.5'} {className}"
 >
   <div class="flex items-baseline gap-1 text-ink">
     {#if children}
@@ -36,5 +36,5 @@
       {#if unit}<span class="text-body-1">{unit}</span>{/if}
     {/if}
   </div>
-  <div class={variant === "outline" ? "text-body-1 text-ink" : "text-body-2 text-muted"}>{label}</div>
+  <div class="text-body-2 text-muted">{label}</div>
 </div>

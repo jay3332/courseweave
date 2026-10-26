@@ -57,8 +57,11 @@
     otherLimit = 50;
   });
 
-  /** A course opens in the detail panel; the full page is a link away from there. */
-  const hrefFor = (course: Course): string => url.href({ course: course.code });
+  // A course opens in the detail panel beside the list (the full page is a link away from there): from 1024px, where
+  // the rail folds away for it. Narrower, the panel would take the whole screen, so the full course page opens instead.
+  const inPanel = $derived(desktop.current);
+  const hrefFor = (course: Course): string =>
+    inPanel ? url.href({ course: course.code }) : coursePath(course.code, x.allMode ? ALL_SEMESTERS : x.termId);
   const closeHref = $derived(url.href({ course: null }));
 
   $effect(() => {
@@ -93,7 +96,7 @@
       requestAnimationFrame(() => document.querySelector(`#result-${id}`)?.scrollIntoView({ block: "nearest" }));
     } else if (event.key === "Enter") {
       const course = results[Math.max(0, active)];
-      if (course) void goto(hrefFor(course), { noScroll: true, keepFocus: true });
+      if (course) void goto(hrefFor(course), inPanel ? { noScroll: true, keepFocus: true } : {});
     }
   }
 
@@ -306,6 +309,7 @@
           contextTermId={x.termId}
           offeredOf={(id) => x.all?.termsOf.get(id) ?? []}
           {hrefFor}
+          keepList={inPanel}
           {selectedId}
           {active}
           bind:limit

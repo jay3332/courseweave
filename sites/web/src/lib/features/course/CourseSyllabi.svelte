@@ -60,8 +60,8 @@
   {:else}
     <p class="mt-0.5 mb-3 text-label-md text-muted">
       {files}
-      {files === 1 ? "file" : "files"} from CMU's syllabus registry, across {terms.length}
-      {terms.length === 1 ? "semester" : "semesters"}. Policies and schedules change; check the current course site.
+      {files === 1 ? "file" : "files"} from {terms.length}
+      {terms.length === 1 ? "semester" : "semesters"}
     </p>
     <ul class="divide-y divide-line overflow-hidden rounded-card border border-pressed bg-surface">
       {#each shown as t (t.term)}

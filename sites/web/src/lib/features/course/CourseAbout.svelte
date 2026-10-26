@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ExternalLink, GitFork } from "@lucide/svelte";
+  import { ChevronDown, ExternalLink, GitFork } from "@lucide/svelte";
   import CourseChipList from "$lib/components/course/CourseChipList.svelte";
   import { catalogIndex, courseDetails } from "$lib/components/course/data.svelte";
   import { getCourseHref } from "$lib/components/course/links";
@@ -166,8 +166,14 @@
 
     {#if profile.length > 0}
       <details class="group rounded-card border border-pressed bg-surface">
-        <summary class="flex min-h-10 cursor-pointer items-center px-4 text-label-lg text-ink select-none">
+        <summary
+          class="flex min-h-10 cursor-pointer list-none items-center justify-between gap-2 rounded-card px-4 text-label-lg text-ink select-none group-open:rounded-b-none hover:bg-hover [&::-webkit-details-marker]:hidden"
+        >
           Course profile
+          <ChevronDown
+            aria-hidden="true"
+            class="size-5 shrink-0 text-muted transition-transform group-open:rotate-180 motion-reduce:transition-none"
+          />
         </summary>
         <dl class="flex flex-col gap-3 border-t border-line px-4 py-3 text-body-2">
           {#each profile as f (f.key)}

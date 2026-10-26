@@ -75,15 +75,13 @@
   const isId = $derived(/^\d{5}$/u.test(courseId));
 
   // The bar sticks to the top of the panel where the panel scrolls on its own (beside the list), and under the site
-  // header where it scrolls with the page (in place of the list). It shows the code and star once the big ones have
-  // scrolled under it; scroll events don't bubble, but they can be caught on the way down from any scroller.
+  // header where it scrolls with the page (in place of the list). It holds the star, and shows the code once the big
+  // one has scrolled under it; scroll events don't bubble, but they can be caught on the way down from any scroller.
   let article = $state<HTMLElement>();
   let bar = $state<HTMLElement>();
   let head = $state<HTMLElement | null>(null);
   let ownScroll = $state(true);
   let condensed = $state(false);
-  // Where there's no big code and star (not offered here, an error), the bar keeps the star.
-  const barStar = $derived(condensed || (!loading && head === null));
   $effect(() => {
     const parent = article?.parentElement;
     const barEl = bar;
@@ -130,7 +128,8 @@
     >
       <ArrowLeft aria-hidden="true" class="size-5" />All courses
     </a>
-    <!-- The code and star come up here once the big ones have scrolled under the bar. -->
+    {#if isId}<SaveButton {courseId} size="sm" class="md:-ml-1.5" />{/if}
+    <!-- The code comes up here once the big one has scrolled under the bar. -->
     <span
       aria-hidden="true"
       class="hidden text-label-lg text-strong tabular transition-opacity duration-150 motion-reduce:transition-none md:inline {condensed
@@ -138,11 +137,6 @@
         : 'opacity-0'}">{display}</span
     >
     <div class="ml-auto flex items-center gap-1">
-      {#if isId}
-        <span class="contents {barStar ? '' : '[&>*]:invisible'}">
-          <SaveButton {courseId} size="sm" />
-        </span>
-      {/if}
       <Button size="sm" variant="ghost" icon={Maximize2} href={fullHref} title="Open the full course page">
         Expand
       </Button>
@@ -184,9 +178,8 @@
       <!-- As on the full page: the code with its star, the title, the actions card, then the facts. -->
       <header class="flex flex-col gap-4">
         <div>
-          <div bind:this={head} class="flex items-center gap-1.5">
+          <div bind:this={head}>
             <p class="min-w-0 text-[40px] tabular leading-none font-semibold tracking-tight text-strong">{display}</p>
-            <SaveButton {courseId} />
           </div>
           <h2 class="mt-1.5 text-heading-4 text-strong">{title}</h2>
         </div>

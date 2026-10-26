@@ -47,8 +47,7 @@ export const EXAM_SOURCES: Record<ExamBoard, { url: string; updated: string; pol
   AP: {
     url: "https://www.cmu.edu/hub/registrar/docs/ap-credit.pdf",
     updated: "2026-03-16",
-    policy:
-      "Credit for scores of 4 or 5 where listed; exams and scores not listed receive no credit.",
+    policy: "Exams and scores not listed receive no credit.",
   },
   IB: {
     url: "https://www.cmu.edu/hub/registrar/docs/ib-credit.pdf",

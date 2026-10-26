@@ -327,8 +327,5 @@
       onchange={(on) => onchange({ ...query, unoffered: on })}
       class="w-full justify-between text-left"
     />
-    <p class="-mt-4 text-label-md text-muted">
-      Offered in other semesters or listed in the catalog. They're listed after this semester's courses.
-    </p>
   </RailGroup>
 {/if}
