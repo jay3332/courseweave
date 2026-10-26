@@ -34,14 +34,21 @@
     ],
     "sources": [
       {
-        "type": "csv",
-        "path": "schedules/S27.csv"
+        "type": "soc",
+        "term": "S27"
       },
       {
         "type": "stellic",
         "role": "supplement",
         "dir": "stellic-terms/S27",
-        "optional": true
+        "optional": true,
+        "addMissingSections": false
+      },
+      {
+        "type": "csv",
+        "role": "supplement",
+        "path": "schedules/S27.csv",
+        "addMissingSections": false
       }
     ]
   },

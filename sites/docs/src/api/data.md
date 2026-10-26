@@ -18,7 +18,7 @@ FCE and degree program documents are described in [their own page](catalog-fce-p
 | `exported/syllabi/<term>/<dept>/` | Syllabus registry files | `courses-scraper --mode syllabi` |
 | `exported/soc/<term>/` | Schedule of Classes search pages, detail pages, reservations and `meta.json` | `courses-scraper --mode soc` |
 | `exported/soc/details.json` | Parsed course detail pages, for descriptions and requisite text | `courses-scraper --mode soc --soc-catalog` |
-| `exported/schedules/<term>.csv` | A registrar schedule CSV for a term the SOC doesn't list yet | Downloaded by hand |
+| `exported/schedules/<term>.csv` | A registrar schedule CSV: a term's primary source until the SOC lists it, then a supplement for instructors and rooms | Downloaded by hand |
 | `exported/stellic-terms/<term>/` | Stellic sections fetched for one term, with a `meta.json` naming its `lyear` and `sem` | Courseweave's `fetch-stellic.ts` |
 
 `exported/` is gitignored and never committed: the Stellic data and syllabi are CMU-internal and were scraped with one
@@ -102,7 +102,9 @@ document's is `SOURCE_DATE_EPOCH` when set, otherwise the newest input time.
    in `sites/docs-migrating-wip/src/scraper/running.md`.
 
 1. For a new term, add it to `data/terms.json` with the registrar's calendar dates, minis and breaks, and its sources.
-   Until the SOC lists it, use the registrar's schedule CSV in `exported/schedules/` as the primary source.
+   Until the SOC lists it, use the registrar's schedule CSV in `exported/schedules/` as the primary source. Once it
+   does, capture it with `--soc-extras all` (every course's reservations at once), make the SOC primary and keep the
+   Stellic sections and the CSV as supplements with `"addMissingSections": false`, as for Spring 2027.
 
 1. When the registrar publishes a final exam schedule, save it as `data/finals/<term>.pdf` (a mini's separate
    schedule as `data/finals/<term>-<part>.pdf`) and commit it. The build fails if a row can't be read.

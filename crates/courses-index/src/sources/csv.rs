@@ -1,4 +1,5 @@
-//! A registrar schedule CSV, for a term the SOC doesn't list yet (Courseweave's `scripts/sources/csv.ts`). Columns:
+//! A registrar schedule CSV: the primary source for a term the SOC doesn't list yet, then a supplement for its
+//! instructors and rooms (Courseweave's `scripts/sources/csv.ts`). Columns:
 //! `num,title,units,section,lecture,days,begin,end,bldg,room,mode,level,dept,instructors`, one row per meeting.
 //!
 //! Options: `path`, relative to the exported root.

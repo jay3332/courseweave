@@ -70,3 +70,42 @@ Original JSON, semester metadata, retrieval time and SHA-256 are preserved in ig
 
 The S27 schedule CSV and Stellic sections behind that snapshot are now inputs of `courses-index build` directly
 (`exported/schedules/S27.csv`, `exported/stellic-terms/S27`).
+
+## Spring 2027 on the Schedule of Classes - October 26, 2026
+
+The registrar published Spring 2027 on the Schedule of Classes (its complete schedule, `sched_layout_spring.dat`, has a
+run date of October 25). `courses-scraper --mode soc --soc-extras all` captured it on October 26, and
+`data/terms.json` now builds the term from that capture, like the other terms. The Stellic sections and the
+registrar's CSV, both from October 21, stay on as supplements for instructors and rooms. The term's dates match the
+[official 2026-27 academic calendar](https://www.cmu.edu/hub/calendar/docs/2627-academic-calendar.pdf) (updated
+July 1, 2026).
+
+At Pittsburgh, Spring 2027 has **3,086 courses and 6,752 sections** (3,224 courses at every campus). Compared with the
+October 21 inputs:
+
+- 12 courses are new: 39-653, 39-654, 45-890, 48-409, 48-709, 51-495, 51-695, 80-203, 90-783, 90-812, 94-710 and
+  95-733. Seven are gone: 27-592, 27-792, 45-886, 45-893, 54-410, 54-810 and 95-811. Four administrative placeholders
+  (00-060, 00-080, 01-700, 01-999) were only in the CSV; the SOC doesn't list them.
+- Three sections were cancelled (94-819 Z3, 94-879 C4, 95-810 Z4), and 16 sections are new since Stellic's October 21
+  list.
+- 13 sections meet at new times, mostly minis: 45-820 A3 and B3, 45-821 M4, 45-842 M4, 45-872 M3, 95-760 B3 and D4,
+  95-865 E4, 90-916 A4, 17-647 D4, 51-379 A, 54-823 A and 57-194 C.
+- Five courses have new units: 51-206, 57-308 and 45-813 are now 3, 57-900 is 6, and 82-051 is variable.
+
+Checks and coverage:
+
+- The search pages and the complete schedule agree section for section on all 3,224 courses. They differ only on
+  15-111 (Pre-College, dropped since October 25) and 67-375 (Qatar, added since).
+- 5,521 sections have instructors: 5,454 from Stellic and 67 more from the CSV. Where both name instructors, they
+  differ on 254 sections, mostly preferred against full names; Stellic's are kept, as in the other terms. 3,290 of the
+  4,075 scheduled sections have a room.
+- The SOC adds seat reservations for 2,451 sections and special permission for 493 courses.
+- Instructors and rooms for the new courses and sections, and changes to either since October 21, need a Stellic
+  refresh with a CMU session (Courseweave's `fetch-stellic.ts S27`, copied to `exported/stellic-terms/S27`).
+
+The catalog's course pages gained 382 courses. The 1,494 courses Spring 2027 lists whose pages had been read from a
+2025-26 term were re-read from Spring 2027; 215 had new descriptions, titles, cross-listings or prerequisite text.
+
+Switching the term to the SOC turned up two problems in the builder, fixed with it: supplements added meetings at
+times the SOC doesn't list (`addMissingMeetings` in [catalog data](data.md)), and SOC text was decoded with the wrong
+charset ([decision 18](../decisions/0018-capture-the-schedule-of-classes-with-the-scraper.md)).
