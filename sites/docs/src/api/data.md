@@ -35,8 +35,11 @@ which add instructors, rooms, capacities and missing sections but never remove a
 | `{ "type": "csv", "path": "schedules/S27.csv" }` | `path`: relative to the exported root |
 | `{ "type": "stellic", "lyear": 1, "sem": 1 }` | `dir`: relative to the exported root, default the one account's `courses_history`. `lyear`: Stellic's academic year counted from the exporting account's first term. `sem`: 1 fall, 2 spring, 3 summer. Both may come from `<dir>/meta.json`. `optional`: skip a missing export |
 
-Any source takes `role` (`primary` or `supplement`); supplements take `addMissingCourses` (default false) and
-`addMissingSections` (default true; false when the primary is the SOC, which drops cancelled sections).
+Any source takes `role` (`primary` or `supplement`); supplements take `addMissingCourses` (default false),
+`addMissingSections` (default true; false when the primary is the SOC, which drops cancelled sections) and
+`addMissingMeetings` (default `addMissingSections`). Without `addMissingMeetings`, a supplement fills in rooms for the
+primary's meetings and times for its TBA sections, but adds no meetings at other times: next to the SOC's current
+times, a supplement's are out of date or the same meetings split by day, and would show as conflicts.
 
 `lyear` values are relative to one Stellic account. With several accounts under `exported/`, pass `--stellic-user`.
 

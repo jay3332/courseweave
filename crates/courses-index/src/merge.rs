@@ -2,7 +2,9 @@
 //! data:
 //! - sections missing from the primary (recitations) are added with their parent link, unless `add_missing_sections`
 //!   is false
-//! - sections in both get missing instructors, rooms, meetings, capacity, reservations and parent filled in
+//! - sections in both get missing instructors, rooms, meetings, capacity, reservations and parent filled in; a
+//!   section with scheduled meetings gets the supplement's meetings at other times only when `add_missing_meetings`
+//!   is set
 //! - courses missing from the primary are added only when `add_missing_courses` is set
 
 use std::collections::BTreeMap;
@@ -15,6 +17,7 @@ pub fn merge_supplement(
     supplement: Vec<Course>,
     add_missing_courses: bool,
     add_missing_sections: bool,
+    add_missing_meetings: bool,
 ) {
     for sup in supplement {
         let Some(course) = primary.get_mut(&sup.id) else {
@@ -67,6 +70,9 @@ pub fn merge_supplement(
                     m.building = found.building.clone();
                     m.room = found.room.clone();
                 }
+            }
+            if !add_missing_meetings {
+                continue;
             }
             for m in s.meetings {
                 if !existing
@@ -158,6 +164,7 @@ mod tests {
             ],
             false,
             true,
+            true,
         );
         assert_eq!(primary.len(), 1);
         let c = &primary["15122"];
@@ -186,8 +193,53 @@ mod tests {
             ],
             true,
             false,
+            false,
         );
         assert_eq!(primary["15122"].sections.len(), 1);
         assert!(primary.contains_key("15150"));
+    }
+
+    #[test]
+    fn an_authoritative_primary_keeps_its_meeting_times() {
+        let mut primary = BTreeMap::new();
+        primary.insert(
+            "45820".to_owned(),
+            course(
+                "45820",
+                Some(6.0),
+                vec![
+                    section("A3", None, vec![meeting(&[1, 3], Some(600), None)]),
+                    section("B3", None, vec![]),
+                ],
+            ),
+        );
+        // The supplement has the room, the old Tuesday and Thursday time, and the same time split by day; for the
+        // section the primary lists as TBA, its times.
+        merge_supplement(
+            &mut primary,
+            vec![course(
+                "45820",
+                None,
+                vec![
+                    section(
+                        "A3",
+                        None,
+                        vec![
+                            meeting(&[1, 3], Some(600), Some("TEP")),
+                            meeting(&[2, 4], Some(600), Some("TEP")),
+                            meeting(&[1], Some(600), Some("TEP")),
+                        ],
+                    ),
+                    section("B3", None, vec![meeting(&[2], Some(720), Some("TEP"))]),
+                ],
+            )],
+            false,
+            false,
+            false,
+        );
+        let c = &primary["45820"];
+        assert_eq!(c.sections[0].meetings.len(), 1);
+        assert_eq!(c.sections[0].meetings[0].building.as_deref(), Some("TEP"));
+        assert_eq!(c.sections[1].meetings.len(), 1);
     }
 }

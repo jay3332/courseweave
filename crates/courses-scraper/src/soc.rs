@@ -25,8 +25,8 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use anyhow::{Context, Result, bail};
 use courses_index::js::{self, Object};
 use courses_index::soc::{
-    SelectOption, SocDetailsCache, ambiguous_courses, latin1, parse_dat, parse_details_extras,
-    parse_search_page, parse_soc_detail, select_options,
+    SelectOption, SocDetailsCache, ambiguous_courses, parse_dat, parse_details_extras,
+    parse_search_page, parse_soc_detail, response_text, select_options,
 };
 use flate2::Compression;
 use flate2::read::GzDecoder;
@@ -92,7 +92,8 @@ impl Client {
         Self { agent, delay }
     }
 
-    /// Status and Latin-1 text, retrying network errors and server errors twice. Waits the delay after each request.
+    /// Status and text (by the declared charset), retrying network errors and server errors twice. Waits the delay
+    /// after each request.
     fn request(
         &self,
         send: impl Fn(&ureq::Agent) -> Result<ureq::http::Response<ureq::Body>, ureq::Error>,
@@ -103,12 +104,17 @@ impl Client {
                 .map_err(anyhow::Error::from)
                 .and_then(|res| {
                     let status = res.status().as_u16();
+                    let content_type = res
+                        .headers()
+                        .get("content-type")
+                        .and_then(|v| v.to_str().ok())
+                        .map(str::to_owned);
                     let bytes = res
                         .into_body()
                         .into_with_config()
                         .limit(BODY_LIMIT)
                         .read_to_vec()?;
-                    Ok((status, latin1(&bytes)))
+                    Ok((status, response_text(&bytes, content_type.as_deref())))
                 });
             std::thread::sleep(self.delay);
             match result {

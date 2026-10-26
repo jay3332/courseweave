@@ -133,11 +133,13 @@ pub fn build_term(config: &TermConfig, inputs: &Inputs) -> Result<BuiltTerm> {
                 merged.insert(c.id.clone(), c);
             }
         } else {
+            let add_sections = source.add_missing_sections != Some(false);
             merge_supplement(
                 &mut merged,
                 loaded.courses,
                 source.add_missing_courses == Some(true),
-                source.add_missing_sections != Some(false),
+                add_sections,
+                source.add_missing_meetings.unwrap_or(add_sections),
             );
         }
         info!(term = %term.id, source = %source.kind, role, courses = count, "source");

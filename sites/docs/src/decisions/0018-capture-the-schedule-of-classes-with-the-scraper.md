@@ -4,7 +4,8 @@ Date: 2026-10-24
 
 ## Status
 
-Accepted
+Accepted; amended 2026-10-26 to decode pages by their declared charset (titles and descriptions with
+accented letters or curly quotes had been garbled).
 
 ## Context
 
@@ -25,9 +26,9 @@ builder must stay offline and deterministic ([decision 10](0010-build-the-catalo
   descriptions and requisite text.
 - It needs no credentials. Requests are serial with a delay. Reservations are re-read a rotating slice at a time,
   so a run stays short; past terms are read once.
-- Pages are stored as the SOC serves them, Latin-1 read one character per byte, so captures from Courseweave and
-  from the scraper are interchangeable. The parsers live in `courses_index::soc`, shared by the scraper and the
-  builder.
+- Pages are stored as UTF-8 text, decoded by the charset each declares (ISO-8859-1 for the search pages, UTF-8 for
+  detail pages), so captures from Courseweave and from the scraper are interchangeable. The parsers live in
+  `courses_index::soc`, shared by the scraper and the builder.
 - The builder only reads captures. A term document's `generatedAt` is the newest fetch time its sources record
   (`meta.json`), not the build time.
 

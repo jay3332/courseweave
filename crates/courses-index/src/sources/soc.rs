@@ -19,8 +19,8 @@ use crate::config::SourceConfig;
 use crate::js;
 use crate::model::{Course, Kind, Meeting, Section, TermMeta, course_code};
 use crate::soc::{
-    SocRow, is_lecture, latin1, mode_code, parse_details_grouping, parse_search_page, section_name,
-    split_soc_title,
+    SocRow, is_lecture, mode_code, parse_details_grouping, parse_search_page, section_name,
+    split_soc_title, stored_text,
 };
 use crate::text::{clean_title, mini_of, parse_days, parse_time};
 
@@ -154,8 +154,8 @@ pub fn load(source: &SourceConfig, term: &TermMeta, inputs: &Inputs) -> Result<L
     };
 
     let (u, g) = rayon::join(
-        || read_gzip(&dir.join("search-U.html.gz")).map(|b| parse_search_page(&latin1(&b))),
-        || read_gzip(&dir.join("search-G.html.gz")).map(|b| parse_search_page(&latin1(&b))),
+        || read_gzip(&dir.join("search-U.html.gz")).map(|b| parse_search_page(&stored_text(b))),
+        || read_gzip(&dir.join("search-G.html.gz")).map(|b| parse_search_page(&stored_text(b))),
     );
     let mut courses = Vec::new();
     for (level, rows) in [("U", u?), ("G", g?)] {

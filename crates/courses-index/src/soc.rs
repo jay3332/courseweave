@@ -644,6 +644,29 @@ pub fn latin1(bytes: &[u8]) -> String {
     bytes.iter().map(|&b| b as char).collect()
 }
 
+/// A response's text, by the charset its `Content-Type` declares: the SOC's search pages say ISO-8859-1, its detail
+/// pages UTF-8. Anything else, or bytes that aren't the UTF-8 they claim, is read as Latin-1.
+pub fn response_text(bytes: &[u8], content_type: Option<&str>) -> String {
+    let utf8 = content_type.is_some_and(|t| {
+        t.split(';').skip(1).any(|p| {
+            p.trim()
+                .to_ascii_lowercase()
+                .strip_prefix("charset=")
+                .is_some_and(|c| c.trim_matches('"') == "utf-8")
+        })
+    });
+    match std::str::from_utf8(bytes) {
+        Ok(text) if utf8 => text.to_owned(),
+        _ => latin1(bytes),
+    }
+}
+
+/// A stored capture's text. Captures hold each page's decoded text as UTF-8 (Courseweave's captures too); bytes that
+/// aren't UTF-8 are read as Latin-1.
+pub fn stored_text(bytes: Vec<u8>) -> String {
+    String::from_utf8(bytes).unwrap_or_else(|e| latin1(e.as_bytes()))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -996,5 +1019,27 @@ mod tests {
             r("", "Lec 2"),
         ];
         assert_eq!(ambiguous_courses(&rows), ["15122"]);
+    }
+
+    #[test]
+    fn decodes_by_the_declared_charset() {
+        // A search page (Latin-1) and a detail page (UTF-8).
+        assert_eq!(
+            response_text(b"Pok\xe9mon\xa0", Some("text/html;charset=ISO-8859-1")),
+            "Pok\u{e9}mon\u{a0}"
+        );
+        let detail = "Today\u{2019}s systems.\u{a0}";
+        assert_eq!(
+            response_text(detail.as_bytes(), Some("text/html; charset=\"UTF-8\"")),
+            detail
+        );
+        assert_eq!(
+            response_text(b"Bj\xf6rk", Some("text/html;charset=UTF-8")),
+            "Bj\u{f6}rk"
+        );
+        assert_eq!(response_text(b"plain", None), "plain");
+        // Captures hold that text as UTF-8.
+        assert_eq!(stored_text(detail.as_bytes().to_vec()), detail);
+        assert_eq!(stored_text(b"Pok\xe9mon".to_vec()), "Pok\u{e9}mon");
     }
 }

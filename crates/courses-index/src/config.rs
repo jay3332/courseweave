@@ -42,6 +42,11 @@ pub struct SourceConfig {
     /// authoritative about which sections exist (the SOC drops cancelled sections).
     #[serde(default)]
     pub add_missing_sections: Option<bool>,
+    /// Supplements only: add meetings at times a section's primary meetings don't list. Default
+    /// `add_missing_sections`: a primary authoritative about which sections exist is also authoritative about when
+    /// they meet, and a supplement's other times are stale or the same meetings split by day.
+    #[serde(default)]
+    pub add_missing_meetings: Option<bool>,
     /// Adapter options.
     #[serde(flatten)]
     pub options: Map<String, Value>,
