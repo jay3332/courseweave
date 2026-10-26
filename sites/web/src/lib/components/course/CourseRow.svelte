@@ -1,5 +1,6 @@
 <script lang="ts">
   import { Star } from "@lucide/svelte";
+  import { getSession } from "$lib/components/shell/session";
   import { FCE_HOURS_HELP, courseIsMini, formatHours } from "$lib/core/fce";
   import { workloadDescription } from "$lib/core/fce/workload";
   import { meetingSummary } from "$lib/core/explorer/summary";
@@ -34,6 +35,7 @@
     class?: string;
   } = $props();
 
+  const session = getSession();
   const summary = $derived(offered === undefined ? meetingSummary(course) : null);
   const fce = $derived(fceSummary());
   const stats = $derived(fce.value?.courses.get(course.id));
@@ -76,8 +78,9 @@
           {offeredText}
         {:else if course.instructors.length > 0}
           {course.instructors.join(", ")}
-        {:else}
-          {course.sections.length > 0 ? "Instructor TBA" : ""}
+        {:else if course.sections.length > 0 && session.status === "signed-in"}
+          <!-- Instructors are member data: signed out, no listing has any. -->
+          Instructor TBA
         {/if}
       </span>
     </span>

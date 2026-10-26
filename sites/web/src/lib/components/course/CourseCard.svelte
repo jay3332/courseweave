@@ -4,11 +4,12 @@
   import Button from "$lib/components/ui/Button.svelte";
   import Chip from "$lib/components/ui/Chip.svelte";
   import Select from "$lib/components/ui/Select.svelte";
+  import { instructorSlug } from "$lib/core/data";
   import { departmentName } from "$lib/core/departments";
   import type { Course } from "$lib/core/types";
   import { termLabel } from "$lib/core/requisites";
-  import { coursePath, coursesPath } from "$lib/core/routes";
-  import { catalogIndex, courseDetails, courseFce, fceSummary, offeredTerms } from "./data.svelte";
+  import { coursePath, coursesPath, instructorPath } from "$lib/core/routes";
+  import { catalogIndex, courseDetails, courseFce, fceSummary, offeredTerms, teachersByTerm } from "./data.svelte";
   import { aggregateFce, selectFceRows } from "./fce-aggregate";
   import { fceOptions } from "./fce-options.svelte";
   import FceAggregate from "./FceAggregate.svelte";
@@ -56,6 +57,22 @@
   const details = $derived(courseDetails(course.id));
   const description = $derived(details.value?.description);
   const website = $derived(details.value?.website);
+  const hasCoreqs = $derived(entry?.coreqs.some((other) => other !== course.id) ?? false);
+
+  // Who teaches it in the card's semester: the listing's own instructors, or, for another semester (and the
+  // all-semesters view's listing, which has no sections), the teaching document's. Member data, so signed out
+  // there's nothing to show.
+  const signedIn = $derived(session.status === "signed-in");
+  const ownListing = $derived(cardTerm === termId && course.sections.length > 0);
+  const teachers = $derived(signedIn && !ownListing ? teachersByTerm() : null);
+  const instructors = $derived.by((): readonly string[] | null => {
+    if (!signedIn) return null;
+    if (ownListing) return course.instructors;
+    if (teachers?.status !== "ready") return null;
+    return teachers.value?.get(cardTerm)?.get(course.id) ?? [];
+  });
+  // Up to three names; more, two and how many others.
+  const named = $derived(instructors === null ? [] : instructors.length > 3 ? instructors.slice(0, 2) : instructors);
 
   const units = $derived.by(() => {
     if (course.units !== null) return `${course.units} ${course.units === 1 ? "unit" : "units"}`;
@@ -160,14 +177,40 @@
     <FriendsTaking courseId={course.id} termId={cardTerm} class="[grid-area:friends] self-start justify-self-end" />
 
     <dl class="[grid-area:reqs] flex min-w-0 flex-col gap-x-10 gap-y-1 @2xl:flex-row @2xl:flex-wrap">
+      {#if signedIn}
+        <div class="flex min-w-0 items-baseline gap-2 @2xl:basis-full">
+          <dt class="shrink-0 text-body-1 font-semibold">
+            {instructors !== null && instructors.length === 1 ? "Instructor:" : "Instructors:"}
+          </dt>
+          <dd class="min-w-0 text-body-1">
+            {#if teachers?.status === "loading"}
+              <span class="inline-block h-4 w-32 animate-pulse rounded-tag bg-line" aria-hidden="true"></span>
+            {:else if instructors !== null && instructors.length > 0}
+              <!-- Separators are strings: Svelte trims the whitespace at the edges of each item. -->
+              {#each named as name, n (name)}{n > 0 ? ", " : ""}<a
+                  href={instructorPath(instructorSlug(name), cardTerm)}
+                  class="underline decoration-line-strong underline-offset-2 hover:text-accent-ink">{name}</a
+                >{/each}{#if instructors.length > named.length}{" and "}<a
+                  href={pageHref}
+                  data-course-preview="off"
+                  class="text-muted hover:text-ink hover:underline">{instructors.length - named.length} more</a
+                >{/if}
+            {:else if instructors !== null}
+              <span class="text-muted">TBA</span>
+            {/if}
+          </dd>
+        </div>
+      {/if}
       <div class="flex min-w-0 items-center gap-2">
         <dt class="shrink-0 text-body-1 font-semibold">Prerequisites:</dt>
         <dd class="min-w-0"><RequisiteSummary courseId={course.id} termId={cardTerm} kind="prereqs" /></dd>
       </div>
-      <div class="flex min-w-0 items-center gap-2">
-        <dt class="shrink-0 text-body-1 font-semibold">Corequisites:</dt>
-        <dd class="min-w-0"><RequisiteSummary courseId={course.id} termId={cardTerm} kind="coreqs" /></dd>
-      </div>
+      {#if hasCoreqs}
+        <div class="flex min-w-0 items-center gap-2">
+          <dt class="shrink-0 text-body-1 font-semibold">Corequisites:</dt>
+          <dd class="min-w-0"><RequisiteSummary courseId={course.id} termId={cardTerm} kind="coreqs" /></dd>
+        </div>
+      {/if}
     </dl>
   </div>
 
@@ -216,7 +259,7 @@
       aria-expanded={expanded}
       aria-controls="{id}-more"
       onclick={() => (expanded = !expanded)}
-      class="-ml-2 inline-flex h-10 items-center gap-2 rounded-full px-2 text-body-1 text-muted hover:bg-hover hover:text-ink"
+      class="-ml-3 inline-flex h-10 items-center gap-2 rounded-full pr-4 pl-3 text-body-1 text-muted hover:bg-hover hover:text-ink"
     >
       <ChevronDown aria-hidden="true" class="size-5 transition-transform {expanded ? 'rotate-180' : ''}" />
       {expanded ? "Show less" : "Expand all"}

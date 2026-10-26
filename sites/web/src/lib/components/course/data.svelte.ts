@@ -100,6 +100,34 @@ export function fceSummary(): Shared<FceSummaryData | null> {
   return shared("fce-summary", () => catalog.fceSummary());
 }
 
+/**
+ * Who teaches each course: semester, then course id, to the instructors' names (member data), from the teaching
+ * document, so a card can name them for any semester without loading that semester's courses. Null when this catalog
+ * has none.
+ */
+export function teachersByTerm(): Shared<Map<string, Map<string, string[]>> | null> {
+  return shared("teachers", async () => {
+    const teaching = await catalog.teaching();
+    if (teaching === null) return null;
+    const byTerm = new Map<string, Map<string, string[]>>();
+    for (const [name, { terms }] of Object.entries(teaching.instructors)) {
+      for (const [termId, { courses }] of Object.entries(terms)) {
+        let byCourse = byTerm.get(termId);
+        if (byCourse === undefined) {
+          byCourse = new Map();
+          byTerm.set(termId, byCourse);
+        }
+        for (const courseId of courses) {
+          const names = byCourse.get(courseId);
+          if (names === undefined) byCourse.set(courseId, [name]);
+          else names.push(name);
+        }
+      }
+    }
+    return byTerm;
+  });
+}
+
 /** Every FCE row for a course, newest first (member data). */
 export function courseFce(courseId: string): Shared<FceRow[]> {
   return shared(`fce:${courseId}`, () => catalog.courseFce(courseId));

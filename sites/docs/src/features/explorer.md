@@ -31,8 +31,10 @@ search and the other filters work on the public documents.
 `sites/web/src/lib/components/course/` holds what the Courses page, the profile, schedules and instructor pages
 share. Each component needs only a course (or its id) and a semester:
 
-- `CourseCard` (the Figma card: requisite status with a popover of the expression as status chips, semester select,
-  save star, friends taking it; expanded, the FCE aggregate and table), `CourseRow` in a `CourseList` (Courseweave's
+- `CourseCard` (the Figma card: requisite status with a popover of the expression as status chips, corequisites only
+  when the course has some, semester select, save star, friends taking it; signed in, who teaches it in the card's
+  semester, up to three names linked to their pages, from the listing or, for another semester, the teaching document;
+  expanded, the FCE aggregate and table), `CourseRow` in a `CourseList` (Courseweave's
   compact rows; from 34rem wide their hours column is Courseweave's workload cell: the FCE hours, "mini" before a
   mini's, over a `WorkloadMeter` bar, with the workload described in its title and to screen readers) and `CourseCardSmall` (the Figma's small card, for saved courses and the record's Courses Taken and
   Currently Taking, with `deptLabel`, `children` and `footer` slots).
