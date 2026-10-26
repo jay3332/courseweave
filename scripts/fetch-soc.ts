@@ -23,7 +23,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { gunzipSync, gzipSync } from 'node:zlib'
 import { dataDir } from './lib/common.ts'
-import { isLecture, parseDetailsExtras, parseSearchPage, selectOptions } from './lib/soc-parse.ts'
+import { isLecture, parseDetailsExtras, parseSearchPage, responseText, selectOptions } from './lib/soc-parse.ts'
 
 const BASE = 'https://enr-apps.as.cmu.edu/open/SOC/SOCServlet'
 const DELAY_MS = 150
@@ -33,7 +33,7 @@ async function get(url: string, init?: RequestInit, attempt = 1): Promise<string
   try {
     const res = await fetch(url, { ...init, headers: { 'User-Agent': 'courseweave (CMU course planner; weekly schedule refresh)', ...init?.headers } })
     if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`)
-    return new TextDecoder('latin1').decode(await res.arrayBuffer())
+    return responseText(new Uint8Array(await res.arrayBuffer()), res.headers.get('content-type'))
   } catch (e) {
     if (attempt >= 3) throw e
     await sleep(1000 * attempt)

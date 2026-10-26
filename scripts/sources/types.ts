@@ -16,6 +16,12 @@ export interface SourceConfig {
    * Set false when the primary is authoritative about which sections exist (SOC drops cancelled sections).
    */
   addMissingSections?: boolean
+  /**
+   * With role "supplement": add meetings at times a section's primary meetings don't list. Default `addMissingSections`:
+   * a primary authoritative about which sections exist is also authoritative about when they meet, and a supplement's
+   * other times are stale or the same meetings split by day. Rooms and TBA sections are still filled in.
+   */
+  addMissingMeetings?: boolean
   /** Adapter-specific options (paths are relative to data/). */
   [option: string]: unknown
 }

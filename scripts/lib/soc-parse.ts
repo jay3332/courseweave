@@ -1,6 +1,34 @@
 // Pure parsers for CMU's open Schedule of Classes (enr-apps.as.cmu.edu/open/SOC/SOCServlet).
 // No I/O here so the parsers can be unit tested (src/lib/soc-parse.test.ts).
 
+/**
+ * A response's text, by the charset its Content-Type declares: the SOC's search pages say ISO-8859-1, its detail pages
+ * UTF-8. Anything else, or bytes that aren't the UTF-8 they claim, is read as Latin-1.
+ */
+export function responseText(bytes: Uint8Array, contentType: string | null): string {
+  const utf8 = (contentType ?? '')
+    .split(';')
+    .slice(1)
+    .some((p) => /^charset="?utf-8"?$/i.test(p.trim()))
+  if (utf8) {
+    try {
+      return new TextDecoder('utf-8', { fatal: true }).decode(bytes)
+    } catch {
+      // not UTF-8 after all
+    }
+  }
+  return Buffer.from(bytes).toString('latin1')
+}
+
+/** A stored capture's text. Captures hold each page's decoded text as UTF-8; bytes that aren't UTF-8 are read as Latin-1. */
+export function storedText(bytes: Buffer): string {
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(bytes)
+  } catch {
+    return bytes.toString('latin1')
+  }
+}
+
 /** One <tr> of the search results table. Continuation rows (more meetings / more sections) have an empty course. */
 export interface SocRow {
   /** Department title of the table this row is in, e.g. "COMPUTER SCIENCE". */

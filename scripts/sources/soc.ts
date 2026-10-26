@@ -16,7 +16,7 @@ import { join } from 'node:path'
 import { gunzipSync } from 'node:zlib'
 import type { Course, Section } from '../../src/lib/types.ts'
 import { addMeeting, cleanTitle, courseCode, miniOf, parseDays, parseTime } from '../lib/common.ts'
-import { isLecture, modeCode, parseDetailsGrouping, parseSearchPage, sectionName, splitSocTitle, type SocRow } from '../lib/soc-parse.ts'
+import { isLecture, modeCode, parseDetailsGrouping, parseSearchPage, sectionName, splitSocTitle, storedText, type SocRow } from '../lib/soc-parse.ts'
 import type { SourceAdapter } from './types.ts'
 
 interface DeptMeta {
@@ -26,7 +26,7 @@ interface DeptMeta {
 }
 
 function readGz(path: string): string {
-  return gunzipSync(readFileSync(path)).toString('latin1')
+  return storedText(gunzipSync(readFileSync(path)))
 }
 
 /** "VAR", "3-12", "9,12" → null (variable); "12" / "4.5" → number. */

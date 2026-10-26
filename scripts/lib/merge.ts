@@ -4,10 +4,17 @@ import { addInstructors, addMeeting } from './common.ts'
 /**
  * Folds a supplement source into the primary course list. Never removes data:
  * - sections missing from primary (e.g. recitations) are added, with their parent link, unless `addMissingSections` is false;
- * - sections present in both get missing instructors, rooms and meetings filled in;
+ * - sections present in both get missing instructors, rooms and meetings filled in; a section with scheduled meetings
+ *   gets the supplement's meetings at other times only when `addMissingMeetings` is set;
  * - courses missing from primary are added only when `addMissingCourses` is set.
  */
-export function mergeSupplement(primary: Map<string, Course>, supplement: Course[], addMissingCourses: boolean, addMissingSections = true) {
+export function mergeSupplement(
+  primary: Map<string, Course>,
+  supplement: Course[],
+  addMissingCourses: boolean,
+  addMissingSections = true,
+  addMissingMeetings = addMissingSections,
+) {
   for (const sup of supplement) {
     const course = primary.get(sup.id)
     if (!course) {
@@ -40,6 +47,7 @@ export function mergeSupplement(primary: Map<string, Course>, supplement: Course
           m.room = match.room
         }
       }
+      if (!addMissingMeetings) continue
       for (const m of s.meetings) if (!existing.meetings.some((x) => x.start === m.start && x.days.join() === m.days.join())) addMeeting(existing, m)
     }
   }

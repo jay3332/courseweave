@@ -35,11 +35,11 @@ Several inputs come from a checkout of the ScottyLabs courses repo (FCE CSV, Ste
 
 ### Terms and sources
 
-Each entry in `data/terms.json` lists academic-calendar dates (classes, minis, breaks) and one or more `sources`. The first source is primary and defines the course list; later ones are supplements that fill in instructors, rooms and capacities, and can add missing sections.
+Each entry in `data/terms.json` lists academic-calendar dates (classes, minis, breaks) and one or more `sources`. The first source is primary and defines the course list; later ones are supplements that fill in instructors, rooms and capacities, and can add missing sections. With `"addMissingSections": false` (when the SOC is primary, as it is for every term it lists), a supplement doesn't add sections or meetings at times the SOC doesn't list: next to the SOC's current times, its own are out of date or the same meetings split by day. `addMissingMeetings` overrides that part.
 
 | Source | Input | Notes |
 | --- | --- | --- |
-| `csv` | `data/raw/<TERM>.csv` | Schedule CSV export (`num,title,units,section,lecture,days,...`). |
+| `csv` | `data/raw/<TERM>.csv` | Schedule CSV export (`num,title,units,section,lecture,days,...`). Primary until the SOC lists the term, then a supplement for instructors and rooms. |
 | `soc` | `data/raw/soc/<TERM>/` | Public Schedule of Classes, cached by `npm run fetch:soc`. Has recitations, no instructors or rooms. |
 | `stellic` | Stellic `getcoursesections` exports | Instructors, rooms, capacities, recitations. `npm run fetch:stellic -- <TERM>` fetches a term read-only with your session cookie (`COOKIE_HEADER`). |
 
@@ -55,7 +55,7 @@ Mini sections are detected from the section name's last digit when it matches on
 
 The **Refresh course data** workflow (`.github/workflows/refresh-data.yml`) runs every Monday and Thursday, or any time from the Actions tab:
 
-- It re-downloads the public Schedule of Classes. When sections really changed (not just the SOC's daily "last updated" stamp), it builds and tests the new data and opens a pull request on `data/schedule-of-classes` listing the added, removed and changed courses. When a semester that `data/terms.json` builds from something else appears on the SOC (Spring 2027 is due Monday, October 26), the pull request also switches it to the SOC as its primary source.
+- It re-downloads the public Schedule of Classes. When sections really changed (not just the SOC's daily "last updated" stamp), it builds and tests the new data and opens a pull request on `data/schedule-of-classes` listing the added, removed and changed courses. When a semester that `data/terms.json` builds from something else appears on the SOC, the pull request also switches it to the SOC as its primary source, keeping its Stellic sections and schedule CSV as supplements.
 - It keeps one **Data refresh checklist** issue for what CI can't do: newer FCE data from ScottyLabs, Stellic sections more than two weeks old for a term that hasn't ended (Stellic needs your CMU login), merged data the live site doesn't have yet, and semesters newly on the Schedule of Classes. The issue closes itself once everything is current.
 
 Deploys stay on your machine, because a deploy also needs the Stellic and FCE data that live there. After merging a refresh pull request (or refreshing Stellic or FCE data), run `npm run data`, commit `data/derived/refreshed.json` if it changed, and `npm run deploy`. Pull requests from the workflow need **Settings → Actions → General → Allow GitHub Actions to create and approve pull requests**.

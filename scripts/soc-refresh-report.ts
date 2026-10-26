@@ -20,6 +20,7 @@ import { gunzipSync } from 'node:zlib'
 import type { Course, TermMeta } from '../src/lib/types.ts'
 import { dataDir, root } from './lib/common.ts'
 import { socSource } from './sources/soc.ts'
+import type { SourceConfig } from './sources/types.ts'
 
 const { values } = parseArgs({ options: { out: { type: 'string' } } })
 const SOC_DIR = 'data/raw/soc'
@@ -67,7 +68,7 @@ for (const term of new Set(remaining.map(termOf))) {
 
 // ---- 2. Compare each changed term before and after ----
 
-const terms = JSON.parse(readFileSync(join(dataDir, 'terms.json'), 'utf8')) as (Omit<TermMeta, 'sources'> & { sources: { type: string; term?: string }[] })[]
+const terms = JSON.parse(readFileSync(join(dataDir, 'terms.json'), 'utf8')) as (Omit<TermMeta, 'sources'> & { sources: SourceConfig[] })[]
 const socTermIds = new Set(terms.flatMap((t) => t.sources.filter((s) => s.type === 'soc').map((s) => s.term ?? t.id)))
 const changedTerms = [...new Set(changedPaths().map(termOf))].sort()
 
@@ -171,13 +172,15 @@ for (const term of cached.filter((t) => !socTermIds.has(t)).sort()) {
     notes.push(`- **${term}** is on the Schedule of Classes but isn't in data/terms.json. Add it (calendar dates and minis from the academic calendar) to show it on the site.`)
     continue
   }
-  // The SOC is now the authority on which sections exist (like the other terms); Stellic only fills in details.
-  const previous = configured.sources[0]?.type
+  // The SOC is now the authority on which sections exist and when they meet (like the other terms). The earlier sources
+  // only fill in instructors and rooms, so a schedule CSV that was primary stays on as a supplement.
+  const [previous, ...supplements] = configured.sources
+  if (previous?.type === 'csv') supplements.push({ ...previous, role: 'supplement' })
   configured.sources = [
     { type: 'soc', term },
-    ...configured.sources.slice(1).map((s) => (s.type === 'stellic' ? { ...s, addMissingSections: false } : s)),
+    ...supplements.map((s) => (s.type === 'stellic' || s.type === 'csv' ? { ...s, addMissingSections: false } : s)),
   ]
-  switched.push(`- **${configured.name}** is on the Schedule of Classes now, so this switches its primary source from ${previous} to the SOC (its Stellic supplement still adds instructors and rooms where the SOC has none).`)
+  switched.push(`- **${configured.name}** is on the Schedule of Classes now, so this switches its primary source from ${previous?.type} to the SOC (its Stellic sections and schedule CSV still add instructors and rooms where the SOC has none).`)
 }
 if (switched.length) writeFileSync(join(dataDir, 'terms.json'), `${JSON.stringify(terms, null, 2)}\n`)
 

@@ -80,7 +80,8 @@ async function buildTerm(config: TermConfig, passFail: Set<string>): Promise<Ter
       if (i !== 0) throw new Error(`${term.id}: only the first source can be primary`)
       for (const c of courses) merged.set(c.id, c)
     } else {
-      mergeSupplement(merged, courses, source.addMissingCourses === true, source.addMissingSections !== false)
+      const addSections = source.addMissingSections !== false
+      mergeSupplement(merged, courses, source.addMissingCourses === true, addSections, source.addMissingMeetings ?? addSections)
     }
     console.log(`  ${term.id} ${source.type} (${role}): ${courses.length} courses`)
   }
