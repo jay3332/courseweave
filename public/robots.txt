@@ -9,4 +9,4 @@ Disallow: /*/plan
 # People pages: many instructors are students (TAs), so they stay out of search results.
 Disallow: /*/instructors
 
-Sitemap: https://courseweave.jay3332.tech/sitemap.xml
+Sitemap: https://legacy.courseweave.jay3332.tech/sitemap.xml

@@ -6,9 +6,10 @@
   "name": "courseweave",
   "main": "worker/index.ts",
   "compatibility_date": "2026-10-21",
-  // Served at courseweave.jay3332.tech (the zone is on this Cloudflare account; deploy creates the DNS record and
-  // certificate). The workers.dev address is off so there's one canonical URL for sign-in redirects.
-  "routes": [{ "pattern": "courseweave.jay3332.tech", "custom_domain": true }],
+  // Served at legacy.courseweave.jay3332.tech (the zone is on this Cloudflare account; deploy creates the DNS record
+  // and certificate). courseweave.jay3332.tech redirects to courses.jay3332.tech, the ScottyLabs-based instance. The
+  // workers.dev address is off so there's one canonical URL for sign-in redirects.
+  "routes": [{ "pattern": "legacy.courseweave.jay3332.tech", "custom_domain": true }],
   "workers_dev": false,
   // `wrangler dev` would otherwise present requests as coming from the custom domain above, breaking local sign-in
   // (redirect URI), cookie names and the dev-origin check. Locally the Worker sees http://localhost:8787.

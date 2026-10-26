@@ -15,7 +15,7 @@ import { parseArgs } from 'node:util'
 import { DATA_INPUT_PATHS, dataDir, readRefreshRecord, root } from './lib/common.ts'
 
 const { values } = parseArgs({ options: { 'soc-notes': { type: 'string' }, out: { type: 'string' } } })
-const SITE = process.env.SITE_URL ?? 'https://courseweave.jay3332.tech'
+const SITE = process.env.SITE_URL ?? 'https://legacy.courseweave.jay3332.tech'
 /** Stellic sections older than this get a reminder while their term is still running. */
 const STELLIC_MAX_AGE_DAYS = 14
 const DAY = 24 * 60 * 60 * 1000

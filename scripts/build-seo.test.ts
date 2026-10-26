@@ -8,7 +8,7 @@ const template = `<!doctype html>
     <meta name="description" content="Generic." />
     <meta property="og:type" content="website" />
     <meta property="og:title" content="Courseweave" />
-    <meta property="og:image" content="https://courseweave.jay3332.tech/og.png" />
+    <meta property="og:image" content="https://legacy.courseweave.jay3332.tech/og.png" />
     <title>Courseweave</title>
     <script type="module" crossorigin src="/assets/index-abc.js"></script>
   </head>
@@ -32,9 +32,9 @@ describe('course pages', () => {
 
   it('puts the course in the head and keeps the app untouched', () => {
     expect(page).toContain('<title>15-122 Principles of Imperative Computation · CMU course · Courseweave</title>')
-    expect(page).toContain('<link rel="canonical" href="https://courseweave.jay3332.tech/all/courses/15-122" />')
+    expect(page).toContain('<link rel="canonical" href="https://legacy.courseweave.jay3332.tech/all/courses/15-122" />')
     expect(page).toContain('<meta property="og:title" content="15-122 Principles of Imperative Computation" />')
-    expect(page).toContain('<meta property="og:image" content="https://courseweave.jay3332.tech/og.png" />')
+    expect(page).toContain('<meta property="og:image" content="https://legacy.courseweave.jay3332.tech/og.png" />')
     expect(page.match(/og:title/g)).toHaveLength(1)
     expect(page).toContain('<script type="module" crossorigin src="/assets/index-abc.js"></script>')
     expect(page).toContain('<div id="root"></div>')
@@ -93,8 +93,8 @@ describe('which courses get pages', () => {
 
 describe('sitemap', () => {
   it('lists addresses with their dates', () => {
-    const xml = sitemap([{ loc: 'https://courseweave.jay3332.tech/' }, { loc: 'https://courseweave.jay3332.tech/all/courses/15-122', lastmod: '2026-10-24' }])
+    const xml = sitemap([{ loc: 'https://legacy.courseweave.jay3332.tech/' }, { loc: 'https://legacy.courseweave.jay3332.tech/all/courses/15-122', lastmod: '2026-10-24' }])
     expect(xml).toContain('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">')
-    expect(xml).toContain('<url><loc>https://courseweave.jay3332.tech/all/courses/15-122</loc><lastmod>2026-10-24</lastmod></url>')
+    expect(xml).toContain('<url><loc>https://legacy.courseweave.jay3332.tech/all/courses/15-122</loc><lastmod>2026-10-24</lastmod></url>')
   })
 })
