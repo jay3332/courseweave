@@ -49,8 +49,10 @@ so visiting creates nothing. `?schedule=<id>` shows a particular one (the profil
   previews a course's sections on the calendar, Enter adds it with sections that fit; the results float in the top
   layer, as wide as the field, with the title on its own line so it stays readable in the narrow rail and the
   sheet), then each course (`CourseEntryRow.svelte`: color, lecture and recitation pickers with times, rooms,
-  instructors' FCEs and conflicts, pass/fail, hide, remove, and a handle to drag it up or down the list, the rows it
-  passes making room, or to move it a place with the arrow keys); saved courses offered this semester
+  instructors' FCEs and conflicts, hide, remove, and a handle to drag it up or down the list, the rows it passes
+  making room, or to move it a place with the arrow keys; taking a course pass/fail is rare, so its box shows only
+  once it's on, set from the plan's course menu, which a synced semester shares, to turn it off); saved courses
+  offered this semester
   with quick add; the requisite check against the record (`ScheduleRequisiteSummary.svelte`, built on
   `core/record/context.ts`); the FCE workload by course and by half of the semester; and a friend's schedule to
   compare. Below the desktop breakpoint the rail is the "Courses" sheet, search and totals included.

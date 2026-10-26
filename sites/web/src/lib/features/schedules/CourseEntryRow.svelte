@@ -1,8 +1,8 @@
 <!--
   One course in the schedule (Courseweave's CourseEntryRow): its color, units, lecture and recitation pickers (dropdowns,
-  or the compact letters when the student prefers them), conflicts, pass/fail, buttons to hide it from the calendar or
-  remove it, and a handle to drag it up or down the list (or move it with the arrow keys). Clicking the row selects the
-  course on the calendar, which outlines its other sections.
+  or the compact letters when the student prefers them), conflicts, pass/fail once it's on, buttons to hide it from the
+  calendar or remove it, and a handle to drag it up or down the list (or move it with the arrow keys). Clicking the row
+  selects the course on the calendar, which outlines its other sections.
 -->
 <script lang="ts">
   import { Eye, EyeOff, GripVertical, TriangleAlert, X } from "@lucide/svelte";
@@ -263,7 +263,9 @@
 
     {#if passFailOnly}
       <p class="text-label-md font-normal text-muted" title={PASS_FAIL_ONLY_HELP}>Pass/fail only</p>
-    {:else}
+    {:else if entry.passFail}
+      <!-- Taking a course pass/fail is rare, so the box shows only once it's on (set before, or from the plan's course
+           menu, which a synced semester shares), to turn it off. -->
       <Checkbox
         checked={entry.passFail}
         label="Take pass/fail"
