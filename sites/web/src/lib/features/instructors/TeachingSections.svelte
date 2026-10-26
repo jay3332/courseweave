@@ -61,7 +61,7 @@
 
 <section aria-labelledby="teaching-heading" class="flex flex-col gap-4">
   <h2 id="teaching-heading" class="text-heading-5 text-strong">Teaching in {term.meta.name}</h2>
-  <div class="grid grid-cols-3 gap-2 sm:max-w-xl sm:gap-3">
+  <div class="grid grid-cols-3 gap-2 sm:gap-3">
     <StatBox label="Courses" value={inst.courseIds.length} />
     <StatBox label="Sections" value={inst.sectionCount} />
     <div

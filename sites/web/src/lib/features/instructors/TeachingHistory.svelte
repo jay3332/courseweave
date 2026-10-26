@@ -13,7 +13,7 @@
 <section aria-labelledby="history-heading" class="flex flex-col gap-4">
   <h2 id="history-heading" class="text-heading-5 text-strong">Teaching by semester</h2>
   {#if inst.terms.length > 0}
-    <div class="grid grid-cols-3 gap-2 sm:max-w-xl sm:gap-3">
+    <div class="grid grid-cols-3 gap-2 sm:gap-3">
       <StatBox label="Semesters" value={inst.terms.length} />
       <StatBox label="Courses" value={inst.courseIds.length} />
       <StatBox label="Sections" value={inst.sectionCount} />
