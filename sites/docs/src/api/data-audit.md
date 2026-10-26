@@ -75,8 +75,9 @@ The S27 schedule CSV and Stellic sections behind that snapshot are now inputs of
 
 The registrar published Spring 2027 on the Schedule of Classes (its complete schedule, `sched_layout_spring.dat`, has a
 run date of October 25). `courses-scraper --mode soc --soc-extras all` captured it on October 26, and
-`data/terms.json` now builds the term from that capture, like the other terms. The Stellic sections and the
-registrar's CSV, both from October 21, stay on as supplements for instructors and rooms. The term's dates match the
+`data/terms.json` now builds the term from that capture, like the other terms. Stellic's sections (refreshed the same
+day) add instructors, rooms and capacities, and the registrar's CSV from October 21 fills in instructors Stellic
+lacks. The term's dates match the
 [official 2026-27 academic calendar](https://www.cmu.edu/hub/calendar/docs/2627-academic-calendar.pdf) (updated
 July 1, 2026).
 
@@ -96,12 +97,14 @@ Checks and coverage:
 
 - The search pages and the complete schedule agree section for section on all 3,224 courses. They differ only on
   15-111 (Pre-College, dropped since October 25) and 67-375 (Qatar, added since).
-- 5,521 sections have instructors: 5,454 from Stellic and 67 more from the CSV. Where both name instructors, they
-  differ on 254 sections, mostly preferred against full names; Stellic's are kept, as in the other terms. 3,290 of the
-  4,075 scheduled sections have a room.
+- 5,542 sections have instructors: 5,473 from Stellic and 69 more from the CSV (7 of those are names Stellic has
+  dropped since October 21). Where both name instructors, they differ on 256 sections, mostly preferred against full
+  names; Stellic's are kept, as in the other terms. 3,539 of the 4,075 scheduled sections have a room, and every
+  section has a capacity.
 - The SOC adds seat reservations for 2,451 sections and special permission for 493 courses.
-- Instructors and rooms for the new courses and sections, and changes to either since October 21, need a Stellic
-  refresh with a CMU session (Courseweave's `fetch-stellic.ts S27`, copied to `exported/stellic-terms/S27`).
+- Stellic's sections were refreshed on October 26 (Courseweave's `fetch-stellic.ts S27`, copied to
+  `exported/stellic-terms/S27`). They now cover every course and section the SOC lists and agree with its meeting
+  times. Since October 21, 406 sections changed rooms, 23 changed instructors, 26 gained one and 7 lost theirs.
 
 The catalog's course pages gained 382 courses. The 1,494 courses Spring 2027 lists whose pages had been read from a
 2025-26 term were re-read from Spring 2027; 215 had new descriptions, titles, cross-listings or prerequisite text.
