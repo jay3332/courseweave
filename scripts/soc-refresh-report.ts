@@ -104,10 +104,12 @@ function headCopy(term: string): string | null {
 }
 
 const code = (id: string) => `${id.slice(0, 2)}-${id.slice(2)}`
-const sectionKey = (c: Course) =>
-  JSON.stringify(
-    c.sections.map((s) => [s.name, s.instructors, s.meetings.map((m) => [m.days, m.start, m.end, m.building, m.room])]).sort(),
-  )
+/** A section's meetings in a fixed order: the SOC lists a section's meetings in a different order from day to day. */
+const sortedMeetings = (s: Course['sections'][number]) =>
+  s.meetings.map((m) => JSON.stringify([m.days, m.start, m.end, m.building, m.room])).sort()
+/** A course as JSON, its meetings in a fixed order. */
+const courseKey = (c: Course) => JSON.stringify({ ...c, sections: c.sections.map((s) => ({ ...s, meetings: sortedMeetings(s) })) })
+const sectionKey = (c: Course) => JSON.stringify(c.sections.map((s) => [s.name, s.instructors, sortedMeetings(s)]).sort())
 
 function describe(before: Course, after: Course): string {
   const parts: string[] = []
@@ -121,7 +123,7 @@ function describe(before: Course, after: Course): string {
   if (!!before.permissionRequired !== !!after.permissionRequired) parts.push(after.permissionRequired ? 'now needs special permission' : 'no longer needs special permission')
   const same = after.sections.filter((s) => names(before).has(s.name))
   const was = (s: Course['sections'][number]) => before.sections.find((b) => b.name === s.name)!
-  const withoutReservations = (s: Course['sections'][number]) => JSON.stringify({ ...s, reservations: undefined })
+  const withoutReservations = (s: Course['sections'][number]) => JSON.stringify({ ...s, meetings: sortedMeetings(s), reservations: undefined })
   if (!parts.length || sectionKey(before) !== sectionKey(after)) {
     const changedSections = same.filter((s) => withoutReservations(s) !== withoutReservations(was(s)))
     if (changedSections.length) parts.push(`times, rooms or instructors (${changedSections.map((s) => s.name).join(', ')})`)
@@ -147,7 +149,7 @@ for (const term of changedTerms) {
   const added = [...after.keys()].filter((id) => !before.has(id)).sort()
   const removed = [...before.keys()].filter((id) => !after.has(id)).sort()
   const changed = [...after.keys()]
-    .filter((id) => before.has(id) && JSON.stringify(before.get(id)) !== JSON.stringify(after.get(id)))
+    .filter((id) => before.has(id) && courseKey(before.get(id)!) !== courseKey(after.get(id)!))
     .sort()
   if (!added.length && !removed.length && !changed.length) {
     // The pages differ, but not in anything the site shows: keep the committed copy.
