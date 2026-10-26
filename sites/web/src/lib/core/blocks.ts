@@ -30,6 +30,7 @@ export function sectionBlocks(
         label: course.code,
         section: sectionLabel(section),
         location: formatLocation(m),
+        title: section.title ?? course.title,
         detail: `${sectionLabel(section)} \u00b7 ${formatLocation(m)}`,
         mini: section.mini,
         tooltip: `${course.code} ${course.title}, ${sectionLabel(section)}`,

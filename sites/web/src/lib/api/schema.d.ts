@@ -563,6 +563,8 @@ export interface components {
       location: boolean;
       section: boolean;
       time: boolean;
+      /** @description The course's name (or a topics section's title), when the block is tall enough. Off unless chosen. */
+      title: boolean;
     };
     CourseDetail: {
       code: string;
@@ -805,6 +807,7 @@ export interface components {
        * @description 0 when nothing has been saved yet.
        */
       revision: number;
+      sectionPicker: components["schemas"]["SectionPicker"];
       /** Format: int64 */
       updatedAt: number;
     };
@@ -827,6 +830,7 @@ export interface components {
        * @description The revision this change is based on; 0 to create.
        */
       revision: number;
+      sectionPicker?: components["schemas"]["SectionPicker"];
     };
     /** @description Which program version a plan audits against (`lib/plan-types.ts`). */
     ProgramSelection: {
@@ -972,6 +976,11 @@ export interface components {
       /** @description The lecture this section belongs to, if any. */
       parent: string | null;
     };
+    /**
+     * @description How the schedule page picks a course's sections: dropdowns of every option, or compact buttons to hover through.
+     * @enum {string}
+     */
+    SectionPicker: "dropdown" | "compact";
     ShareLink: {
       shareId: string;
       /** @description The website's page for the link. */

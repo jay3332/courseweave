@@ -93,7 +93,7 @@ preferences. Its stores are also exported on their own:
 | `links` | | Plan edits that land in a synced schedule: `addToTerm`, `placeInTerm`, `removeFromPlan`, `moveInPlan`, `setPlanPassFail`, `setPlanUnits`, `linkTermToSchedule`, `unlinkTerm` |
 | `record` | `data`, `entries`, `overrides`, `profile`, `isEmpty`, `totals(unitsOf)` | `addEntry`, `addEntries`, `updateEntry`, `removeEntry`, `removeExam`, `setOverride`, `setProfile`, `importRecord`, `clearRecord` |
 | `saved` | `ids`, `has(courseId)` | `toggle`, `add`, `remove` |
-| `preferences` | `calendarDisplay`, `planLayout`, `onboarding`, `activePlanId` | `setCalendarDisplay`, `setPlanLayout`, `hideOnboardingPrompt` |
+| `preferences` | `calendarDisplay`, `planLayout`, `sectionPicker`, `onboarding`, `activePlanId` | `setCalendarDisplay`, `setPlanLayout`, `setSectionPicker`, `hideOnboardingPrompt` |
 
 These are Courseweave's store actions with the same meaning; the pure edits behind them are in `core/state`. What
 changed is where the data lives:

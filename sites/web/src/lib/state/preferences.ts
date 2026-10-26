@@ -1,8 +1,8 @@
 // Preferences that follow the student between devices (`/api/preferences`): calendar display options, the schedule
-// shown for each semester, the active degree plan, the plan layout and the onboarding prompt's answer. Courseweave
-// kept these on the device; here they're one record per student.
+// shown for each semester, the active degree plan, the plan layout, how sections are picked and the onboarding
+// prompt's answer. Courseweave kept these on the device; here they're one record per student.
 import type { Api } from "../api/endpoints.ts";
-import type { PlanLayout, Preferences, PreferencesData } from "../api/types.ts";
+import type { PlanLayout, Preferences, PreferencesData, SectionPicker } from "../api/types.ts";
 import { EMPTY_ONBOARDING, type OnboardingState } from "../core/state/onboarding.ts";
 import { DEFAULT_CALENDAR_DISPLAY, type CalendarDisplay } from "../core/state/store.ts";
 import type { StoreDeps } from "./drafts.ts";
@@ -15,6 +15,7 @@ export const DEFAULT_PREFERENCES: PreferencesData = {
   activeSchedule: {},
   activePlanId: null,
   planLayout: "cards",
+  sectionPicker: "dropdown",
   onboarding: EMPTY_ONBOARDING,
 };
 
@@ -38,10 +39,12 @@ export function normalizePreferences(raw: unknown): PreferencesData | null {
       section: flag(cd.section, DEFAULT_CALENDAR_DISPLAY.section),
       time: flag(cd.time, DEFAULT_CALENDAR_DISPLAY.time),
       location: flag(cd.location, DEFAULT_CALENDAR_DISPLAY.location),
+      title: flag(cd.title, DEFAULT_CALENDAR_DISPLAY.title),
     },
     activeSchedule,
     activePlanId: typeof raw.activePlanId === "string" ? raw.activePlanId : null,
     planLayout: raw.planLayout === "table" ? "table" : "cards",
+    sectionPicker: raw.sectionPicker === "compact" ? "compact" : "dropdown",
     onboarding: { asked: ob.asked === true, promptHidden: ob.promptHidden === true },
   };
 }
@@ -56,6 +59,7 @@ export function mergePreferences(local: PreferencesData, remote: PreferencesData
     activeSchedule: { ...remote.activeSchedule, ...local.activeSchedule },
     activePlanId: local.activePlanId ?? remote.activePlanId,
     planLayout: local.planLayout,
+    sectionPicker: local.sectionPicker,
     onboarding: {
       asked: local.onboarding.asked || remote.onboarding.asked,
       promptHidden: local.onboarding.promptHidden || remote.onboarding.promptHidden,
@@ -106,6 +110,10 @@ export class PreferencesStore {
     return this.store.value.planLayout;
   }
 
+  get sectionPicker(): SectionPicker {
+    return this.store.value.sectionPicker;
+  }
+
   get onboarding(): OnboardingState {
     return this.store.value.onboarding;
   }
@@ -116,6 +124,10 @@ export class PreferencesStore {
 
   setPlanLayout(planLayout: PlanLayout): void {
     this.store.edit((p) => (p.planLayout === planLayout ? p : { ...p, planLayout }));
+  }
+
+  setSectionPicker(sectionPicker: SectionPicker): void {
+    this.store.edit((p) => (p.sectionPicker === sectionPicker ? p : { ...p, sectionPicker }));
   }
 
   /** Shows schedule `id` for `termId`; null forgets the choice. */

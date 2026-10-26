@@ -199,9 +199,12 @@
   {@const tag = shown.section && block.section ? block.section : null}
   {@const room = block.location === "TBA" ? undefined : block.location}
   {@const detail = structured ? (shown.location ? room : undefined) : block.detail}
-  {@const showTime = shown.time && !small && h >= 30}
+  {@const title = shown.title && !small && h >= 30 ? block.title : undefined}
+  <!-- Each line under the code needs about 20px more: the course name first, then the time, then the room. -->
+  {@const showTime = shown.time && !small && h >= (title ? 50 : 30)}
   {@const inline = view === "day" && !small && h < 50}
-  {@const showDetail = !small && Boolean(detail) && (inline ? h >= 30 : h >= (showTime ? 50 : 30))}
+  {@const showDetail =
+    !small && Boolean(detail) && (inline ? h >= 30 : h >= 30 + (title ? 20 : 0) + (showTime ? 20 : 0))}
   <span class="flex items-start gap-1 {small ? 'px-1 pt-0.5' : 'px-1.5 pt-1'}">
     <span
       class="flex min-w-0 flex-wrap items-baseline gap-x-1 leading-tight {small
@@ -225,11 +228,14 @@
       <TriangleAlert aria-hidden="true" class="ml-auto size-3 shrink-0 text-danger @max-[4.5rem]:hidden" />
     {/if}
   </span>
-  {#if inline && (showTime || showDetail)}
+  {#if inline && (title || showTime || showDetail)}
     <span class="block truncate px-1.5 text-[11.5px] opacity-80">
-      {#if showTime}{formatTimeRange(block.start, block.end)}{/if}{#if showTime && showDetail}&nbsp;&middot;&nbsp;{/if}{#if showDetail}{detail}{/if}
+      {#if title}<span class="font-medium">{title}</span>{/if}{#if title && (showTime || showDetail)}&nbsp;&middot;&nbsp;{/if}{#if showTime}{formatTimeRange(block.start, block.end)}{/if}{#if showTime && showDetail}&nbsp;&middot;&nbsp;{/if}{#if showDetail}{detail}{/if}
     </span>
   {:else}
+    {#if title}
+      <span class="block truncate px-1.5 text-[11px] font-medium opacity-90">{title}</span>
+    {/if}
     {#if showTime}
       <span class="block truncate px-1.5 text-[11px] opacity-80">{formatTimeRange(block.start, block.end)}</span>
     {/if}

@@ -36,7 +36,8 @@ the menu), duplicate, share and delete. A semester without a schedule shows "Sch
 so visiting creates nothing. `?schedule=<id>` shows a particular one (the profile links to it).
 
 - **Toolbar**: one row under the tabs with Generate, Finals, Export and the calendar display button (a settings icon,
-  `DisplayMenu.svelte`, whose popover chooses what blocks show besides the code). On screens 80rem and wider the
+  `DisplayMenu.svelte`, whose popover chooses what blocks show besides the code: section, course name, time and room,
+  and how the course list picks sections, dropdowns or compact letters). On screens 80rem and wider the
   session switch (Full semester, Mini 1, Mini 2) sits at the row's start when a placed course runs in a mini;
   narrower screens show it above the calendar. While the rail is a sheet, the row starts with the button that opens
   it ("Courses (6)", or "Add courses" for an empty schedule), the other buttons are icons, and a line under the row
@@ -52,6 +53,15 @@ so visiting creates nothing. `?schedule=<id>` shows a particular one (the profil
   with quick add; the requisite check against the record (`ScheduleRequisiteSummary.svelte`, built on
   `core/record/context.ts`); the FCE workload by course and by half of the semester; and a friend's schedule to
   compare. Below the desktop breakpoint the rail is the "Courses" sheet, search and totals included.
+- **Picking sections**: with the `sectionPicker` preference set to `dropdown` (the default), a course with a choice
+  has a dropdown for its lecture or section and one for its recitation (`SectionPicker.svelte`); each button names
+  the chosen section's instructors (a recitation's only when they aren't its lecture's). Set to `compact`
+  (`SectionButtons.svelte`), the choices are letters: the recitations when the course has them, a row for each
+  lecture (a recitation stands for its lecture, so choosing one sets both), otherwise its lectures or sections.
+  A lecture that conflicts is marked on its row's label, and a letter that conflicts on its own in red with a dot.
+  Hovering or focusing a letter previews it on the calendar and in the lines under the letters (times, room,
+  instructors and what it would conflict with), which sit below the letters so they never move under the pointer;
+  arrows move between letters from one tab stop. A course with a single way to take it shows its sections as text.
 - **Calendar**: clicking a course outlines its other lectures (or recitations); clicking an outline switches to it.
   The session switch (see Toolbar) shows one half of the semester when a course runs in a mini. A friend's friends-visible schedule
   (`GET /api/friends/{id}/schedules?term=`) shows as striped blocks with their name.

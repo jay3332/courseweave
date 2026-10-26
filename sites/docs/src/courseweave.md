@@ -143,7 +143,7 @@ Record bodies:
   `shareId`.
 - Plan: Courseweave's `Plan` (`state/plan.ts`) plus `revision`.
 - Record: Courseweave's persisted record state (`state/record.ts`) plus `revision`.
-- Preferences: `{ calendarDisplay, activeSchedule: { [termId]: id }, activePlanId, planLayout, onboarding, revision }`.
+- Preferences: `{ calendarDisplay, activeSchedule: { [termId]: id }, activePlanId, planLayout, sectionPicker, onboarding, revision }`.
 
 ## Website
 

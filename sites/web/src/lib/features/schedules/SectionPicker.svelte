@@ -1,7 +1,7 @@
 <!--
-  A listbox of sections (Courseweave's SectionPicker). Each option shows its times, room, instructors with their
-  FCEs, and the scheduled courses it would conflict with. Hovering or arrowing to an option previews it on the
-  calendar.
+  A listbox of sections (Courseweave's SectionPicker). The button shows the chosen section's times, room and
+  instructors; each option shows its times, room, instructors with their FCEs, and the scheduled courses it would
+  conflict with. Hovering or arrowing to an option previews it on the calendar.
 -->
 <script lang="ts">
   import { Check, ChevronDown, TriangleAlert } from "@lucide/svelte";
@@ -30,6 +30,7 @@
     placeholder,
     fceCourseId,
     termId,
+    teachers,
   }: {
     /** "lecture", "recitation" or "section", for labels. */
     noun: string;
@@ -48,6 +49,8 @@
     fceCourseId?: string;
     /** The semester the sections are in, for instructor previews. */
     termId?: string | null;
+    /** The instructors to name on the button for the chosen section (a recitation's only when not its lecture's). */
+    teachers?: (section: Section) => string[];
   } = $props();
 
   const id = $props.id();
@@ -61,6 +64,7 @@
   // Signed out, term documents leave rooms out: say so rather than "Room TBA".
   const roomsHidden = $derived(!session.signedIn);
   const where = $derived(current === null ? null : timesAndRoom(current, roomsHidden));
+  const names = $derived(current === null || teachers === undefined ? [] : teachers(current));
 
   function close(): void {
     open = false;
@@ -142,9 +146,16 @@
       : 'border-warn text-warn'}"
   >
     {#if current && where}
-      <span class="shrink-0 font-semibold text-strong">{partLabel(current)}</span>
-      <span class="min-w-0 truncate">{where.times}</span>
-      {#if where.room}<span class="shrink-0 text-muted">{where.room}</span>{/if}
+      <span class="flex min-w-0 flex-1 flex-col">
+        <span class="flex min-w-0 gap-2">
+          <span class="shrink-0 font-semibold text-strong">{partLabel(current)}</span>
+          <span class="min-w-0 truncate">{where.times}</span>
+          {#if where.room}<span class="shrink-0 text-muted">{where.room}</span>{/if}
+        </span>
+        {#if names.length > 0}
+          <span class="truncate text-label-md font-normal text-muted">{names.join(", ")}</span>
+        {/if}
+      </span>
     {:else}
       <span class="font-semibold">{placeholder ?? `Choose a ${noun}`}</span>
     {/if}

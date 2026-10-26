@@ -381,6 +381,10 @@ pub struct CalendarDisplay {
     pub section: bool,
     pub time: bool,
     pub location: bool,
+    /// The course's name (or a topics section's title), when the block is tall enough. Off unless chosen.
+    #[serde(default)]
+    #[schema(required = true)]
+    pub title: bool,
 }
 
 impl Default for CalendarDisplay {
@@ -389,8 +393,18 @@ impl Default for CalendarDisplay {
             section: true,
             time: true,
             location: true,
+            title: false,
         }
     }
+}
+
+/// How the schedule page picks a course's sections: dropdowns of every option, or compact buttons to hover through.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "lowercase")]
+pub enum SectionPicker {
+    #[default]
+    Dropdown,
+    Compact,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
@@ -427,6 +441,8 @@ pub struct PreferencesData {
     #[serde(default)]
     pub plan_layout: PlanLayout,
     #[serde(default)]
+    pub section_picker: SectionPicker,
+    #[serde(default)]
     pub onboarding: Onboarding,
 }
 
@@ -459,6 +475,7 @@ pub struct Preferences {
     #[schema(required = true)]
     pub active_plan_id: Option<String>,
     pub plan_layout: PlanLayout,
+    pub section_picker: SectionPicker,
     pub onboarding: Onboarding,
     /// 0 when nothing has been saved yet.
     pub revision: i64,
@@ -476,6 +493,8 @@ pub struct PreferencesUpdate {
     pub active_plan_id: Option<String>,
     #[serde(default)]
     pub plan_layout: PlanLayout,
+    #[serde(default)]
+    pub section_picker: SectionPicker,
     #[serde(default)]
     pub onboarding: Onboarding,
     /// The revision this change is based on; 0 to create.
@@ -496,6 +515,7 @@ fn preferences_view(d: PreferencesData, revision: i64, updated_at: i64) -> Prefe
         active_schedule: d.active_schedule,
         active_plan_id: d.active_plan_id,
         plan_layout: d.plan_layout,
+        section_picker: d.section_picker,
         onboarding: d.onboarding,
         revision,
         updated_at,
@@ -545,6 +565,7 @@ pub async fn put_preferences(
         active_schedule: update.active_schedule,
         active_plan_id: update.active_plan_id,
         plan_layout: update.plan_layout,
+        section_picker: update.section_picker,
         onboarding: update.onboarding,
     };
     data.validate()?;

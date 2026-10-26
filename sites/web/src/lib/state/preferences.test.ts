@@ -13,15 +13,17 @@ describe("preferences", () => {
   it("reads untrusted JSON with defaults, and drops prototype keys", () => {
     expect(normalizePreferences({})).toEqual(DEFAULT_PREFERENCES);
     const raw = JSON.parse(
-      '{"activeSchedule":{"S27":"a","__proto__":"x"},"planLayout":"table","calendarDisplay":{"time":false},"onboarding":{"asked":true}}',
+      '{"activeSchedule":{"S27":"a","__proto__":"x"},"planLayout":"table","sectionPicker":"compact","calendarDisplay":{"time":false,"title":true},"onboarding":{"asked":true}}',
     ) as unknown;
     expect(normalizePreferences(raw)).toEqual({
       ...DEFAULT_PREFERENCES,
       activeSchedule: { S27: "a" },
       planLayout: "table",
-      calendarDisplay: { section: true, time: false, location: true },
+      sectionPicker: "compact",
+      calendarDisplay: { section: true, time: false, location: true, title: true },
       onboarding: { asked: true, promptHidden: false },
     });
+    expect(normalizePreferences({ sectionPicker: "carousel" })?.sectionPicker).toBe("dropdown");
     expect(normalizePreferences(null)).toBeNull();
   });
 
@@ -30,6 +32,7 @@ describe("preferences", () => {
       ...DEFAULT_PREFERENCES,
       activeSchedule: { S27: "mine" },
       planLayout: "table" as const,
+      sectionPicker: "compact" as const,
     };
     const remote = {
       ...DEFAULT_PREFERENCES,
@@ -42,10 +45,13 @@ describe("preferences", () => {
       activeSchedule: { S27: "mine", F26: "old" },
       activePlanId: "p",
       planLayout: "table",
+      sectionPicker: "compact",
       onboarding: { asked: true, promptHidden: false },
     });
   });
+});
 
+describe("active schedules", () => {
   it("shows the chosen schedule, else the term's latest", () => {
     const stores = draftStores();
     const a = stores.schedules.createSchedule("S27", "A");

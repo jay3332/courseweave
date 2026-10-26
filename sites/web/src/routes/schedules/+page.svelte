@@ -267,6 +267,7 @@
                   onselect={() => (selected = selected?.courseId === id ? null : { courseId: id, level: "section" })}
                   onsection={(name) => switchSection(id, name)}
                   onchild={(name) => schedules.setChild(target(), id, name)}
+                  onpick={(name, child) => schedules.setSection(target(), id, name, child)}
                   oncolor={(c) => schedules.setColor(target(), id, c)}
                   onpassfail={(p) => schedules.setPassFail(target(), id, p)}
                   ontogglehidden={() => schedules.toggleHidden(target(), id)}

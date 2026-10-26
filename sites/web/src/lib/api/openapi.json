@@ -1748,7 +1748,7 @@
       "CalendarDisplay": {
         "type": "object",
         "description": "What calendar blocks show besides the course code.",
-        "required": ["section", "time", "location"],
+        "required": ["section", "time", "location", "title"],
         "properties": {
           "location": {
             "type": "boolean"
@@ -1758,6 +1758,10 @@
           },
           "time": {
             "type": "boolean"
+          },
+          "title": {
+            "type": "boolean",
+            "description": "The course's name (or a topics section's title), when the block is tall enough. Off unless chosen."
           }
         }
       },
@@ -2356,6 +2360,7 @@
           "activeSchedule",
           "activePlanId",
           "planLayout",
+          "sectionPicker",
           "onboarding",
           "revision",
           "updatedAt"
@@ -2387,6 +2392,9 @@
             "type": "integer",
             "format": "int64",
             "description": "0 when nothing has been saved yet."
+          },
+          "sectionPicker": {
+            "$ref": "#/components/schemas/SectionPicker"
           },
           "updatedAt": {
             "type": "integer",
@@ -2439,6 +2447,9 @@
             "type": "integer",
             "format": "int64",
             "description": "The revision this change is based on; 0 to create."
+          },
+          "sectionPicker": {
+            "$ref": "#/components/schemas/SectionPicker"
           }
         }
       },
@@ -2768,6 +2779,11 @@
             "description": "The lecture this section belongs to, if any."
           }
         }
+      },
+      "SectionPicker": {
+        "type": "string",
+        "description": "How the schedule page picks a course's sections: dropdowns of every option, or compact buttons to hover through.",
+        "enum": ["dropdown", "compact"]
       },
       "ShareLink": {
         "type": "object",

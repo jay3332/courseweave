@@ -157,6 +157,11 @@ function drawBlock(
       : block.label;
   ctx.fillText(fit(ctx, head, room), left, line);
   line += 17;
+  if (display.title && block.title !== undefined && line + 13 <= y + h) {
+    ctx.font = `500 11px ${FONT}`;
+    ctx.fillText(fit(ctx, block.title, room), left, line);
+    line += 14;
+  }
   ctx.font = `400 11px ${FONT}`;
   if (display.time && line + 13 <= y + h) {
     ctx.fillText(fit(ctx, formatTimeRange(block.start, block.end), room), left, line);

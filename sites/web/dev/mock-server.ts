@@ -95,10 +95,11 @@ export function publicTerm(doc: unknown): unknown {
 
 const EMPTY_RECORD: Json = { entries: [], overrides: {}, profile: {} };
 const DEFAULT_PREFERENCES: Json = {
-  calendarDisplay: { section: true, time: true, location: true },
+  calendarDisplay: { section: true, time: true, location: true, title: false },
   activeSchedule: {},
   activePlanId: null,
   planLayout: "cards",
+  sectionPicker: "dropdown",
   onboarding: { asked: false, promptHidden: false },
 };
 

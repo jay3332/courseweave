@@ -39,12 +39,15 @@ export interface CalendarDisplay {
   section: boolean;
   time: boolean;
   location: boolean;
+  /** The course's name (a topics section's title), when the block is tall enough. */
+  title: boolean;
 }
 
 export const DEFAULT_CALENDAR_DISPLAY: CalendarDisplay = {
   section: true,
   time: true,
   location: true,
+  title: false,
 };
 
 export interface SectionChoice {

@@ -915,14 +915,14 @@ async fn the_record_and_preferences_are_one_revisioned_document_each() {
     assert_eq!(
         prefs,
         json!({
-            "calendarDisplay": {"section": true, "time": true, "location": true},
-            "activeSchedule": {}, "activePlanId": null, "planLayout": "cards",
+            "calendarDisplay": {"section": true, "time": true, "location": true, "title": false},
+            "activeSchedule": {}, "activePlanId": null, "planLayout": "cards", "sectionPicker": "dropdown",
             "onboarding": {"asked": false, "promptHidden": false}, "revision": 0, "updatedAt": 0
         })
     );
     let body = json!({
-        "calendarDisplay": {"section": false, "time": true, "location": true},
-        "activeSchedule": {"S27": "abc"}, "activePlanId": "p1", "planLayout": "table",
+        "calendarDisplay": {"section": false, "time": true, "location": true, "title": true},
+        "activeSchedule": {"S27": "abc"}, "activePlanId": "p1", "planLayout": "table", "sectionPicker": "compact",
         "onboarding": {"asked": true}, "revision": 0
     });
     let saved = f
@@ -930,6 +930,8 @@ async fn the_record_and_preferences_are_one_revisioned_document_each() {
         .await;
     assert_eq!(saved.status, StatusCode::OK, "{}", saved.text());
     assert_eq!(saved.json()["planLayout"], "table");
+    assert_eq!(saved.json()["sectionPicker"], "compact");
+    assert_eq!(saved.json()["calendarDisplay"]["title"], true);
     assert_eq!(
         saved.json()["onboarding"],
         json!({"asked": true, "promptHidden": false})

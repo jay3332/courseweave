@@ -18,6 +18,8 @@ export interface CalendarBlock {
   section?: string;
   /** Room, e.g. "GHC 4401". */
   location?: string;
+  /** The course's name, or a topics section's title; shown when the student turns course names on. */
+  title?: string;
   /**
    * solid: in the schedule.
    * preview: hovered/candidate section (hatched).

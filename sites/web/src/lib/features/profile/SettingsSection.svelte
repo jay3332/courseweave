@@ -28,6 +28,7 @@
   // Courseweave's calendar display options; every calendar follows them.
   const DISPLAY: { key: keyof CalendarDisplay; label: string; hint: string }[] = [
     { key: "section", label: "Section", hint: "Lec 1, Rec A or Sec A next to the course number" },
+    { key: "title", label: "Course name", hint: "Under the course number, when there's space" },
     { key: "time", label: "Meeting time", hint: "When the block is tall enough" },
     { key: "location", label: "Room", hint: "Building and room, when there's space" },
   ];
@@ -134,6 +135,16 @@
         {/each}
       </div>
     </fieldset>
+    <p class="mt-5 mb-2 text-body-2 text-ink">Pick sections in the schedule's course list with</p>
+    <SegmentedControl
+      options={[
+        { value: "dropdown", label: "Dropdowns" },
+        { value: "compact", label: "Compact" },
+      ]}
+      label="Pick sections with"
+      value={preferences.sectionPicker}
+      onchange={(value) => preferences.setSectionPicker(value === "compact" ? "compact" : "dropdown")}
+    />
   </section>
 
   {#if signedIn}

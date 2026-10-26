@@ -44,6 +44,8 @@ export type AcademicRecord = Schemas["Record"];
 export type RecordUpdate = Schemas["RecordUpdate"];
 
 export type PlanLayout = Schemas["PlanLayout"];
+/** How the schedule page picks sections: dropdowns, or compact buttons to hover through. */
+export type SectionPicker = Schemas["SectionPicker"];
 /** `GET /api/preferences`. Revision 0 means nothing has been saved yet. */
 export type Preferences = Schemas["Preferences"];
 /** `PUT /api/preferences`. */
