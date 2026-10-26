@@ -30,7 +30,7 @@
     rows: readonly Row[];
     /** Describes the table for screen readers. */
     caption: string;
-    /** well: FCE style (gray well, bold headers, no rules); outline: finals style (bordered, header rule). */
+    /** well: FCE style (gray well, bold headers, no rules); outline: in a card (bordered, header rule). */
     variant?: "well" | "outline";
     /** Optional heading inside the well, such as "Aggregate Data". */
     title?: Snippet;
@@ -55,7 +55,7 @@
 <div
   class="{variant === 'well'
     ? 'rounded-card bg-surface-2 px-4 pt-4 pb-3 sm:px-6 sm:pt-5'
-    : 'overflow-hidden rounded-tag border border-line-strong bg-surface'} {className}"
+    : 'overflow-hidden rounded-card border border-pressed bg-surface'} {className}"
 >
   {#if title}<div class="mb-3">{@render title()}</div>{/if}
   <div class="data-table-scroll {variant === 'well' ? 'pb-3' : ''}">

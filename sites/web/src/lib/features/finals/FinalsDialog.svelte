@@ -137,7 +137,7 @@
             {matches.length.toLocaleString("en-US")}
             {matches.length === 1 ? "exam" : "exams"}{query.trim() === "" ? ` in ${term.meta.name}` : " match"}
           </p>
-          <div class="data-table-scroll overflow-hidden rounded-tag border border-line-strong bg-surface">
+          <div class="data-table-scroll overflow-hidden rounded-card border border-pressed bg-surface">
             <table class="data-table-outline">
               <caption class="sr-only">{term.meta.name} final exam schedule</caption>
               <thead>

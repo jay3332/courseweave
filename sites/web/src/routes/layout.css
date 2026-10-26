@@ -394,9 +394,11 @@
 @layer components {
   /*
    * Tables. `.data-table` is the FCE style from the Figma: a well with bold
-   * column headers and no row rules. `.data-table-outline` is the finals style:
-   * an outlined table with a header rule. Wrap either in `.data-table-scroll`
-   * to scroll wide tables horizontally (the Figma's thick rounded scrollbar).
+   * column headers and no row rules. `.data-table-outline` is a table in one of
+   * the site's cards (its wrapper gives the corners and border), with the same
+   * bold headers over a rule and faint rules between rows. Wrap either in
+   * `.data-table-scroll` to scroll wide tables horizontally (the Figma's thick
+   * rounded scrollbar).
    */
   .data-table-scroll {
     /* Positioned so absolutely positioned descendants (screen reader text) scroll with the table instead of
@@ -481,18 +483,18 @@
   }
 
   .data-table-outline th {
-    padding: 16px 20px;
+    padding: 12px 16px;
     border-bottom: 1px solid var(--color-line);
-    color: var(--color-strong);
-    font-size: var(--text-body-1);
-    font-weight: 500;
-    line-height: 24px;
+    color: var(--color-ink);
+    font-size: var(--text-body-2);
+    font-weight: 600;
+    line-height: var(--text-body-2--line-height);
     text-align: left;
     white-space: nowrap;
   }
 
   .data-table-outline td {
-    padding: 12px 20px;
+    padding: 10px 16px;
     vertical-align: middle;
   }
 
@@ -502,42 +504,16 @@
 
   .data-table-outline th:first-child,
   .data-table-outline td:first-child {
-    padding-left: 32px;
+    padding-left: 20px;
   }
 
   .data-table-outline a {
     color: var(--color-accent-ink);
-    font-size: var(--text-body-1);
     font-weight: 500;
   }
 
   .data-table-outline a:hover {
     text-decoration: underline;
-  }
-
-  /*
-   * `.data-table-card` (with `.data-table-outline`): an outlined table inside one of the site's cards (the wrapper
-   * gives the card's corners and border), with headers as in the FCE tables, smaller and bold, and tighter cells.
-   */
-  .data-table-card th {
-    padding: 12px 16px;
-    color: var(--color-ink);
-    font-size: var(--text-body-2);
-    font-weight: 600;
-    line-height: var(--text-body-2--line-height);
-  }
-
-  .data-table-card td {
-    padding: 10px 16px;
-  }
-
-  .data-table-card th:first-child,
-  .data-table-card td:first-child {
-    padding-left: 20px;
-  }
-
-  .data-table-card a {
-    font-size: var(--text-body-2);
   }
 }
 
