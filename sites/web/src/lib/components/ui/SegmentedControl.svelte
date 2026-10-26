@@ -24,7 +24,10 @@
     value?: string;
     /** Accessible name for the group. */
     label: string;
-    /** sm 28px, md 32px tall. */
+    /**
+     * The whole control's height, as the buttons beside it: sm 40px on phones and 36px from 1024px (the toolbars'
+     * buttons and compact selects), md 40px.
+     */
     size?: "sm" | "md";
     /** Fill the container's width, the segments sharing it equally (filters in a rail). */
     full?: boolean;
@@ -58,9 +61,9 @@
   aria-label={label}
   tabindex="-1"
   {onkeydown}
-  class="{full
-    ? 'flex w-full'
-    : 'inline-flex shrink-0'} items-center gap-0.5 rounded-full border border-line-strong bg-surface p-0.5 {className}"
+  class="{full ? 'flex w-full' : 'inline-flex shrink-0'} {size === 'sm'
+    ? 'h-10 lg:h-9'
+    : 'h-10'} items-stretch gap-0.5 rounded-full border border-line-strong bg-surface p-0.5 {className}"
 >
   {#each options as option, index (option.value)}
     {@const isSelected = option.value === selected}
@@ -76,8 +79,8 @@
       class="inline-flex items-center justify-center gap-1.5 rounded-full transition-colors focus-visible:-outline-offset-2 {full
         ? 'flex-1 whitespace-nowrap'
         : ''} {size === 'sm'
-        ? 'h-10 min-w-10 px-2.5 text-label-md lg:h-7 lg:min-w-0 [&_svg]:size-4'
-        : 'h-10 px-3 text-label-md lg:h-8 [&_svg]:size-4'} {isSelected
+        ? 'min-w-9 px-2.5 text-label-md lg:min-w-8 [&_svg]:size-4'
+        : 'px-3 text-label-md [&_svg]:size-4'} {isSelected
         ? 'bg-line text-strong'
         : 'text-muted hover:bg-hover hover:text-ink'}"
     >

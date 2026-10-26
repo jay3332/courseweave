@@ -134,7 +134,7 @@ Import primitives from `$lib/components/ui`, layouts from `$lib/components/layou
 | `HelpTip` | `text`, `label` | A (?) with a short how-to hint, for help most people don't need on screen |
 | `toast()` | `toast(message, { kind, action, duration })` | Rendered by the root layout's `Toaster` |
 | `Tabs` | `tabs`, `bind:value`, `label`, `panel` snippet | |
-| `SegmentedControl` | `options` (label, icon, iconOnly), `bind:value`, `label`, `size`, `full` | Radio group; `full` fills the width with equal segments, as rail filters do |
+| `SegmentedControl` | `options` (label, icon, iconOnly), `bind:value`, `label`, `size`, `full` | Radio group; `full` fills the width with equal segments, as rail filters do. `size` sets the whole control's height to match the buttons beside it: `sm` 40px, 36px from 1024px (toolbars); `md` 40px |
 | `ViewToggle` | `pageKey`, `bind:value` cards or list; `options` for a page's own views | Remembers the choice per page; read it back with `storedView` (or `storedViewOf` with `options`) |
 | `Avatar` | `name`, `src`, `size` xs, sm, md, lg; `tone` | Initials, or a silhouette without a name |
 | `AvatarGroup` | `people`, `max`, `size`, `label` | "+N" after `max` |

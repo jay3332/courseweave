@@ -298,12 +298,14 @@
           <PlanHeader />
           <SemesterGrid />
         </div>
-        <!-- The column scrolls, so it reaches 12px left and 4px up into the gap, padded back, to keep the focus rings
-             of the rows' chevrons and the Expand button inside its scroll box; and down through the page's bottom
-             padding, so at the page's end it meets the footer. -->
+        <!-- The column scrolls, so it reaches 12px left and up into the gap, padded back, to keep the focus rings of
+             the rows' chevrons and the Expand button inside its scroll box; and down through the page's bottom
+             padding, so at the page's end it meets the footer. Stuck, its scroll box runs from the site header to the
+             bottom of the screen, so what scrolls out goes under the header or off the screen (fading at both edges)
+             rather than being cut off short of them. -->
         <aside
           aria-labelledby="requirements-heading"
-          class="scrollbar-thin sticky top-[calc(var(--header-h)+0.75rem)] -mt-1 -mb-5 -ml-3 flex max-h-[calc(100dvh-var(--header-h)-2.25rem)] flex-col gap-3 overflow-y-auto overscroll-contain pt-1 pr-1 pb-5 pl-3 lg:-mb-8 lg:pb-8"
+          class="scrollbar-thin sticky top-[var(--header-h)] -mt-3 -mb-5 -ml-3 flex max-h-[calc(100dvh-var(--header-h))] flex-col gap-3 overflow-y-auto overscroll-contain pt-3 pr-1 pb-5 pl-3 [mask-image:linear-gradient(to_bottom,transparent,black_0.75rem,black_calc(100%-1rem),transparent)] lg:-mb-8 lg:pb-8"
         >
           <div class="flex items-center gap-2">
             <h2 id="requirements-heading" class="text-heading-5 text-strong">Requirements</h2>

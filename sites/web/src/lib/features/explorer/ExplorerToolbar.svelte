@@ -106,11 +106,11 @@
       <IconButton
         label={chart ? "Show courses as cards or a list" : "Chart FCE hours against units"}
         icon={ChartScatter}
-        size="sm"
+        size="md"
         variant="outline"
         pressed={chart}
         onclick={() => onchart(!chart)}
-        class="max-sm:hidden"
+        class="max-sm:hidden lg:size-9"
       />
     {/if}
     <ViewToggle

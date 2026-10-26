@@ -49,16 +49,18 @@ so visiting creates nothing. `?schedule=<id>` shows a particular one (the profil
   previews a course's sections on the calendar, Enter adds it with sections that fit; the results float in the top
   layer, as wide as the field, with the title on its own line so it stays readable in the narrow rail and the
   sheet), then each course (`CourseEntryRow.svelte`: color, lecture and recitation pickers with times, rooms,
-  instructors' FCEs and conflicts, pass/fail, hide, remove, move up or down); saved courses offered this semester
+  instructors' FCEs and conflicts, pass/fail, hide, remove, and a handle to drag it up or down the list, the rows it
+  passes making room, or to move it a place with the arrow keys); saved courses offered this semester
   with quick add; the requisite check against the record (`ScheduleRequisiteSummary.svelte`, built on
   `core/record/context.ts`); the FCE workload by course and by half of the semester; and a friend's schedule to
   compare. Below the desktop breakpoint the rail is the "Courses" sheet, search and totals included.
 - **Picking sections**: with the `sectionPicker` preference set to `dropdown` (the default), a course with a choice
   has a dropdown for its lecture or section and one for its recitation (`SectionPicker.svelte`); each button names
   the chosen section's instructors (a recitation's only when they aren't its lecture's). Set to `compact`
-  (`SectionButtons.svelte`), the choices are letters: the recitations when the course has them, a row for each
-  lecture (a recitation stands for its lecture, so choosing one sets both), otherwise its lectures or sections.
-  A lecture that conflicts is marked on its row's label, and a letter that conflicts on its own in red with a dot.
+  (`SectionButtons.svelte`), the choices are letters in one run: the recitations when the course has them, each
+  lecture's after the last's with a rule between (a recitation stands for its lecture, so choosing one sets both),
+  otherwise its lectures or sections. A conflicting lecture's letters are tinted red, and a letter that conflicts on
+  its own is red with a dot.
   Hovering or focusing a letter previews it on the calendar and in the lines under the letters (times, room,
   instructors and what it would conflict with), which sit below the letters so they never move under the pointer;
   arrows move between letters from one tab stop. A course with a single way to take it shows its sections as text.

@@ -3,7 +3,8 @@
   letters). Each option is a letter: recitations when the course has them, grouped on a row per lecture (a recitation
   stands for its lecture too), otherwise its lectures or sections. Hovering or focusing a letter previews it on the
   calendar and in the lines under the letters (times, room, instructors, conflicts); choosing it places it. The lines
-  sit under the letters so a preview that changes their height never moves a letter out from under the pointer.
+  sit under the letters so a preview that changes their height never moves a letter out from under the pointer. The
+  letters are one row: each lecture's recitations side by side, split by a rule.
 -->
 <script lang="ts">
   import { TriangleAlert } from "@lucide/svelte";
@@ -57,7 +58,7 @@
   const byName = (a: Section, b: Section): number => a.name.length - b.name.length || a.name.localeCompare(b.name);
 
   interface Group {
-    /** The lecture a row of recitations belongs to, when there's more than one. */
+    /** The lecture a run of recitations belongs to, for its conflict's tooltip. */
     label: string | null;
     /** What that lecture conflicts with. */
     conflicts: string[];
@@ -77,7 +78,7 @@
       const kids = childSections(course, t.name).toSorted(byName);
       const lecture = conflictsFor(t);
       return {
-        label: tops.length > 1 && kids.length > 0 ? partLabel(t) : null,
+        label: kids.length > 0 ? partLabel(t) : null,
         conflicts: kids.length > 0 ? lecture : [],
         choices:
           kids.length === 0
@@ -166,51 +167,46 @@
     tabindex="-1"
     {onkeydown}
     onmouseleave={() => preview(null)}
-    class="flex flex-col divide-y divide-line rounded-tag border border-line-strong bg-surface"
+    class="flex flex-wrap items-center gap-0.5 rounded-tag border border-line-strong bg-surface p-0.5"
   >
+    <!-- One run: each lecture's letters after the last's, split by a rule; a conflicting lecture's letters are tinted red. -->
     {#each groups as group, g (g)}
-      <div class="flex min-w-0 items-start gap-1 p-0.5">
-        {#if group.label}
-          <span
-            title={group.conflicts.length > 0 ? `${group.label} conflicts with ${joinList(group.conflicts)}` : undefined}
-            class="inline-flex w-12 shrink-0 items-center gap-1 self-center pl-1.5 text-label-md font-normal whitespace-nowrap {group
-              .conflicts.length > 0
-              ? 'text-danger'
-              : 'text-muted'}"
-            >{group.label}{#if group.conflicts.length > 0}<TriangleAlert aria-hidden="true" class="size-3 shrink-0" />{/if}</span
-          >
-        {/if}
-        <div class="flex min-w-0 flex-1 flex-wrap gap-0.5">
-          {#each group.choices as c (c.key)}
-            {@const isChosen = chosen(c)}
-            <button
-              type="button"
-              data-choice
-              aria-pressed={isChosen}
-              aria-label={describe(c)}
-              title={c.own.length > 0 ? `Conflicts with ${joinList(c.own)}` : undefined}
-              tabindex={c.key === tabKey ? 0 : -1}
-              onmouseenter={() => preview(c)}
-              onfocus={() => preview(c)}
-              onblur={() => preview(null)}
-              onclick={() => {
-                if (!isChosen) onpick(c.top.name, c.child?.name ?? null);
-              }}
-              style={isChosen ? courseColorStyle(color) : undefined}
-              class="relative inline-flex h-10 min-w-10 items-center justify-center rounded-[3px] px-1.5 text-label-md tabular transition-colors focus-visible:-outline-offset-2 lg:h-7 lg:min-w-7 {isChosen
-                ? 'course-block font-semibold'
-                : c.own.length > 0
-                  ? 'text-danger hover:bg-danger-bg'
+      {#if g > 0}<span aria-hidden="true" class="mx-1 h-5 w-px shrink-0 bg-line-strong"></span>{/if}
+      <!-- No wrapper: the letters flow on with the others, so a lecture can start partway along a line. -->
+      {#each group.choices as c (c.key)}
+          {@const isChosen = chosen(c)}
+          <button
+            type="button"
+            data-choice
+            aria-pressed={isChosen}
+            aria-label={describe(c)}
+            title={c.own.length > 0
+              ? `Conflicts with ${joinList(c.own)}`
+              : group.conflicts.length > 0 && group.label
+                ? `${group.label} conflicts with ${joinList(group.conflicts)}`
+                : undefined}
+            tabindex={c.key === tabKey ? 0 : -1}
+            onmouseenter={() => preview(c)}
+            onfocus={() => preview(c)}
+            onblur={() => preview(null)}
+            onclick={() => {
+              if (!isChosen) onpick(c.top.name, c.child?.name ?? null);
+            }}
+            style={isChosen ? courseColorStyle(color) : undefined}
+            class="relative inline-flex h-10 min-w-10 items-center justify-center rounded-[3px] px-1.5 text-label-md tabular transition-colors focus-visible:-outline-offset-2 lg:h-7 lg:min-w-7 {isChosen
+              ? 'course-block font-semibold'
+              : c.own.length > 0
+                ? 'text-danger hover:bg-danger-bg'
+                : group.conflicts.length > 0
+                  ? 'bg-danger-bg text-ink hover:bg-hover'
                   : 'text-ink hover:bg-hover'}"
-            >
-              {c.text}
-              {#if c.own.length > 0}
-                <span aria-hidden="true" class="absolute top-1 right-1 size-1.5 rounded-full bg-danger"></span>
-              {/if}
-            </button>
-          {/each}
-        </div>
-      </div>
+          >
+            {c.text}
+            {#if c.own.length > 0}
+              <span aria-hidden="true" class="absolute top-1 right-1 size-1.5 rounded-full bg-danger"></span>
+            {/if}
+          </button>
+      {/each}
     {/each}
   </div>
 

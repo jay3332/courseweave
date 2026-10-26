@@ -1,15 +1,15 @@
 <!--
   One course in the schedule (Courseweave's CourseEntryRow): its color, units, lecture and recitation pickers (dropdowns,
-  or the compact letters when the student prefers them), conflicts, pass/fail, and buttons to hide it from the
-  calendar, move it in the list or remove it. Clicking the row selects the course on the calendar, which outlines its
-  other sections.
+  or the compact letters when the student prefers them), conflicts, pass/fail, buttons to hide it from the calendar or
+  remove it, and a handle to drag it up or down the list (or move it with the arrow keys). Clicking the row selects the
+  course on the calendar, which outlines its other sections.
 -->
 <script lang="ts">
-  import { ArrowDown, ArrowUp, Ellipsis, Eye, EyeOff, TriangleAlert, X } from "@lucide/svelte";
+  import { Eye, EyeOff, GripVertical, TriangleAlert, X } from "@lucide/svelte";
+  import { tick } from "svelte";
   import { coursePreview } from "$lib/components/course/preview";
   import Checkbox from "$lib/components/ui/Checkbox.svelte";
   import IconButton from "$lib/components/ui/IconButton.svelte";
-  import Menu, { type MenuEntry } from "$lib/components/ui/Menu.svelte";
   import {
     PASS_FAIL_ONLY_HELP,
     conflictingCodes,
@@ -47,6 +47,9 @@
     onremove,
     onmove,
     onpreview,
+    ondragstart,
+    dragging = false,
+    shift,
   }: {
     resolved: ResolvedEntry;
     view: ScheduleView;
@@ -64,8 +67,14 @@
     onpassfail: (passFail: boolean) => void;
     ontogglehidden: () => void;
     onremove: () => void;
-    /** -1: up a place; 1: down a place. */
+    /** -1: up a place; 1: down a place (the handle's arrow keys). */
     onmove: (direction: -1 | 1) => void;
+    /** A drag starting on the handle; the list follows the pointer from there. */
+    ondragstart: (event: PointerEvent) => void;
+    /** Being dragged: lifted over the other rows. */
+    dragging?: boolean;
+    /** How far a drag moves this row, in pixels: the dragged row's offset, or the room another makes for it. */
+    shift?: number;
     /** Sections to preview on the calendar, or null. */
     onpreview: (sections: string[] | null) => void;
   } = $props();
@@ -86,10 +95,18 @@
     return s.instructors.filter((name) => teachesSection(course, s, name));
   }
 
-  const more = $derived<MenuEntry[]>([
-    { label: "Move up", icon: ArrowUp, disabled: first, onselect: () => onmove(-1) },
-    { label: "Move down", icon: ArrowDown, disabled: last, onselect: () => onmove(1) },
-  ]);
+  let handle = $state<HTMLButtonElement>();
+
+  // Arrow keys on the handle move the course a place; the handle keeps focus as its row moves.
+  async function onhandlekey(event: KeyboardEvent): Promise<void> {
+    const direction = event.key === "ArrowUp" ? -1 : event.key === "ArrowDown" ? 1 : 0;
+    if (direction === 0) return;
+    event.preventDefault();
+    if ((direction === -1 && first) || (direction === 1 && last)) return;
+    onmove(direction);
+    await tick();
+    handle?.focus();
+  }
 
   function conflictsFor(s: Section): string[] {
     return conflictingCodes(s, course.id, view);
@@ -125,13 +142,17 @@
 <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
 <li
   {onclick}
-  class="relative rounded-field border px-2.5 py-2 transition-colors {selected
-    ? 'border-line-strong bg-surface-2'
-    : 'border-transparent hover:border-line'}"
+  style={shift ? `transform: translateY(${shift}px)` : undefined}
+  class="relative rounded-field border px-2.5 py-2 {dragging
+    ? 'z-10 border-line-strong bg-surface shadow-lg'
+    : `transition-[transform,border-color,background-color] duration-150 motion-reduce:transition-none ${selected
+        ? 'border-line-strong bg-surface-2'
+        : 'border-transparent hover:border-line'}`}"
 >
-  <div class="flex items-start gap-1">
-    <ColorPicker color={entry.color} code={course.code} onchange={oncolor} />
-    <div class="min-w-0 flex-1 pt-1 {hidden ? 'opacity-50' : ''}">
+  <!-- The name runs under the buttons, so it gets the row's whole width. -->
+  <div class="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-1">
+    <div class="row-span-2"><ColorPicker color={entry.color} code={course.code} onchange={oncolor} /></div>
+    <div class="min-w-0 pt-1 {hidden ? 'opacity-50' : ''}">
       <p class="flex min-w-0 items-baseline gap-x-2 whitespace-nowrap">
         <span {...coursePreview(course.id, termId)} class="tabular shrink-0 text-heading-6 font-semibold text-strong"
           >{course.code}</span
@@ -147,13 +168,9 @@
         {/if}
         {#if hidden}<span class="shrink-0 text-label-md font-normal text-muted">Hidden</span>{/if}
       </p>
-      <a
-        href={coursePath(course.code, termId)}
-        class="block truncate text-body-2 text-ink hover:text-strong hover:underline"
-        title={course.title}>{course.title}</a
-      >
     </div>
-    <div class="flex shrink-0 items-center">
+    <!-- 40px buttons on phones that take up only the code line's height. -->
+    <div class="-my-1 flex shrink-0 items-center lg:my-0">
       <IconButton
         label={hidden ? `Show ${course.code} on the calendar` : `Hide ${course.code} from the calendar`}
         icon={hidden ? EyeOff : Eye}
@@ -161,12 +178,27 @@
         onclick={ontogglehidden}
       />
       <IconButton label="Remove {course.code}" icon={X} class="size-10 lg:size-8" onclick={onremove} />
-      <Menu items={more} label="More for {course.code}">
-        {#snippet trigger(props)}
-          <IconButton {...props} label="More for {course.code}" icon={Ellipsis} class="size-10 lg:size-8" />
-        {/snippet}
-      </Menu>
+      <button
+        bind:this={handle}
+        type="button"
+        aria-label="Move {course.code}"
+        title="Drag to move {course.code}, or press the up and down arrow keys"
+        onpointerdown={ondragstart}
+        onkeydown={onhandlekey}
+        class="grid size-10 shrink-0 cursor-grab touch-none place-items-center rounded-full text-muted hover:bg-hover hover:text-ink active:cursor-grabbing lg:size-8 {dragging
+          ? 'cursor-grabbing'
+          : ''}"
+      >
+        <GripVertical aria-hidden="true" class="size-4" />
+      </button>
     </div>
+    <a
+      href={coursePath(course.code, termId)}
+      class="col-span-2 col-start-2 block truncate text-body-2 text-ink hover:text-strong hover:underline {hidden
+        ? 'opacity-50'
+        : ''}"
+      title={course.title}>{course.title}</a
+    >
   </div>
 
   <div class="mt-1.5 flex flex-col gap-1.5 pl-[42px] lg:pl-[34px] {hidden ? 'opacity-50' : ''}">

@@ -255,9 +255,9 @@
         type="button"
         onclick={() => openSchedule(syncedSchedule.id)}
         title="Synced with {syncedSchedule.name}: this semester's courses come from that schedule, and changes here update it. Open it on the schedules page."
-        class="inline-flex h-10 max-w-44 shrink-0 items-center gap-1 rounded-full border border-line-strong px-2.5 text-label-md text-ink hover:bg-hover md:h-7"
+        class="inline-flex h-10 max-w-44 shrink-0 items-center justify-center gap-1 rounded-full border border-line-strong px-2.5 text-label-md text-ink hover:bg-hover max-sm:w-10 max-sm:px-0 md:h-7"
       >
-        <RefreshCw aria-hidden="true" class="size-3 shrink-0 text-ok" />
+        <RefreshCw aria-hidden="true" class="size-4 shrink-0 text-ok md:size-3" />
         <span class="sr-only">Synced with</span>
         <span class="truncate max-sm:sr-only">{syncedSchedule.name}</span>
       </button>

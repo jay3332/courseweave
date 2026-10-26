@@ -112,6 +112,61 @@
     schedules.addCourse(target(), course.id, choice.section, choice.child);
   }
 
+  // Dragging a course by its handle: its row follows the pointer, the rows it passes make room, and letting go moves
+  // it there. The pointer is captured by the handle, so the drag keeps going outside it.
+  let drag = $state<{ id: string; from: number; to: number; dy: number; size: number } | null>(null);
+
+  function startDrag(event: PointerEvent, id: string): void {
+    const handle = event.currentTarget;
+    if (event.button !== 0 || !(handle instanceof HTMLElement)) return;
+    const row = handle.closest("li");
+    const rows = row?.parentElement ? [...row.parentElement.children] : [];
+    const from = row ? rows.indexOf(row) : -1;
+    if (!row || from < 0) return;
+    event.preventDefault();
+    const boxes = rows.map((r) => r.getBoundingClientRect());
+    const mids = boxes.map((b) => b.top + b.height / 2);
+    const gap = boxes.length > 1 ? (boxes[1]?.top ?? 0) - (boxes[0]?.bottom ?? 0) : 0;
+    const size = (boxes[from]?.height ?? 0) + gap;
+    const startY = event.clientY;
+    try {
+      handle.setPointerCapture(event.pointerId);
+    } catch {
+      // A pointer that's already gone: the drag still follows its events on the handle.
+    }
+    drag = { id, from, to: from, dy: 0, size };
+
+    // It goes where the pointer is: after every other row whose middle is above the pointer.
+    const move = (e: PointerEvent): void => {
+      const to = mids.filter((mid, i) => i !== from && mid < e.clientY).length;
+      drag = { id, from, to, dy: e.clientY - startY, size };
+    };
+    const finish = (drop: boolean): void => {
+      handle.removeEventListener("pointermove", move);
+      handle.removeEventListener("pointerup", up);
+      handle.removeEventListener("pointercancel", cancel);
+      const done = drag;
+      drag = null;
+      if (!drop || done === null || done.to === done.from || view === null) return;
+      const others = view.entries.filter((e) => e.course.id !== id);
+      schedules.moveEntry(target(), id, others[done.to]?.course.id ?? null);
+    };
+    const up = (): void => finish(true);
+    const cancel = (): void => finish(false);
+    handle.addEventListener("pointermove", move);
+    handle.addEventListener("pointerup", up);
+    handle.addEventListener("pointercancel", cancel);
+  }
+
+  /** How far the drag moves row `i`: the dragged row follows the pointer; the ones it passes move a place. */
+  function dragShift(i: number): number {
+    if (drag === null) return 0;
+    if (i === drag.from) return drag.dy;
+    if (drag.to > drag.from && i > drag.from && i <= drag.to) return -drag.size;
+    if (drag.to < drag.from && i >= drag.to && i < drag.from) return drag.size;
+    return 0;
+  }
+
   function switchSection(courseId: string, name: string): void {
     const course = term?.courseById.get(courseId);
     if (course === undefined || view === null) return;
@@ -193,6 +248,7 @@
   {#if term}
     <SegmentedControl
       label="Session"
+      size="sm"
       value={mini === null ? "all" : String(mini)}
       onchange={(value) => (miniChoice = value === "all" ? null : Number(value))}
       options={[
@@ -274,6 +330,9 @@
                   onremove={() => schedules.removeCourse(target(), id)}
                   onmove={(d) => schedules.moveEntry(target(), id, view.entries[i + (d === 1 ? 2 : -1)]?.course.id ?? null)}
                   onpreview={(sections) => (preview = sections === null ? null : { courseId: id, sections })}
+                  ondragstart={(event) => startDrag(event, id)}
+                  dragging={drag?.id === id}
+                  shift={dragShift(i)}
                 />
               {/each}
             </ul>

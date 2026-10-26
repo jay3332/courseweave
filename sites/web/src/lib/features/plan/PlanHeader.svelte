@@ -129,7 +129,8 @@
       { value: "table", label: "Detailed", icon: Table2, iconOnly: !roomy.current },
     ]}
   />
-  <OptionsMenu label="Plan options" variant="outline" size="md">
+  <!-- As tall as the layout switch: 40px, 36px from 1024px. -->
+  <OptionsMenu label="Plan options" variant="outline" size="md" class="lg:size-9">
     {#snippet children(close)}
       <MenuItem icon={Pencil} onclick={() => { close(); startRename(); }}>Rename</MenuItem>
       <MenuItem icon={Copy} onclick={() => { close(); go(plans.duplicatePlan(plan.id)); }}>Duplicate</MenuItem>
