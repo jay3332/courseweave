@@ -921,14 +921,15 @@ async fn the_record_and_preferences_are_one_revisioned_document_each() {
         prefs,
         json!({
             "calendarDisplay": {"section": true, "time": true, "location": true, "title": false},
-            "activeSchedule": {}, "activePlanId": null, "planLayout": "cards", "sectionPicker": "dropdown",
-            "onboarding": {"asked": false, "promptHidden": false}, "revision": 0, "updatedAt": 0
+            "activeSchedule": {}, "scheduleOrder": {}, "activePlanId": null, "planLayout": "cards",
+            "sectionPicker": "dropdown", "onboarding": {"asked": false, "promptHidden": false}, "revision": 0,
+            "updatedAt": 0
         })
     );
     let body = json!({
         "calendarDisplay": {"section": false, "time": true, "location": true, "title": true},
-        "activeSchedule": {"S27": "abc"}, "activePlanId": "p1", "planLayout": "table", "sectionPicker": "compact",
-        "onboarding": {"asked": true}, "revision": 0
+        "activeSchedule": {"S27": "abc"}, "scheduleOrder": {"S27": ["def", "abc"]}, "activePlanId": "p1",
+        "planLayout": "table", "sectionPicker": "compact", "onboarding": {"asked": true}, "revision": 0
     });
     let saved = f
         .write("PUT", "/api/preferences", "alice", Some(body.clone()))
@@ -938,18 +939,30 @@ async fn the_record_and_preferences_are_one_revisioned_document_each() {
     assert_eq!(saved.json()["sectionPicker"], "compact");
     assert_eq!(saved.json()["calendarDisplay"]["title"], true);
     assert_eq!(
+        saved.json()["scheduleOrder"],
+        json!({"S27": ["def", "abc"]})
+    );
+    assert_eq!(
         saved.json()["onboarding"],
         json!({"asked": true, "promptHidden": false})
     );
-    let mut bad = body;
-    bad["revision"] = json!(1);
-    bad["activeSchedule"] = json!({"spring": "abc"});
-    assert_eq!(
-        f.write("PUT", "/api/preferences", "alice", Some(bad))
-            .await
-            .status,
-        StatusCode::BAD_REQUEST
-    );
+    for (field, value) in [
+        ("activeSchedule", json!({"spring": "abc"})),
+        ("scheduleOrder", json!({"spring": ["abc"]})),
+        ("scheduleOrder", json!({"S27": ["not an id"]})),
+        ("scheduleOrder", json!({"S27": vec!["abc"; 301]})),
+    ] {
+        let mut bad = body.clone();
+        bad["revision"] = json!(1);
+        bad[field] = value;
+        assert_eq!(
+            f.write("PUT", "/api/preferences", "alice", Some(bad))
+                .await
+                .status,
+            StatusCode::BAD_REQUEST,
+            "{field}"
+        );
+    }
     assert_eq!(
         f.get("/api/preferences", Some("bob")).await.json()["revision"],
         0

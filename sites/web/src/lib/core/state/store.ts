@@ -64,11 +64,22 @@ export function nextScheduleName(schedules: Schedule[]): string {
   return `Schedule ${n}`;
 }
 
-/** Schedules for a term, oldest first (tab order). */
+/** Schedules for a term, oldest first (their tabs' order until the student rearranges them). */
 export function termSchedules(schedules: Iterable<Schedule>, termId: string): Schedule[] {
   return [...schedules]
     .filter((s) => s.termId === termId)
     .sort((a, b) => a.createdAt - b.createdAt);
+}
+
+/** Schedules in a tab order (ids): the ones it lists, in its order, then the rest as they come. */
+export function inTabOrder<T extends { id: string }>(
+  schedules: readonly T[],
+  order: readonly string[] = [],
+): T[] {
+  const rank = new Map(order.map((id, i) => [id, i]));
+  return schedules.toSorted(
+    (a, b) => (rank.get(a.id) ?? order.length) - (rank.get(b.id) ?? order.length),
+  );
 }
 
 /** The term's most recently edited schedule: what becomes active when the active one is missing or deleted. */

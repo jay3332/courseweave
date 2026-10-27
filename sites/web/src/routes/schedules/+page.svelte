@@ -1,5 +1,6 @@
 <script lang="ts">
   import { CalendarClock, CalendarDays, Info, ListPlus, LogIn, RotateCw, WandSparkles } from "@lucide/svelte";
+  import { tick } from "svelte";
   import { MediaQuery } from "svelte/reactivity";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
@@ -115,6 +116,9 @@
   // Dragging a course by its handle: its row follows the pointer, the rows it passes make room, and letting go moves
   // it there. The pointer is captured by the handle, so the drag keeps going outside it.
   let drag = $state<{ id: string; from: number; to: number; dy: number; size: number } | null>(null);
+  // For the update that puts the rows in their new order: the ones that made room are already there, so they don't
+  // slide.
+  let settling = $state(false);
 
   function startDrag(event: PointerEvent, id: string): void {
     const handle = event.currentTarget;
@@ -149,7 +153,13 @@
       drag = null;
       if (!drop || done === null || done.to === done.from || view === null) return;
       const others = view.entries.filter((e) => e.course.id !== id);
+      settling = true;
       schedules.moveEntry(target(), id, others[done.to]?.course.id ?? null);
+      void tick().then(() => {
+        // Lays the rows out in their new places before their slide comes back.
+        row.parentElement?.getBoundingClientRect();
+        settling = false;
+      });
     };
     const up = (): void => finish(true);
     const cancel = (): void => finish(false);
@@ -310,7 +320,10 @@
             onpreview={(id) => (preview = id === null ? null : { courseId: id, sections: null })}
           />
           {#if view.entries.length > 0}
-            <ul class="-mx-2.5 flex flex-col gap-1" aria-label="Courses in this schedule">
+            <ul
+              class="-mx-2.5 flex flex-col gap-1 {settling ? '[&>li]:transition-none' : ''}"
+              aria-label="Courses in this schedule"
+            >
               {#each view.entries as resolved, i (resolved.course.id)}
                 {@const id = resolved.course.id}
                 <CourseEntryRow

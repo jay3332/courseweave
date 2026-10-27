@@ -807,6 +807,10 @@ export interface components {
        * @description 0 when nothing has been saved yet.
        */
       revision: number;
+      /** @description Term id to the order of its schedules' tabs, by id. Schedules it doesn't list follow, oldest first. */
+      scheduleOrder: {
+        [key: string]: string[];
+      };
       sectionPicker: components["schemas"]["SectionPicker"];
       /** Format: int64 */
       updatedAt: number;
@@ -830,6 +834,9 @@ export interface components {
        * @description The revision this change is based on; 0 to create.
        */
       revision: number;
+      scheduleOrder?: {
+        [key: string]: string[];
+      };
       sectionPicker?: components["schemas"]["SectionPicker"];
     };
     /** @description Which program version a plan audits against (`lib/plan-types.ts`). */

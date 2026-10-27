@@ -216,7 +216,7 @@ types mirror Courseweave's TypeScript and are validated for shape and bounds; un
 | Schedule | Courseweave's `Schedule` (`termId`, `name`, `entries`) plus `visibility`, `revision`, `shareId`, `createdAt`, `updatedAt` | 300 per student, 100 courses each |
 | Plan | Courseweave's `Plan` (`name`, `programs`, `startTerm`, `terms`) plus `revision`, `createdAt`, `updatedAt` | 50 per student; 40 terms, 40 courses a term, 10 programs |
 | Record | Courseweave's persisted record (`entries`, `overrides`, `profile`) plus `revision`, `updatedAt` | 600 entries, 600 overrides |
-| Preferences | `calendarDisplay` (`{ section, time, location, title }`), `activeSchedule` (term to schedule id), `activePlanId`, `planLayout` (`cards` or `table`), `sectionPicker` (`dropdown` or `compact`), `onboarding` (`{ asked, promptHidden }`), plus `revision`, `updatedAt` | 100 active schedules |
+| Preferences | `calendarDisplay` (`{ section, time, location, title }`), `activeSchedule` (term to schedule id), `scheduleOrder` (term to its schedule ids in tab order), `activePlanId`, `planLayout` (`cards` or `table`), `sectionPicker` (`dropdown` or `compact`), `onboarding` (`{ asked, promptHidden }`), plus `revision`, `updatedAt` | 100 active schedules; 100 tab orders of up to 300 ids |
 | Saved course | `{ courseId, savedAt }` | 1000 per student |
 
 Names are 1 to 120 characters after trimming. Course ids are five digits (`15122`), terms look like `S27`, `M26` or

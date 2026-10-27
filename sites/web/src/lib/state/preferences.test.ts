@@ -13,11 +13,12 @@ describe("preferences", () => {
   it("reads untrusted JSON with defaults, and drops prototype keys", () => {
     expect(normalizePreferences({})).toEqual(DEFAULT_PREFERENCES);
     const raw = JSON.parse(
-      '{"activeSchedule":{"S27":"a","__proto__":"x"},"planLayout":"table","sectionPicker":"compact","calendarDisplay":{"time":false,"title":true},"onboarding":{"asked":true}}',
+      '{"activeSchedule":{"S27":"a","__proto__":"x"},"scheduleOrder":{"S27":["b",5,"a"],"F26":"b","__proto__":["x"]},"planLayout":"table","sectionPicker":"compact","calendarDisplay":{"time":false,"title":true},"onboarding":{"asked":true}}',
     ) as unknown;
     expect(normalizePreferences(raw)).toEqual({
       ...DEFAULT_PREFERENCES,
       activeSchedule: { S27: "a" },
+      scheduleOrder: { S27: ["b", "a"] },
       planLayout: "table",
       sectionPicker: "compact",
       calendarDisplay: { section: true, time: false, location: true, title: true },
@@ -31,18 +32,21 @@ describe("preferences", () => {
     const local = {
       ...DEFAULT_PREFERENCES,
       activeSchedule: { S27: "mine" },
+      scheduleOrder: { S27: ["b", "a"] },
       planLayout: "table" as const,
       sectionPicker: "compact" as const,
     };
     const remote = {
       ...DEFAULT_PREFERENCES,
       activeSchedule: { S27: "theirs", F26: "old" },
+      scheduleOrder: { S27: ["a", "b"], F26: ["c", "d"] },
       activePlanId: "p",
       onboarding: { asked: true, promptHidden: false },
     };
     expect(mergePreferences(local, remote)).toEqual({
       ...DEFAULT_PREFERENCES,
       activeSchedule: { S27: "mine", F26: "old" },
+      scheduleOrder: { S27: ["b", "a"], F26: ["c", "d"] },
       activePlanId: "p",
       planLayout: "table",
       sectionPicker: "compact",
@@ -63,6 +67,27 @@ describe("active schedules", () => {
     expect(stores.schedules.activeId("S27")).toBe(b);
     expect(stores.schedules.activeId("F26")).toBeNull();
     expect(stores.schedules.forTerm("S27").map((s) => s.name)).toEqual(["B"]);
+  });
+
+  it("keeps the tabs in the order the student puts them, with new ones after", () => {
+    const stores = draftStores();
+    const names = (): string[] => stores.schedules.forTerm("S27").map((s) => s.name);
+    const a = stores.schedules.createSchedule("S27", "A");
+    stores.schedules.createSchedule("S27", "B");
+    const c = stores.schedules.createSchedule("S27", "C");
+    expect(names()).toEqual(["A", "B", "C"]);
+    stores.schedules.moveSchedule(c, a);
+    expect(names()).toEqual(["C", "A", "B"]);
+    stores.schedules.moveSchedule(a, null);
+    expect(names()).toEqual(["C", "B", "A"]);
+    stores.schedules.createSchedule("S27", "D");
+    stores.schedules.deleteSchedule(c);
+    expect(names()).toEqual(["B", "A", "D"]);
+    stores.schedules.moveSchedule(a, "missing");
+    expect(names()).toEqual(["B", "D", "A"]);
+    expect(stores.preferences.scheduleOrder.S27).toEqual(
+      stores.schedules.forTerm("S27").map((s) => s.id),
+    );
   });
 });
 

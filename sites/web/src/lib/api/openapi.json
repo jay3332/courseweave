@@ -2358,6 +2358,7 @@
         "required": [
           "calendarDisplay",
           "activeSchedule",
+          "scheduleOrder",
           "activePlanId",
           "planLayout",
           "sectionPicker",
@@ -2392,6 +2393,19 @@
             "type": "integer",
             "format": "int64",
             "description": "0 when nothing has been saved yet."
+          },
+          "scheduleOrder": {
+            "type": "object",
+            "description": "Term id to the order of its schedules' tabs, by id. Schedules it doesn't list follow, oldest first.",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "propertyNames": {
+              "type": "string"
+            }
           },
           "sectionPicker": {
             "$ref": "#/components/schemas/SectionPicker"
@@ -2447,6 +2461,18 @@
             "type": "integer",
             "format": "int64",
             "description": "The revision this change is based on; 0 to create."
+          },
+          "scheduleOrder": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "propertyNames": {
+              "type": "string"
+            }
           },
           "sectionPicker": {
             "$ref": "#/components/schemas/SectionPicker"

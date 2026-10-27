@@ -6,6 +6,7 @@ import type { ScheduleRecord, ShareLink, SharedSchedule } from "../api/types.ts"
 import { mergeNewer, normalizeSchedule } from "../core/sync-merge.ts";
 import {
   applyScheduleEdit,
+  inTabOrder,
   latestSchedule,
   newSchedule,
   scheduleEdits,
@@ -116,9 +117,12 @@ export class ScheduleStore {
     return this.store.items[id];
   }
 
-  /** A term's schedules, oldest first (tab order). */
+  /** A term's schedules in tab order: as the student arranged them (preferences), then any newer, oldest first. */
   forTerm(termId: string): ScheduleItem[] {
-    return termSchedules(Object.values(this.store.items), termId);
+    return inTabOrder(
+      termSchedules(Object.values(this.store.items), termId),
+      this.#prefs.scheduleOrder[termId],
+    );
   }
 
   /** The schedule shown for a term: the one chosen, else the term's most recently edited one. */
@@ -189,6 +193,15 @@ export class ScheduleStore {
 
   setActiveSchedule(termId: string, id: string): void {
     this.#prefs.setActiveSchedule(termId, id);
+  }
+
+  /** Moves a schedule's tab to just before another's (null: the end). */
+  moveSchedule(id: string, beforeId: string | null): void {
+    const s = this.store.items[id];
+    if (s === undefined) return;
+    const ids = this.forTerm(s.termId).flatMap((t) => (t.id === id ? [] : [t.id]));
+    const at = beforeId === null ? -1 : ids.indexOf(beforeId);
+    this.#prefs.setScheduleOrder(s.termId, at < 0 ? [...ids, id] : ids.toSpliced(at, 0, id));
   }
 
   /** Adds a schedule shared by link (or an import link) to the student's own schedules, and shows it. */

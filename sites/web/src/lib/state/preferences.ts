@@ -1,6 +1,6 @@
 // Preferences that follow the student between devices (`/api/preferences`): calendar display options, the schedule
-// shown for each semester, the active degree plan, the plan layout, how sections are picked and the onboarding
-// prompt's answer. Courseweave kept these on the device; here they're one record per student.
+// shown for each semester and the order of its schedules' tabs, the active degree plan, the plan layout, how sections
+// are picked and the onboarding prompt's answer. Courseweave kept these on the device; here they're one record per student.
 import type { Api } from "../api/endpoints.ts";
 import type { PlanLayout, Preferences, PreferencesData, SectionPicker } from "../api/types.ts";
 import { EMPTY_ONBOARDING, type OnboardingState } from "../core/state/onboarding.ts";
@@ -13,6 +13,7 @@ import type { Stored } from "./sync.ts";
 export const DEFAULT_PREFERENCES: PreferencesData = {
   calendarDisplay: DEFAULT_CALENDAR_DISPLAY,
   activeSchedule: {},
+  scheduleOrder: {},
   activePlanId: null,
   planLayout: "cards",
   sectionPicker: "dropdown",
@@ -33,6 +34,13 @@ export function normalizePreferences(raw: unknown): PreferencesData | null {
       if (!UNSAFE_KEYS.has(term) && typeof id === "string") activeSchedule[term] = id;
     }
   }
+  const scheduleOrder: Record<string, string[]> = {};
+  if (isObject(raw.scheduleOrder)) {
+    for (const [term, ids] of Object.entries(raw.scheduleOrder)) {
+      if (!UNSAFE_KEYS.has(term) && Array.isArray(ids))
+        scheduleOrder[term] = ids.filter((id): id is string => typeof id === "string");
+    }
+  }
   const ob = isObject(raw.onboarding) ? raw.onboarding : {};
   return {
     calendarDisplay: {
@@ -42,6 +50,7 @@ export function normalizePreferences(raw: unknown): PreferencesData | null {
       title: flag(cd.title, DEFAULT_CALENDAR_DISPLAY.title),
     },
     activeSchedule,
+    scheduleOrder,
     activePlanId: typeof raw.activePlanId === "string" ? raw.activePlanId : null,
     planLayout: raw.planLayout === "table" ? "table" : "cards",
     sectionPicker: raw.sectionPicker === "compact" ? "compact" : "dropdown",
@@ -50,13 +59,14 @@ export function normalizePreferences(raw: unknown): PreferencesData | null {
 }
 
 /**
- * This device's preferences over the server's, field by field: they're the more recent choice. Active schedules
- * combine per semester, and the onboarding prompt counts as answered if either copy says so.
+ * This device's preferences over the server's, field by field: they're the more recent choice. Active schedules and
+ * tab orders combine per semester, and the onboarding prompt counts as answered if either copy says so.
  */
 export function mergePreferences(local: PreferencesData, remote: PreferencesData): PreferencesData {
   return {
     calendarDisplay: local.calendarDisplay,
     activeSchedule: { ...remote.activeSchedule, ...local.activeSchedule },
+    scheduleOrder: { ...remote.scheduleOrder, ...local.scheduleOrder },
     activePlanId: local.activePlanId ?? remote.activePlanId,
     planLayout: local.planLayout,
     sectionPicker: local.sectionPicker,
@@ -102,6 +112,11 @@ export class PreferencesStore {
     return this.store.value.activeSchedule;
   }
 
+  /** Term id to its schedules' ids in tab order. Use schedules.forTerm(), which puts any it doesn't list after. */
+  get scheduleOrder(): Record<string, string[]> {
+    return this.store.value.scheduleOrder;
+  }
+
   get activePlanId(): string | null {
     return this.store.value.activePlanId;
   }
@@ -138,6 +153,20 @@ export class PreferencesStore {
       if (id === null) delete activeSchedule[termId];
       else activeSchedule[termId] = id;
       return { ...p, activeSchedule };
+    });
+  }
+
+  /** Puts a term's schedule tabs in this order, by id. */
+  setScheduleOrder(termId: string, ids: string[]): void {
+    this.store.edit((p) => {
+      const current = p.scheduleOrder[termId];
+      if (
+        current !== undefined &&
+        current.length === ids.length &&
+        current.every((id, i) => id === ids[i])
+      )
+        return p;
+      return { ...p, scheduleOrder: { ...p.scheduleOrder, [termId]: ids } };
     });
   }
 

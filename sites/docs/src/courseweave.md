@@ -125,7 +125,7 @@ Same origin as the website. JSON field names are camelCase. Every write needs `O
 | `GET /api/shared-schedules/{token}` | A shared schedule, without its owner |
 | `GET`, `POST /api/plans`; `PUT`, `DELETE /api/plans/{id}` | Degree plans, revisioned like schedules |
 | `GET`, `PUT /api/record` | The academic record, revisioned |
-| `GET`, `PUT /api/preferences` | Preferences that follow the student: calendar display, active schedule and plan, onboarding answers |
+| `GET`, `PUT /api/preferences` | Preferences that follow the student: calendar display, active schedule and plan, schedule tab order, onboarding answers |
 | `GET /api/saved`; `PUT`, `DELETE /api/saved/{courseId}` | Saved courses, not tied to a semester |
 | `GET /api/friends` and the request, accept, remove, invite and redeem routes | As before, renamed to camelCase |
 | `PUT /api/friends/sharing` | `{ shareCourses, shareSchedules }`: what accepted friends may see |
@@ -143,7 +143,7 @@ Record bodies:
   `shareId`.
 - Plan: Courseweave's `Plan` (`state/plan.ts`) plus `revision`.
 - Record: Courseweave's persisted record state (`state/record.ts`) plus `revision`.
-- Preferences: `{ calendarDisplay, activeSchedule: { [termId]: id }, activePlanId, planLayout, sectionPicker, onboarding, revision }`.
+- Preferences: `{ calendarDisplay, activeSchedule: { [termId]: id }, scheduleOrder: { [termId]: id[] }, activePlanId, planLayout, sectionPicker, onboarding, revision }`.
 
 ## Website
 

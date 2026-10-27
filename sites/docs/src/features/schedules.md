@@ -32,8 +32,12 @@ hues in `routes/layout.css` (`--c0` to `--c9`, with dark values), applied with `
 
 `/schedules?term=<id>` shows the semester's schedules as tabs (`ScheduleTabs.svelte`), each with its units in a pill:
 switch, create (blank or from a degree plan semester, `core/planner/fromPlan.ts`), rename (the pencil, double-click or
-the menu), duplicate, share and delete. A semester without a schedule shows "Schedule 1", created on the first edit,
-so visiting creates nothing. `?schedule=<id>` shows a particular one (the profile links to it).
+the menu), duplicate, share, delete and rearrange. A tab drags along the strip, the others making room, and dropping it
+shows it; a mouse drags once it moves a few pixels, so clicks and double-clicks still work, and a finger holds the tab
+for 0.4 seconds first, so a swipe still scrolls the strip, which scrolls along near its ends. The menu's Move left and
+Move right do the same for the shown tab. The order is the `scheduleOrder` preference; tabs it doesn't list (new ones)
+follow, oldest first. A semester without a schedule shows "Schedule 1", created on the first edit, so visiting creates
+nothing. `?schedule=<id>` shows a particular one (the profile links to it).
 
 - **Toolbar**: one row under the tabs with Generate, Finals, Export and the calendar display button (a settings icon,
   `DisplayMenu.svelte`, whose popover chooses what blocks show besides the code: section, course name, time and room,

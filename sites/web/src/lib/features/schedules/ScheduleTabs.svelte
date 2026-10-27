@@ -1,10 +1,13 @@
 <!--
   The semester's schedules as tabs (Courseweave's ScheduleTabs), each with its units in a pill: switch, create (blank or from
-  a degree plan's semester), rename (double-click or the menu), duplicate, share and delete. A tab synced with the
-  active degree plan's semester is marked, as is one friends can see.
+  a degree plan's semester), rename (double-click or the menu), duplicate, share, delete and rearrange (drag a tab, or
+  move the shown one from the menu). A tab synced with the active degree plan's semester is marked, as is one friends
+  can see.
 -->
 <script lang="ts">
   import {
+    ArrowLeft,
+    ArrowRight,
     CirclePlus,
     Copy,
     Ellipsis,
@@ -51,6 +54,7 @@
   let tablist = $state<HTMLElement>();
   const list = $derived(schedules.forTerm(termId));
   const active = $derived(list.find((s) => s.id === activeId) ?? null);
+  const activeIndex = $derived(list.findIndex((s) => s.id === activeId));
   const placeholder = $derived(nextScheduleName(Object.values(schedules.items).filter((s) => s.termId === termId)));
 
   // Schedules a semester of the active degree plan is synced with.
@@ -109,6 +113,141 @@
     schedules.renameSchedule(id, name.slice(0, 120));
   }
 
+  // Dragging a tab: it follows the pointer along the strip, the tabs it passes make room, and letting go puts it there
+  // and shows it, as a browser's tabs do. A mouse drags once it has moved a few pixels, so clicks and double-clicks
+  // still switch and rename; a finger holds the tab a moment first, so a swipe still scrolls the strip.
+  let drag = $state<{ id: string; from: number; to: number; dx: number; size: number } | null>(null);
+  // For the update that puts the tabs in their new order: the ones that made room are already there, so they don't
+  // slide.
+  let settling = $state(false);
+  let endPress: (() => void) | null = null;
+  $effect(() => () => endPress?.());
+
+  // Once a drag starts, a finger moves the tab instead of scrolling the strip. The browser only waits to scroll for
+  // a listener that was there when the touch began, so this one always is.
+  $effect(() => {
+    const strip = tablist;
+    if (strip === undefined) return;
+    const hold = (event: TouchEvent): void => {
+      if (drag !== null) event.preventDefault();
+    };
+    strip.addEventListener("touchmove", hold, { passive: false });
+    return () => strip.removeEventListener("touchmove", hold);
+  });
+
+  function press(event: PointerEvent, id: string): void {
+    const tab = event.currentTarget;
+    const strip = tablist;
+    if (event.button !== 0 || !(tab instanceof HTMLElement) || strip === undefined) return;
+    const tabs = [...strip.querySelectorAll<HTMLElement>('[role="tab"]')];
+    const from = tabs.indexOf(tab);
+    if (renaming !== null || tabs.length < 2 || from < 0) return;
+    endPress?.();
+
+    // Positions along the strip's content, which hold as it scrolls.
+    const stripLeft = strip.getBoundingClientRect().left;
+    const at = (clientX: number): number => clientX - stripLeft + strip.scrollLeft;
+    const boxes = tabs.map((t) => {
+      const r = t.getBoundingClientRect();
+      return { left: at(r.left), right: at(r.right) };
+    });
+    const first = boxes[0];
+    const second = boxes[1];
+    const last = boxes.at(-1);
+    const self = boxes[from];
+    if (first === undefined || second === undefined || last === undefined || self === undefined) return;
+    const size = self.right - self.left + second.left - first.right;
+    const startX = at(event.clientX);
+    const touch = event.pointerType === "touch";
+    let pointerX = event.clientX;
+    let started = false;
+    let frame = 0;
+
+    // It goes past a tab once its leading edge passes that tab's middle; it stays within the row of tabs.
+    const update = (): void => {
+      const dx = Math.min(Math.max(at(pointerX) - startX, first.left - self.left), last.right - self.right);
+      const to = boxes.filter((b, i) => {
+        const middle = (b.left + b.right) / 2;
+        return i < from ? self.left + dx > middle : i > from && self.right + dx > middle;
+      }).length;
+      drag = { id, from, to, dx, size };
+    };
+    // Near either end of a strip that scrolls, it scrolls along.
+    const scroll = (): void => {
+      frame = 0;
+      const r = strip.getBoundingClientRect();
+      const before = strip.scrollLeft;
+      if (pointerX < r.left + 40) strip.scrollLeft -= 8;
+      else if (pointerX > r.right - 40) strip.scrollLeft += 8;
+      if (strip.scrollLeft === before) return;
+      update();
+      frame = requestAnimationFrame(scroll);
+    };
+    const begin = (): void => {
+      started = true;
+      try {
+        tab.setPointerCapture(event.pointerId);
+      } catch {
+        // A pointer that's already gone: the drag still follows its events.
+      }
+      update();
+    };
+    const timer = touch ? setTimeout(begin, 400) : undefined;
+
+    const end = (drop: boolean): void => {
+      clearTimeout(timer);
+      cancelAnimationFrame(frame);
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", cancel);
+      endPress = null;
+      const done = drag;
+      drag = null;
+      if (!started || done === null || !drop) return;
+      schedules.setActiveSchedule(termId, id);
+      if (done.to === done.from) return;
+      settling = true;
+      schedules.moveSchedule(id, list.filter((s) => s.id !== id)[done.to]?.id ?? null);
+      void tick().then(() => {
+        // Lays the tabs out in their new places before their slide comes back.
+        strip.getBoundingClientRect();
+        settling = false;
+      });
+    };
+    const move = (e: PointerEvent): void => {
+      if (e.pointerId !== event.pointerId) return;
+      pointerX = e.clientX;
+      if (!started) {
+        const moved = Math.hypot(e.clientX - event.clientX, e.clientY - event.clientY);
+        // A finger that moves before the hold is up is scrolling.
+        if (touch && moved > 8) end(false);
+        else if (!touch && moved > 4) begin();
+        return;
+      }
+      update();
+      if (frame === 0) frame = requestAnimationFrame(scroll);
+    };
+    const up = (e: PointerEvent): void => {
+      if (e.pointerId === event.pointerId) end(true);
+    };
+    const cancel = (e: PointerEvent): void => {
+      if (e.pointerId === event.pointerId) end(false);
+    };
+    endPress = () => end(false);
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", cancel);
+  }
+
+  /** How far a drag moves tab `i`: the dragged one follows the pointer; the ones it passes move a place. */
+  function shift(i: number): number {
+    if (drag === null) return 0;
+    if (i === drag.from) return drag.dx;
+    if (drag.to > drag.from && i > drag.from && i <= drag.to) return -drag.size;
+    if (drag.to < drag.from && i >= drag.to && i < drag.from) return drag.size;
+    return 0;
+  }
+
   // Arrow keys move between tabs, as in the design system's Tabs.
   function onTabKey(event: KeyboardEvent): void {
     const i = list.findIndex((s) => s.id === activeId);
@@ -145,6 +284,28 @@
       },
     },
     { label: "Share", icon: Link2, onselect: onshare },
+    // What dragging a tab does, for the keyboard and screen readers.
+    ...(list.length > 1
+      ? ([
+          "separator",
+          {
+            label: "Move left",
+            icon: ArrowLeft,
+            disabled: activeIndex < 1,
+            onselect: () => {
+              if (active !== null) schedules.moveSchedule(active.id, list[activeIndex - 1]?.id ?? null);
+            },
+          },
+          {
+            label: "Move right",
+            icon: ArrowRight,
+            disabled: activeIndex < 0 || activeIndex === list.length - 1,
+            onselect: () => {
+              if (active !== null) schedules.moveSchedule(active.id, list[activeIndex + 2]?.id ?? null);
+            },
+          },
+        ] satisfies MenuEntry[])
+      : []),
     "separator",
     {
       label: "Delete",
@@ -180,9 +341,9 @@
     bind:this={tablist}
     role="tablist"
     aria-label="Schedules"
-    class="scrollbar-thin -mx-1 -mt-1 -mb-1.5 flex min-w-0 items-end gap-5 overflow-x-auto px-1 pt-1 pb-1.5"
+    class="scrollbar-thin -mx-1 -mt-1 -mb-1.5 flex min-w-0 items-end gap-5 overflow-x-auto px-1 pt-1 pb-1.5 select-none"
   >
-    {#each list.length > 0 ? list : [null] as s (s?.id ?? "placeholder")}
+    {#each list.length > 0 ? list : [null] as s, i (s?.id ?? "placeholder")}
       {@const id = s?.id ?? null}
       {@const isActive = id === activeId || s === null}
       {#if renaming !== null && (renaming === id || (s === null && renaming === activeId))}
@@ -211,9 +372,17 @@
             if (id !== null) schedules.setActiveSchedule(termId, id);
           }}
           onkeydown={onTabKey}
+          onpointerdown={(event) => {
+            if (id !== null) press(event, id);
+          }}
           ondblclick={() => void startRename(id ?? ontarget())}
-          title={isActive ? "Double-click to rename" : undefined}
-          class="relative -mb-px flex shrink-0 items-center gap-2 border-b-2 pt-1 pb-3 transition-colors {isActive
+          title={isActive ? "Double-click to rename, or drag to move" : undefined}
+          style={shift(i) === 0 ? undefined : `transform: translateX(${shift(i)}px)`}
+          class="relative -mb-px flex shrink-0 items-center gap-2 border-b-2 pt-1 pb-3 {drag?.id === id
+            ? 'z-10 -mx-2 cursor-grabbing rounded-t-field bg-surface-2 px-2 shadow-md transition-colors'
+            : settling
+              ? 'transition-colors'
+              : 'transition-[color,border-color,transform] motion-reduce:transition-colors'} {isActive
             ? 'border-accent text-strong'
             : 'border-transparent text-muted hover:text-ink'}"
         >

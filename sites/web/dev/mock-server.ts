@@ -97,6 +97,7 @@ const EMPTY_RECORD: Json = { entries: [], overrides: {}, profile: {} };
 const DEFAULT_PREFERENCES: Json = {
   calendarDisplay: { section: true, time: true, location: true, title: false },
   activeSchedule: {},
+  scheduleOrder: {},
   activePlanId: null,
   planLayout: "cards",
   sectionPicker: "dropdown",

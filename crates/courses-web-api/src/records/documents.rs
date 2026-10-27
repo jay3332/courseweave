@@ -10,7 +10,7 @@ use utoipa::ToSchema;
 
 use super::{
     COUNT_WRITE, DAILY_WRITES, UNDER_CAP, WriteState, check, check_text, check_units, is_course_id,
-    is_record_id, is_term, to_stored, write_failed,
+    is_record_id, is_term, schedules::SCHEDULES_MAX, to_stored, write_failed,
 };
 use crate::{
     auth::{CurrentUser, Writer},
@@ -437,6 +437,8 @@ pub struct PreferencesData {
     #[serde(default)]
     pub active_schedule: BTreeMap<String, String>,
     #[serde(default)]
+    pub schedule_order: BTreeMap<String, Vec<String>>,
+    #[serde(default)]
     pub active_plan_id: Option<String>,
     #[serde(default)]
     pub plan_layout: PlanLayout,
@@ -459,6 +461,21 @@ impl Document for PreferencesData {
             check(is_record_id(id), "activeSchedule values are schedule ids.")?;
         }
         check(
+            self.schedule_order.len() <= 100,
+            "Too many schedule orders.",
+        )?;
+        for (term, ids) in &self.schedule_order {
+            check(is_term(term), "scheduleOrder is keyed by term, like S27.")?;
+            check(
+                i64::try_from(ids.len()).is_ok_and(|n| n <= SCHEDULES_MAX),
+                "Too many schedules in an order.",
+            )?;
+            check(
+                ids.iter().all(|id| is_record_id(id)),
+                "scheduleOrder lists schedule ids.",
+            )?;
+        }
+        check(
             self.active_plan_id.as_deref().is_none_or(is_record_id),
             "activePlanId is a plan id or null.",
         )
@@ -472,6 +489,8 @@ pub struct Preferences {
     pub calendar_display: CalendarDisplay,
     /// Term id to the schedule shown for it.
     pub active_schedule: BTreeMap<String, String>,
+    /// Term id to the order of its schedules' tabs, by id. Schedules it doesn't list follow, oldest first.
+    pub schedule_order: BTreeMap<String, Vec<String>>,
     #[schema(required = true)]
     pub active_plan_id: Option<String>,
     pub plan_layout: PlanLayout,
@@ -489,6 +508,8 @@ pub struct PreferencesUpdate {
     pub calendar_display: CalendarDisplay,
     #[serde(default)]
     pub active_schedule: BTreeMap<String, String>,
+    #[serde(default)]
+    pub schedule_order: BTreeMap<String, Vec<String>>,
     #[serde(default)]
     pub active_plan_id: Option<String>,
     #[serde(default)]
@@ -513,6 +534,7 @@ fn preferences_view(d: PreferencesData, revision: i64, updated_at: i64) -> Prefe
     Preferences {
         calendar_display: d.calendar_display,
         active_schedule: d.active_schedule,
+        schedule_order: d.schedule_order,
         active_plan_id: d.active_plan_id,
         plan_layout: d.plan_layout,
         section_picker: d.section_picker,
@@ -563,6 +585,7 @@ pub async fn put_preferences(
     let data = PreferencesData {
         calendar_display: update.calendar_display,
         active_schedule: update.active_schedule,
+        schedule_order: update.schedule_order,
         active_plan_id: update.active_plan_id,
         plan_layout: update.plan_layout,
         section_picker: update.section_picker,

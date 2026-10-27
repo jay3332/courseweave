@@ -88,12 +88,12 @@ preferences. Its stores are also exported on their own:
 
 | Store | Reading | Changing |
 | --- | --- | --- |
-| `schedules` | `items`, `get(id)`, `forTerm(termId)`, `activeId(termId)`, `active(termId)` | `ensureSchedule`, `createSchedule`, `duplicateSchedule`, `deleteSchedule`, `renameSchedule`, `setActiveSchedule`, `addCourse`, `removeCourse`, `setSection`, `setChild`, `setSections`, `setPassFail`, `setColor`, `toggleHidden`, `moveEntry`, `setVisibility`, `importShared`; `share(id)` and `unshare(id)` when signed in |
+| `schedules` | `items`, `get(id)`, `forTerm(termId)`, `activeId(termId)`, `active(termId)` | `ensureSchedule`, `createSchedule`, `duplicateSchedule`, `deleteSchedule`, `renameSchedule`, `setActiveSchedule`, `moveSchedule`, `addCourse`, `removeCourse`, `setSection`, `setChild`, `setSections`, `setPassFail`, `setColor`, `toggleHidden`, `moveEntry`, `setVisibility`, `importShared`; `share(id)` and `unshare(id)` when signed in |
 | `plans` | `items`, `list`, `get(id)`, `activeId`, `active` | `createPlan`, `duplicatePlan`, `deletePlan`, `setActivePlan`, `renamePlan`, `setPrograms`, `setStartTerm`, `addTerm`, `removeTerm`, `addCourse`, `removeCourse`, `moveCourse`, `updateCourse`, `setTermCourses`, `linkTerm`, `unlinkTerm`, `setCourseUnits`, `removeCourseFromTerm` |
 | `links` | | Plan edits that land in a synced schedule: `addToTerm`, `placeInTerm`, `removeFromPlan`, `moveInPlan`, `setPlanPassFail`, `setPlanUnits`, `linkTermToSchedule`, `unlinkTerm` |
 | `record` | `data`, `entries`, `overrides`, `profile`, `isEmpty`, `totals(unitsOf)` | `addEntry`, `addEntries`, `updateEntry`, `removeEntry`, `removeExam`, `setOverride`, `setProfile`, `importRecord`, `clearRecord` |
 | `saved` | `ids`, `has(courseId)` | `toggle`, `add`, `remove` |
-| `preferences` | `calendarDisplay`, `planLayout`, `sectionPicker`, `onboarding`, `activePlanId` | `setCalendarDisplay`, `setPlanLayout`, `setSectionPicker`, `hideOnboardingPrompt` |
+| `preferences` | `calendarDisplay`, `scheduleOrder`, `planLayout`, `sectionPicker`, `onboarding`, `activePlanId` | `setCalendarDisplay`, `setScheduleOrder`, `setPlanLayout`, `setSectionPicker`, `hideOnboardingPrompt` |
 
 These are Courseweave's store actions with the same meaning; the pure edits behind them are in `core/state`. What
 changed is where the data lives:
