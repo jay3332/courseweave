@@ -1,9 +1,10 @@
 # Personal instance: courses.jay3332.tech
 
-This branch (`scottylabs` in the Courseweave repository) is ScottyLabs' CMU Courses, from the `courseweave` branch of
-<https://git.cmu.dev/scottylabs/courses>, with what a personal instance needs on top. ScottyLabs-specific deployment
-(Kennel, Keycloak) stays upstream; changes that aren't specific to this instance go upstream first and are merged in
-with `git fetch scottylabs && git merge scottylabs/courseweave`.
+This is Courseweave: the `main` branch of the Courseweave repository, the official CMU Courses (ScottyLabs', from the
+`courseweave` branch of <https://git.cmu.dev/scottylabs/courses>) with what this personal instance needs on top.
+ScottyLabs-specific deployment (Kennel, Keycloak) stays official-only; changes that aren't specific to this instance go
+to the official repository first and are merged in with `git fetch scottylabs && git merge scottylabs/courseweave`. The
+original Courseweave, a Cloudflare Worker, is the `legacy` branch, served at <https://legacy.courseweave.jay3332.tech>.
 
 ## What differs from upstream
 

@@ -8,7 +8,7 @@
   import { readLocal, writeLocal } from "../ui/storage";
 
   const FEEDBACK_URL = "https://github.com/jay3332/courseweave/issues";
-  const SOURCE_URL = "https://github.com/jay3332/courseweave/tree/scottylabs";
+  const SOURCE_URL = "https://github.com/jay3332/courseweave";
   const UPSTREAM_URL = "https://git.cmu.dev/ScottyLabs/courses";
   const SCOTTYLABS_URL = "https://scottylabs.org";
   const KEY = "footer-collapsed";
