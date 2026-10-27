@@ -56,7 +56,8 @@ beside its requirements:
 When the main column is at least 1120px wide (with the rail open, from about 1700px; hiding the rail makes room
 sooner) the requirements are a sticky column beside the semesters, a third of the column wide (320 to 600px; 300 to 560px beside the detailed table). Stuck, the
 column scrolls in a box from the site header to the bottom of the screen, fading at both edges, so nothing is cut off
-short of either. Below that they're the
+short of either; until the page scrolls it up there (under the import banner), it's only as tall as the room below its
+top (`roomBelow`), so its end is on screen too. Below that they're the
 rail's last group (its sheet on phones, "Programs and requirements"), without cards (`AuditPanel`'s `flat`).
 Requirement rows are one line at any width: the status icon, the number, the title (truncated, whole in its tooltip),
 then the semester a course counted in ("F27") and its units. Add appears over the row's end when the row is hovered or

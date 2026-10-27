@@ -4,6 +4,7 @@
   import { page } from "$app/state";
   import { MediaQuery } from "svelte/reactivity";
   import RailLayout from "$lib/components/layout/RailLayout.svelte";
+  import { roomBelow } from "$lib/components/layout/room-below";
   import { getSession } from "$lib/components/shell/session";
   import Title from "$lib/components/shell/Title.svelte";
   import Button from "$lib/components/ui/Button.svelte";
@@ -319,10 +320,13 @@
     </div>
 
     {#if query.course !== null && x.termId !== null}
+      <!-- Beside the list, the panel sticks under the header and scrolls on its own. Until the page scrolls it up there
+           (under the toolbar), it's only as tall as the room below its top, so its end is always on screen. -->
       <aside
+        {@attach roomBelow}
         aria-label="Course details"
         class="min-w-0 rounded-card border border-pressed bg-surface {panelBeside
-          ? 'scrollbar-thin sticky top-[calc(var(--header-h)+1rem)] max-h-[calc(100dvh-var(--header-h)-2rem)] w-[400px] shrink-0 overflow-y-auto overscroll-contain xl:w-[440px] min-[90rem]:w-[460px] min-[105rem]:w-[500px]'
+          ? 'scrollbar-thin sticky top-[calc(var(--header-h)+1rem)] max-h-[min(calc(100dvh-var(--header-h)-2rem),calc(var(--room-below,100dvh)-1rem))] w-[400px] shrink-0 overflow-y-auto overscroll-contain xl:w-[440px] min-[90rem]:w-[460px] min-[105rem]:w-[500px]'
           : 'w-full'}"
       >
         {#key selectedId}

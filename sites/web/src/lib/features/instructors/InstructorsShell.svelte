@@ -8,6 +8,7 @@
   import RailGroup from "$lib/components/layout/RailGroup.svelte";
   import RailLayout from "$lib/components/layout/RailLayout.svelte";
   import RailSection from "$lib/components/layout/RailSection.svelte";
+  import { roomBelow } from "$lib/components/layout/room-below";
   import SignInPrompt from "$lib/components/shell/SignInPrompt.svelte";
   import Button from "$lib/components/ui/Button.svelte";
   import Chip from "$lib/components/ui/Chip.svelte";
@@ -277,9 +278,12 @@
     />
   {:else if split}
     <div class="flex items-start gap-6">
+      <!-- Sticks under the header and scrolls on its own; until the page scrolls it up there (under the toolbar), it's
+           only as tall as the room below its top, so its end is always on screen. -->
       <div
         bind:this={side}
-        class="scrollbar-thin sticky top-[calc(var(--header-h)+1rem)] max-h-[calc(100dvh-var(--header-h)-2rem)] w-[320px] shrink-0 overflow-y-auto overscroll-contain rounded-card border border-pressed bg-surface"
+        {@attach roomBelow}
+        class="scrollbar-thin sticky top-[calc(var(--header-h)+1rem)] max-h-[min(calc(100dvh-var(--header-h)-2rem),calc(var(--room-below,100dvh)-1rem))] w-[320px] shrink-0 overflow-y-auto overscroll-contain rounded-card border border-pressed bg-surface"
       >
         <InstructorRows docs={scope.results.slice(0, SIDE_ROWS)} {active} stickyTop="top-0" />
         {#if scope.results.length > SIDE_ROWS}

@@ -18,7 +18,9 @@ course components other pages reuse. They port Courseweave's explorer, catalog a
 | `ExplorerToolbar.svelte`, `chips.ts` | Search, result count, removable filter chips, semester, sort, the FCE chart and the cards/list switch |
 | `CourseResults.svelte` | Cards (20 at a time), rows (100 at a time) or the hours chart; more load as the end of the list scrolls into view |
 
-Selecting a course opens it in the detail panel (`?course=15-122`) beside the list from 1024px wide. Below 1440px the
+Selecting a course opens it in the detail panel (`?course=15-122`) beside the list from 1024px wide. The panel sticks
+under the site header and scrolls on its own; until the page scrolls it up there it's only as tall as the room below its
+top (`roomBelow`, `components/layout/room-below.ts`), so its end is always on screen. Below 1440px the
 filter rail collapses to its strip while a course is open (`RailLayout`'s `autoCollapse`); showing the rail again puts
 the course in place of the list. Below 1024px, where the panel would take the whole screen, selecting a course opens the
 full course page instead (a `?course=` link still opens the panel, in place of the list). The panel's Expand goes to

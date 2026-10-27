@@ -9,6 +9,7 @@
   import RailGroup from "$lib/components/layout/RailGroup.svelte";
   import HelpTip from "$lib/components/ui/HelpTip.svelte";
   import RailLayout from "$lib/components/layout/RailLayout.svelte";
+  import { roomBelow } from "$lib/components/layout/room-below";
   import Button from "$lib/components/ui/Button.svelte";
   import Dialog from "$lib/components/ui/Dialog.svelte";
   import { toast } from "$lib/components/ui/toast.svelte";
@@ -302,10 +303,12 @@
              the rows' chevrons and the Expand button inside its scroll box; and down through the page's bottom
              padding, so at the page's end it meets the footer. Stuck, its scroll box runs from the site header to the
              bottom of the screen, so what scrolls out goes under the header or off the screen (fading at both edges)
-             rather than being cut off short of them. -->
+             rather than being cut off short of them. Until the page scrolls it up there (under the import banner),
+             it's only as tall as the room below its top, so its end is on screen too. -->
         <aside
+          {@attach roomBelow}
           aria-labelledby="requirements-heading"
-          class="scrollbar-thin sticky top-[var(--header-h)] -mt-3 -mb-5 -ml-3 flex max-h-[calc(100dvh-var(--header-h))] flex-col gap-3 overflow-y-auto overscroll-contain pt-3 pr-1 pb-5 pl-3 [mask-image:linear-gradient(to_bottom,transparent,black_0.75rem,black_calc(100%-1rem),transparent)] lg:-mb-8 lg:pb-8"
+          class="scrollbar-thin sticky top-[var(--header-h)] -mt-3 -mb-5 -ml-3 flex max-h-[min(calc(100dvh-var(--header-h)),var(--room-below,100dvh))] flex-col gap-3 overflow-y-auto overscroll-contain pt-3 pr-1 pb-5 pl-3 [mask-image:linear-gradient(to_bottom,transparent,black_0.75rem,black_calc(100%-1rem),transparent)] lg:-mb-8 lg:pb-8"
         >
           <div class="flex items-center gap-2">
             <h2 id="requirements-heading" class="text-heading-5 text-strong">Requirements</h2>

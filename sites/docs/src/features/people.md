@@ -21,7 +21,8 @@ signed out, the pages ask the visitor to sign in, and a non-CMU account is told 
 | `lib/components/course/` | What instructors share with courses: the aggregate window and figures (`fce-aggregate.ts`), the "Aggregate FCEs" settings, stat boxes (`FceStats`), the FCE table and the trend chart |
 
 The layout keeps the list's state while the student opens instructors. In the list view on screens 1280 pixels wide
-or more, an open instructor shows beside Courseweave's rows, which stay in their own scrolling column; in the cards
+or more, an open instructor shows beside Courseweave's rows, which stay in their own scrolling column (as tall as the
+room below its top until it sticks, `roomBelow`, so its end is always on screen); in the cards
 view and on narrower screens the instructor page is on its own, with "All instructors" going back to the list.
 
 The rail and toolbar match the Courses page: departments are a searchable multi-select and the sort a toolbar select
