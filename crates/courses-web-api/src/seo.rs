@@ -39,14 +39,6 @@ impl Site {
             template,
         })
     }
-
-    #[cfg(test)]
-    pub fn from_template(template: &str) -> Self {
-        Self {
-            dir: PathBuf::new(),
-            template: template.to_owned(),
-        }
-    }
 }
 
 /// A course's public fields, as the head tags need them.

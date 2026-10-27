@@ -57,7 +57,7 @@ For syllabi, point `SYLLABI_DIR` at a scraper export such as the main checkout's
 | `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET` | The OIDC client |
 | `OAUTH_RELAY_URL` | The Ricochet callback relay registered with Keycloak |
 | `PROJECT_ADMIN_GROUP` | Keycloak group path whose members get `isAdmin`; empty for none. Never grants CMU membership |
-| `STATIC_DIR` | The built website. Enables `/course/{code}` and serves the SPA with `index.html` as the fallback |
+| `STATIC_DIR` | The built website. Enables `/course/{code}` and serves the SPA with `index.html` as the fallback, except under `/_app`, where a missing build file is a 404. Content-hashed files (`/_app/immutable/`) may be cached for a year, other files are revalidated (`no-cache`), and errors aren't stored (`no-store`), so no cache keeps the page under a script's name |
 | `SYLLABI_DIR` | Serve syllabi from this directory (development). Takes precedence over the bucket |
 | `SYLLABI_BUCKET` | Serve syllabi from this S3-compatible bucket |
 | `SYLLABI_PREFIX` | Key prefix inside the bucket; default `syllabi/` |

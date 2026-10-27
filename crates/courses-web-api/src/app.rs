@@ -1,10 +1,12 @@
 //! The router: API routes with their OpenAPI document, sign-in, search-engine files and the website, behind the
 //! Origin guard, security headers and sessions.
 
+use std::path::Path;
+
 use axum::{
     Extension, Json, Router,
     extract::{DefaultBodyLimit, Request},
-    http::{HeaderValue, Method, header},
+    http::{HeaderValue, Method, StatusCode, header},
     middleware::{self, Next},
     response::{IntoResponse, Response},
     routing::get,
@@ -294,14 +296,42 @@ pub fn router(state: AppState, sign_in: SignIn) -> Router {
         );
 
     match &state.site {
-        Some(site) => {
-            let files = ServeDir::new(&site.dir)
-                .append_index_html_on_directories(true)
-                .fallback(ServeFile::new(site.dir.join("index.html")));
-            app.fallback_service(files)
-        }
+        Some(site) => app.fallback_service(website(&site.dir)),
         None => app,
     }
+}
+
+/// The website's files. Build output under `/_app` that isn't there is a 404; any other path is the app's page, which
+/// routes it. `website_cache` says how long each may be kept.
+fn website(dir: &Path) -> Router {
+    let pages = ServeDir::new(dir)
+        .append_index_html_on_directories(true)
+        .fallback(ServeFile::new(dir.join("index.html")));
+    Router::new()
+        .nest_service("/_app", ServeDir::new(dir.join("_app")))
+        .fallback_service(pages)
+        .layer(middleware::from_fn(website_cache))
+}
+
+/// Build output with content-hashed names (`/_app/immutable/`) may be kept for a year; everything else is checked again
+/// each time, so a deploy shows at once; and an error, a missing file above all, is never kept. Missing build files
+/// used to be answered with the app's page, which Cloudflare and browsers then kept for hours under the script's name:
+/// when a later build brought that name back, they served the page in its place and the app failed to start.
+async fn website_cache(request: Request, next: Next) -> Response {
+    let immutable = request.uri().path().starts_with("/_app/immutable/");
+    let mut response = next.run(request).await;
+    let status = response.status();
+    let policy = if !(status.is_success() || status == StatusCode::NOT_MODIFIED) {
+        "no-store"
+    } else if immutable {
+        "public, max-age=31536000, immutable"
+    } else {
+        "no-cache"
+    };
+    response
+        .headers_mut()
+        .insert(header::CACHE_CONTROL, HeaderValue::from_static(policy));
+    response
 }
 
 /// Bridges tower-sessions to axum-oidc's session storage.

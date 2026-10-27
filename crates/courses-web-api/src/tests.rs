@@ -181,6 +181,11 @@ fn fixture_with(options: Options) -> Fixture {
     std::fs::create_dir_all(&syllabi).unwrap();
     std::fs::write(syllabi.join("15122-1.pdf"), b"%PDF-1.4 test").unwrap();
     std::fs::write(syllabi.join("15122 notes.docx"), b"docx bytes").unwrap();
+    let site = dir.path().join("site");
+    std::fs::create_dir_all(site.join("_app/immutable/chunks")).unwrap();
+    std::fs::write(site.join("index.html"), TEMPLATE).unwrap();
+    std::fs::write(site.join("_app/version.json"), r#"{"version":"1"}"#).unwrap();
+    std::fs::write(site.join("_app/immutable/chunks/start.js"), "export {};").unwrap();
     let state = AppState::new(Inner {
         catalog: Catalog::open(&catalog_path).unwrap(),
         db: UserDb::open(&dir.path().join("users.sqlite")).unwrap(),
@@ -190,7 +195,7 @@ fn fixture_with(options: Options) -> Fixture {
         syllabi: options
             .syllabi
             .then(|| SyllabusStore::Dir(dir.path().join("syllabi"))),
-        site: options.site.then(|| Site::from_template(TEMPLATE)),
+        site: options.site.then(|| Site::load(&site).unwrap()),
         writes: Limiter::new(options.writes_per_minute, Duration::from_secs(60)),
     });
     Fixture {
@@ -1572,6 +1577,36 @@ async fn syllabi_are_for_members_with_safe_headers() {
         (r.status, r.code().as_str()),
         (StatusCode::SERVICE_UNAVAILABLE, "unavailable")
     );
+}
+
+#[tokio::test]
+async fn website_files_and_how_long_they_may_be_kept() {
+    let f = fixture();
+    let script = f.get("/_app/immutable/chunks/start.js", None).await;
+    assert_eq!(script.status, StatusCode::OK);
+    assert!(script.header(header::CONTENT_TYPE).contains("javascript"));
+    assert_eq!(
+        script.header(header::CACHE_CONTROL),
+        "public, max-age=31536000, immutable"
+    );
+
+    // A build file that isn't there is a 404 nothing keeps, never the app's page.
+    let missing = f.get("/_app/immutable/chunks/gone.js", None).await;
+    assert_eq!(missing.status, StatusCode::NOT_FOUND);
+    assert_eq!(missing.header(header::CACHE_CONTROL), "no-store");
+    assert!(!missing.text().contains("<html"));
+
+    let version = f.get("/_app/version.json", None).await;
+    assert_eq!(version.status, StatusCode::OK);
+    assert_eq!(version.header(header::CACHE_CONTROL), "no-cache");
+
+    // Any other path is the app's page, checked again each time.
+    for path in ["/", "/schedules", "/plan/anything"] {
+        let page = f.get(path, None).await;
+        assert_eq!(page.status, StatusCode::OK, "{path}");
+        assert_eq!(page.text(), TEMPLATE, "{path}");
+        assert_eq!(page.header(header::CACHE_CONTROL), "no-cache", "{path}");
+    }
 }
 
 #[tokio::test]
