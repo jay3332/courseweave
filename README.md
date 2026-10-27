@@ -1,5 +1,10 @@
 # Courseweave
 
+This is the `legacy` branch: the original Courseweave, a Cloudflare Worker served at
+<https://legacy.courseweave.jay3332.tech>. Courseweave now lives on
+[`main`](https://github.com/jay3332/courseweave/tree/main), ScottyLabs' CMU Courses with Courseweave's features, at
+<https://courses.jay3332.tech>.
+
 A CMU course explorer, instructor directory, schedule planner and degree planner. Everything runs in the browser: course data is static JSON, and your schedules, record and plans are saved in local storage.
 
 - **Courses**: search and filter every course in a semester, with sections (lectures and their recitations), FCE workload against units, an hours-vs-units chart, descriptions and requisites. Each course links to its prerequisite tree and everything it unlocks.
@@ -154,7 +159,7 @@ The app makes a handful of these requests per page, so 20 per 10 seconds is only
 
 The site is served at `legacy.courseweave.jay3332.tech`, set in `wrangler.jsonc`. Its old address,
 `courseweave.jay3332.tech`, redirects to <https://courses.jay3332.tech>, Courseweave's features on ScottyLabs' CMU
-Courses (the `scottylabs` branch).
+Courses (the `main` branch).
 
 ```jsonc
 "routes": [{ "pattern": "legacy.courseweave.jay3332.tech", "custom_domain": true }],
