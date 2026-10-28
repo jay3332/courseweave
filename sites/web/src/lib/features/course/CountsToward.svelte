@@ -2,9 +2,8 @@
   import MemberSignIn from "$lib/components/course/MemberSignIn.svelte";
   import { catalogIndex } from "$lib/components/course/data.svelte";
   import Spinner from "$lib/components/ui/Spinner.svelte";
-  import { reqParam } from "$lib/core/explorer/filters";
   import { requirementsForCourse, type CourseRequirementMatch } from "$lib/core/requirement-match";
-  import { coursesPath, planPath } from "$lib/core/routes";
+  import { planPath, requirementCoursesPath } from "$lib/core/routes";
   import { catalog, resource } from "$lib/data";
   import { plans } from "$lib/state";
 
@@ -40,9 +39,7 @@
   });
 
   function filterHref(m: CourseRequirementMatch): string {
-    const base = coursesPath(termId);
-    const req = `req=${reqParam({ auditId: m.auditId, nodeId: m.filterNodeId })}`;
-    return `${base}${base.includes("?") ? "&" : "?"}${req}`;
+    return requirementCoursesPath({ auditId: m.auditId, nodeId: m.filterNodeId }, termId);
   }
 </script>
 
@@ -77,7 +74,7 @@
               <li>
                 <a
                   href={filterHref(m)}
-                  title="Show courses that count toward this"
+                  title="Show courses that count toward this, fewest FCE hours first"
                   class="group -mx-2 flex min-h-10 items-baseline gap-2 rounded-tag px-2 py-2 hover:bg-hover sm:min-h-0 sm:py-1"
                 >
                   <span class="min-w-0 flex-1 text-body-2">

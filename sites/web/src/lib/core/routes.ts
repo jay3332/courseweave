@@ -1,5 +1,6 @@
 // Links to the website's pages (docs/src/courseweave.md, "Website"). Courseweave puts the semester in the path; here
 // it's the `term` query parameter, and `term=all` is the all-semesters view of the course and instructor lists.
+import { reqParam, type ReqRef } from "./explorer/filters.ts";
 import { codeOf } from "./requisite-format.ts";
 
 /** The `term` value for the all-semesters view. */
@@ -16,6 +17,11 @@ function withTerm(path: string, term?: string | null, extra: Record<string, stri
 /** The course list. */
 export function coursesPath(term?: string | null): string {
   return withTerm("/", term);
+}
+
+/** The course list narrowed to what counts toward a requirement, fewest FCE hours first. */
+export function requirementCoursesPath(req: ReqRef, term?: string | null): string {
+  return withTerm("/", term, { req: reqParam(req), sort: "hours" });
 }
 
 /** A course's full page. Takes a five-digit id ("15122") or a code ("15-122"). */

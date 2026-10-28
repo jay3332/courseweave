@@ -3,6 +3,7 @@
   // requirement doesn't need (under "other options not needed") has no Add but still drags onto a semester.
   import { Info } from "@lucide/svelte";
   import { displayState, fmt, STATE_LABEL } from "$lib/core/degree/audit/format";
+  import { FCE_HOURS_HELP, formatHours } from "$lib/core/fce";
   import type { RequirementResult } from "$lib/core/plan-types";
   import { codeOf } from "$lib/core/requisite-format";
   import AddButton from "./AddButton.svelte";
@@ -21,14 +22,15 @@
   const canDrag = $derived(a === undefined && !done && !ctx.inPlan.has(id));
   const drag = $derived(canDrag ? dragNew(id, ctx) : {});
   const units = $derived(ctx.units(id));
+  const hours = $derived(ctx.hours(id));
   const canAdd = $derived(!a && !done && state !== "skipped" && ctx.onAddCourse !== undefined && !ctx.inPlan.has(id));
   const notOffered = $derived(!a && !done && !ctx.offered(id));
   /** Where it counted, shortly: "F27" or "Credit"; the whole status is its tooltip. */
   const when = $derived(a === undefined ? null : a.status === "credit" ? "Credit" : (a.term ?? null));
 </script>
 
-<!-- One line at any width: the number, the title (truncated), and where it counted or its units. Add waits over the
-     line's end (AddButton). -->
+<!-- One line at any width: the number, the title (truncated), where it counted, its FCE hours and its units. Add waits
+     over the line's end (AddButton). -->
 <li
   id="req-{r.nodeId}"
   class="group/leaf relative flex min-h-10 items-center gap-2 border-t border-line py-1 first:border-t-0 md:min-h-9 {drag.draggable
@@ -54,6 +56,7 @@
     {#if a}
       <span title={assignedStatus(a)}>{when ?? assignedStatus(a)}<span class="sr-only">, {assignedStatus(a)}</span></span>
     {/if}
+    {#if hours !== null}<span title={FCE_HOURS_HELP}>{formatHours(hours)}h</span>{/if}
     {#if units !== null}<span>{fmt(units)}u</span>{/if}
     {#if notOffered}<span class="sr-only">Not offered in {ctx.termName}</span>{/if}
     {#if r.notes.length > 0}

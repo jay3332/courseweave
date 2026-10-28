@@ -30,12 +30,14 @@
   const index = resource(() => (signedIn ? catalog.programsIndex() : null));
   const planVersions = resource(() => (signedIn && plan && plan.programs.length > 0 ? catalog.auditVersions(plan.programs) : null));
 
-  // A program picked here before choosing one of its requirements; otherwise the filter's own program.
-  let picked = $state<string | null>(null);
+  // A program picked here before choosing one of its requirements (null when cleared); otherwise the filter's own
+  // program, or with no filter the degree plan's first program, so its requirements are one pick away.
+  let picked = $state<string | null | undefined>(undefined);
   $effect.pre(() => {
-    if (value !== null) picked = null;
+    if (value !== null) picked = undefined;
   });
-  const program = $derived(picked ?? (value === null ? null : String(value.auditId)));
+  const planProgram = $derived(plan?.programs[0] ? String(plan.programs[0].auditId) : null);
+  const program = $derived(picked !== undefined ? picked : value === null ? planProgram : String(value.auditId));
   const version = resource(() => (program === null ? null : catalog.program(Number(program))));
 
   const GEN_ED = /general education|gen ?ed/iu;

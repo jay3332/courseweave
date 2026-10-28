@@ -21,7 +21,7 @@
     /** Null only while no program is chosen. */
     data: AuditData | null;
     /** Lookups and actions for the tree (without the requirement lookup, which each program adds). */
-    base: Omit<TreeContext, "node" | "catalog" | "inPlan">;
+    base: Omit<TreeContext, "node" | "auditId" | "catalog" | "inPlan">;
     /** In the rail: no cards; programs are divided by rules like the rail's groups, and what's checked with a program
      *  is set in by a rule on its left. */
     flat?: boolean;

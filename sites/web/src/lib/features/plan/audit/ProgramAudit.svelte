@@ -16,8 +16,8 @@
   }: {
     program: ProgramAuditResult;
     version: ProgramVersion | undefined;
-    /** Everything but the requirement lookup, which is this version's. */
-    base: Omit<TreeContext, "node">;
+    /** Everything but the requirement lookup and the version, which are this program's. */
+    base: Omit<TreeContext, "node" | "auditId">;
     nested?: boolean;
   } = $props();
 
@@ -32,7 +32,7 @@
   }
 
   const nodes = $derived(indexNodes(version?.root));
-  const ctx = $derived<TreeContext>({ ...base, node: (id) => nodes.get(id) ?? null });
+  const ctx = $derived<TreeContext>({ ...base, auditId: program.auditId, node: (id) => nodes.get(id) ?? null });
   const areas = $derived(program.root.children.filter((c) => c.skipped !== true && c.manual !== true));
   const areasDone = $derived(areas.filter((c) => c.state === "complete").length);
   const areasPlanned = $derived(areas.filter((c) => c.state === "complete-with-plan").length);

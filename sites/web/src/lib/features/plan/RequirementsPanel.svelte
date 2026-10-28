@@ -5,6 +5,7 @@
   import { session } from "$lib/data";
   import Spinner from "$lib/components/ui/Spinner.svelte";
   import type { AuditData } from "$lib/core/programs";
+  import { requirementCoursesPath } from "$lib/core/routes";
   import AuditPanel from "./audit/AuditPanel.svelte";
   import type { TreeContext } from "./audit/tree";
   import { planPage } from "./context";
@@ -30,12 +31,14 @@
 
   const page = planPage();
   const plan = $derived(page.plan);
-  const base = $derived<Omit<TreeContext, "node" | "catalog" | "inPlan">>({
+  const base = $derived<Omit<TreeContext, "node" | "auditId" | "catalog" | "inPlan">>({
     termName: page.routed?.meta.name ?? "this semester",
     offered: (id) => page.routed?.courseById.has(id) ?? false,
     title: (id) => page.lookup(id).title,
     units: (id) => page.lookup(id).units,
+    hours: (id) => page.fceHours(id),
     href: (id, term) => page.href(id, term),
+    requirementHref: (auditId, nodeId) => requirementCoursesPath({ auditId, nodeId }, page.routed?.meta.id),
     onAddCourse: (id) => page.addSuggested(id),
     dragCourses: drag,
     onDragStart: (courseId) => page.startDrag({ kind: "add", courseId }),
