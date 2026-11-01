@@ -42,6 +42,7 @@ function catalogChips(query: ExplorerQuery, names: ChipNames, add: Add, addExtra
       bucket === "var" ? "Variable" : (UNIT_BUCKETS.find((b) => b.id === bucket)?.label ?? bucket);
     add(`bucket:${bucket}`, `${label} units`, { units: f.units.filter((u) => u !== bucket) });
   }
+  if (query.extra.fixed) addExtra("fixed", "Fixed units", { fixed: false });
   if (query.extra.seasons.length > 0) {
     const seasons = query.extra.seasons.map((s) => capitalize(s)).join(" or ");
     addExtra("seasons", `Offered in ${seasons}`, { seasons: [] });

@@ -1,6 +1,8 @@
 // The Courses page's search: rank by the query (core/search.ts), keep what passes the filters (Courseweave's and
-// the extra ones in query.ts), then sort. Also the courses this semester doesn't offer: search matches from other
-// semesters, and the full list behind "Show courses not offered". Pure functions over loaded documents.
+// the extra ones in query.ts), then sort, either way round. Also the courses this semester doesn't offer: search
+// matches from other semesters, and the full list behind "Show courses not offered". Pure functions over loaded
+// documents.
+import type { SortDir } from "../../components/course/columns.ts";
 import type { CatalogIndex } from "../../core/catalog-types.ts";
 import {
   activeFilterCount,
@@ -10,7 +12,6 @@ import {
   sortOtherCourses,
   type FilterContext,
   type Filters,
-  type SortKey,
 } from "../../core/explorer/filters.ts";
 import {
   catalogTitle,
@@ -20,8 +21,10 @@ import {
 import type { FceSummary } from "../../core/fce.ts";
 import { exactCourseId, searchOtherTerms, type Offerings } from "../../core/offerings.ts";
 import { scoreCourse, type ScoredDoc } from "../../core/search.ts";
+import { topSections } from "../../core/sections.ts";
+import { isScheduled } from "../../core/time.ts";
 import type { Course } from "../../core/types.ts";
-import { extraFilterCount, extraMatches, type ExtraFilters } from "./query.ts";
+import { extraFilterCount, extraMatches, type ExplorerSort, type ExtraFilters } from "./query.ts";
 
 export interface SearchInput {
   docs: readonly (ScoredDoc & { course: Course })[];
@@ -29,7 +32,9 @@ export interface SearchInput {
   q: string;
   filters: Filters;
   extra: ExtraFilters;
-  sort: SortKey;
+  sort: ExplorerSort;
+  /** The other way round from the sort's usual way, or null (query.ts's sortDir()). */
+  dir: SortDir | null;
   ctx: FilterContext;
   catalog: CatalogIndex | null;
   /** Semesters offering a course, for the "offered in" seasons. */
@@ -69,7 +74,67 @@ export function filterCourses(
         input.extra,
       ),
   );
-  return sortCourses(kept, input.sort, input.ctx.fce);
+  const sorted =
+    input.sort === "meets" ? byMeetingTime(kept) : sortCourses(kept, input.sort, input.ctx.fce);
+  return input.dir === null
+    ? sorted
+    : turnAround(sorted, (course) => hasSortValue(course, input.sort, input.ctx.fce, course));
+}
+
+/** When a course first meets: the earliest start among its lectures and other top sections; null when TBA. */
+export function firstMeeting(course: Course): { start: number; day: number } | null {
+  let first: { start: number; day: number } | null = null;
+  for (const section of topSections(course))
+    for (const meeting of section.meetings) {
+      if (!isScheduled(meeting)) continue;
+      const day = Math.min(...meeting.days);
+      if (first === null || meeting.start < first.start || (meeting.start === first.start && day < first.day))
+        first = { start: meeting.start, day };
+    }
+  return first;
+}
+
+/** Earliest meeting time first, then the earliest day; courses without a time last, by number. */
+function byMeetingTime(items: readonly { course: Course }[]): Course[] {
+  const keyed = items.map(({ course }) => ({ course, first: firstMeeting(course) }));
+  keyed.sort((a, b) => {
+    if (a.first === null || b.first === null)
+      return a.first === b.first ? a.course.id.localeCompare(b.course.id) : a.first === null ? 1 : -1;
+    return a.first.start - b.first.start || a.first.day - b.first.day || a.course.id.localeCompare(b.course.id);
+  });
+  return keyed.map((k) => k.course);
+}
+
+/**
+ * Whether a course has what the sort orders by. Courses without it (no FCEs, variable units, no meeting time) stay
+ * last whichever way the sort runs.
+ */
+function hasSortValue(
+  subject: { id: string; units: number | null },
+  sort: ExplorerSort,
+  fce: Map<string, FceSummary> | null | undefined,
+  course?: Course,
+): boolean {
+  const s = fce?.get(subject.id);
+  switch (sort) {
+    case "units":
+      return subject.units !== null;
+    case "meets":
+      return course !== undefined && firstMeeting(course) !== null;
+    case "ratio":
+      return s?.hours != null && Boolean(subject.units);
+    case "rating":
+      return s?.courseRate != null;
+    case "teaching":
+      return s?.teachingRate != null;
+    default:
+      return true;
+  }
+}
+
+/** The list the other way round, keeping the items without a value for the sort at the end. */
+function turnAround<T>(sorted: readonly T[], has: (item: T) => boolean): T[] {
+  return [...sorted.filter((item) => has(item)).toReversed(), ...sorted.filter((item) => !has(item))];
 }
 
 export interface OtherMatch {
@@ -123,7 +188,8 @@ export function unofferedMatches(input: {
   q: string;
   filters: Filters;
   extra: ExtraFilters;
-  sort: SortKey;
+  sort: ExplorerSort;
+  dir: SortDir | null;
   ctx: Pick<FilterContext, "bookmarks" | "fce" | "reqAccepts">;
   catalog: CatalogIndex | null;
   fce: Map<string, FceSummary> | null;
@@ -137,5 +203,9 @@ export function unofferedMatches(input: {
     const score = input.q === "" ? 1 : scoreCourse(doc, input.q);
     if (score > 0) out.push({ course: doc.course, score });
   }
-  return sortOtherCourses(out, input.sort, input.fce);
+  // Without sections nothing has a meeting time, so a meeting-time sort keeps them by number.
+  const sorted = sortOtherCourses(out, input.sort === "meets" ? "number" : input.sort, input.fce);
+  return input.dir === null
+    ? sorted
+    : turnAround(sorted, (course) => hasSortValue(course, input.sort, input.fce));
 }

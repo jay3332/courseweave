@@ -168,12 +168,32 @@
       bind:high={() => extra.unitsHigh, (high) => setExtra({ unitsHigh: high })}
       presets={unitPresets}
     />
-    <!-- Courseweave's VAR units chip: research, independent study and other courses with units set per student. -->
+    <!-- Courseweave's VAR units chip: research, independent study and other courses with units set per student;
+         and its opposite, fixed units only. Checking one clears the other. -->
     <Checkbox
       label="Variable units only"
       checked={f.units.includes("var")}
-      onchange={(event) =>
-        set("units", event.currentTarget.checked ? ["var"] : f.units.filter((u) => u !== "var"))}
+      onchange={(event) => {
+        const on = event.currentTarget.checked;
+        onchange({
+          ...query,
+          filters: { ...f, units: on ? ["var"] : f.units.filter((u) => u !== "var") },
+          extra: { ...extra, fixed: on ? false : extra.fixed },
+        });
+      }}
+      class="-ml-2"
+    />
+    <Checkbox
+      label="Fixed units only"
+      checked={extra.fixed}
+      onchange={(event) => {
+        const on = event.currentTarget.checked;
+        onchange({
+          ...query,
+          filters: { ...f, units: on ? f.units.filter((u) => u !== "var") : f.units },
+          extra: { ...extra, fixed: on },
+        });
+      }}
       class="-ml-2"
     />
   </RailSection>

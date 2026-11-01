@@ -7,7 +7,6 @@ import {
   FCE_SORTS,
   parseSort,
   withoutSectionFilters,
-  type SortKey,
 } from "$lib/core/explorer/filters";
 import { requirementLabel } from "$lib/core/explorer/requirementHooks";
 import { unofferedDocs } from "$lib/core/explorer/unoffered";
@@ -25,7 +24,7 @@ import {
   saved,
   schedules,
 } from "$lib/state";
-import { extraFilterCount } from "./query";
+import { extraFilterCount, sortDir, type ExplorerSort } from "./query";
 import { filterCourses, otherTermMatches, scoreDocs, unofferedMatches } from "./results";
 import { ExplorerUrl } from "./url-state.svelte";
 
@@ -104,7 +103,9 @@ export class Explorer {
     activeFilterCount(this.filters) + extraFilterCount(this.url.query.extra),
   );
   readonly q = $derived(this.url.query.q.trim());
-  readonly sort = $derived.by((): SortKey => {
+  readonly sort = $derived.by((): ExplorerSort => {
+    // Meeting times need a semester's sections; the all-semesters view has none.
+    if (this.url.query.sort === "meets" && !this.allMode) return "meets";
     const sort = parseSort(
       new URLSearchParams(this.url.query.sort === null ? "" : `sort=${this.url.query.sort}`),
       this.q !== "",
@@ -113,6 +114,8 @@ export class Explorer {
       return this.q === "" ? "number" : "relevance";
     return sort;
   });
+  /** The other way round from the sort's usual way, or null. */
+  readonly dir = $derived(sortDir(this.sort, this.url.query.dir));
 
   readonly scheduleView = $derived(
     !this.allMode && this.term?.value && this.termId !== null
@@ -168,6 +171,7 @@ export class Explorer {
       filters: this.filters,
       extra: this.url.query.extra,
       sort: this.sort,
+      dir: this.dir,
       catalog: this.index.value ?? null,
       ctx: {
         bookmarks: new Set(saved.ids),
@@ -210,6 +214,7 @@ export class Explorer {
       filters: this.filters,
       extra: this.url.query.extra,
       sort: this.sort,
+      dir: this.dir,
       ctx: { bookmarks: new Set(saved.ids), fce: this.fceMap, reqAccepts: this.reqAccepts },
       catalog: this.index.value ?? null,
       fce: this.fceMap,
@@ -225,6 +230,7 @@ export class Explorer {
       this.filters,
       this.url.query.extra,
       this.sort,
+      this.dir,
     ]),
   );
 }

@@ -42,6 +42,13 @@
   const showFce = $derived(fce.status === "ready" && fce.value !== null);
   const mini = $derived(courseIsMini(course, stats));
   const workload = $derived(stats ? workloadDescription(stats.hours, course.units, mini) : "");
+  // How many students' evaluations the hours and rating average: n, the sample size.
+  const responses = $derived(stats && stats.responses > 0 ? stats.responses : null);
+  const responsesText = $derived.by(() => {
+    if (!stats || responses === null) return "";
+    const count = `${responses.toLocaleString("en-US")} FCE ${responses === 1 ? "response" : "responses"}`;
+    return `${count} over its last ${stats.terms} ${stats.terms === 1 ? "semester" : "semesters"} with evaluations`;
+  });
   const offeredText = $derived(
     offered === undefined
       ? ""
@@ -100,7 +107,14 @@
                   class="size-3 fill-current"
                 /><span class="sr-only">course rating</span></span
               >{/if}
+            {#if responses !== null}<span class="tabular" title={responsesText}>n={responses}</span>{/if}
           </span>
+          <!-- Between the narrow layout and the one with a Rating column: the hours have a column, n doesn't. -->
+          {#if responses !== null}
+            <span class="narrow-n ml-auto shrink-0 text-muted" title={responsesText}
+              ><span class="tabular">n={responses}</span><span class="sr-only">, {responsesText}</span></span
+            >
+          {/if}
         {/if}
       </span>
     {/if}
@@ -134,12 +148,18 @@
     {/if}
   </span>
 
-  <span class="col-rating pt-px text-right text-body-2" title="Overall course rating from FCEs, 1 to 5">
+  <span
+    class="col-rating pt-px text-right text-body-2"
+    title="Overall course rating from FCEs, 1 to 5{responsesText ? `, from ${responsesText}` : ''}"
+  >
     {#if showFce}
       {#if stats?.courseRate != null}
-        <span class="tabular text-ink">{stats.courseRate.toFixed(1)}</span>
+        <span class="tabular block text-ink">{stats.courseRate.toFixed(1)}</span>
       {:else}
-        <span class="text-label-md text-muted">-</span>
+        <span class="block text-label-md text-muted">-</span>
+      {/if}
+      {#if responses !== null}
+        <span class="tabular block text-label-md text-muted">n={responses}</span>
       {/if}
     {/if}
   </span>
@@ -158,7 +178,8 @@
 
   .col-meets,
   .col-hours,
-  .col-rating {
+  .col-rating,
+  .narrow-n {
     display: none;
   }
 
@@ -182,6 +203,10 @@
 
     .narrow-fce {
       display: none;
+    }
+
+    .narrow-n {
+      display: inline;
     }
 
     .title {

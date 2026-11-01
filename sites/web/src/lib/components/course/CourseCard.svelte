@@ -133,16 +133,25 @@
         <span class="text-body-2 text-muted">No FCE hours</span>
       {:else}
         {@const recent = fce.value?.courses.get(course.id)?.terms ?? 0}
-        <!-- The course's recent average, which can differ from the aggregate below over the semesters chosen. -->
+        {@const responses = fce.value?.courses.get(course.id)?.responses ?? 0}
+        <!-- The course's recent average, which can differ from the aggregate below over the semesters chosen; n is
+             how many students' evaluations it averages. -->
         <span
           class="whitespace-nowrap text-muted @2xl:text-ink"
           title="Hours a week students reported over its last {recent} {recent === 1
             ? 'semester'
-            : 'semesters'} with evaluations"
+            : 'semesters'} with evaluations, from {responses.toLocaleString('en-US')} {responses === 1
+            ? 'response'
+            : 'responses'}"
           ><span class="tabular">{hours.toFixed(1)}</span> hrs/week<span class="sr-only">
             over its last {recent} {recent === 1 ? "semester" : "semesters"} with evaluations</span
           ></span
         >
+        {#if responses > 0}
+          <span class="tabular text-body-2 whitespace-nowrap text-muted"
+            >n={responses}<span class="sr-only"> {responses === 1 ? "response" : "responses"}</span></span
+          >
+        {/if}
       {/if}
     </div>
 

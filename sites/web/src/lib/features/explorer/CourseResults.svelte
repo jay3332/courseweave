@@ -3,6 +3,7 @@
   import CourseCard from "$lib/components/course/CourseCard.svelte";
   import CourseList from "$lib/components/course/CourseList.svelte";
   import CourseRow from "$lib/components/course/CourseRow.svelte";
+  import type { ListColumn, SortedColumn } from "$lib/components/course/columns";
   import HoursScatter from "$lib/components/course/HoursScatter.svelte";
   import type { ListView } from "$lib/components/ui/ViewToggle.svelte";
   import type { FceSummary } from "$lib/core/fce";
@@ -22,6 +23,8 @@
     keepList = true,
     selectedId = null,
     active = -1,
+    sorted = null,
+    onsort,
     limit = $bindable(0),
     footer,
   }: {
@@ -47,6 +50,10 @@
     selectedId?: string | null;
     /** Highlighted by keyboard navigation from the search field. */
     active?: number;
+    /** The list's column the results are sorted by, for its headers. */
+    sorted?: SortedColumn | null;
+    /** A click on a list header: sort by that column, or turn the sort around. */
+    onsort?: (column: ListColumn) => void;
     /** How many results are rendered; more load as the end of the list scrolls into view. */
     limit?: number;
     /** Shown once every result is (courses from other semesters). */
@@ -93,18 +100,20 @@
           {#if cardTerm(course) === ""}
             <CourseRow {course} termId={null} offered={[]} href={hrefFor(course)} />
           {:else}
+            <!-- Open, so the description and FCEs show without a click; "Show less" folds a card up. -->
             <CourseCard
               {course}
               termId={cardTerm(course)}
               offered={termId === null ? (offeredOf?.(course.id) ?? []) : undefined}
               href={hrefFor(course)}
+              expanded
             />
           {/if}
         </li>
       {/each}
     </ol>
   {:else}
-    <CourseList label="Courses" allSemesters={termId === null}>
+    <CourseList label="Courses" allSemesters={termId === null} {sorted} {onsort}>
       {#each shown as course, index (course.id)}
         <div id="result-{course.id}" class="scroll-mt-40">
           <CourseRow
