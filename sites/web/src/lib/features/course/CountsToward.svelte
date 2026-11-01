@@ -2,6 +2,7 @@
   import MemberSignIn from "$lib/components/course/MemberSignIn.svelte";
   import { catalogIndex } from "$lib/components/course/data.svelte";
   import Spinner from "$lib/components/ui/Spinner.svelte";
+  import { entryYearOf } from "$lib/core/degree/hooks";
   import { requirementsForCourse, type CourseRequirementMatch } from "$lib/core/requirement-match";
   import { planPath, requirementCoursesPath } from "$lib/core/routes";
   import { catalog, resource } from "$lib/data";
@@ -18,7 +19,9 @@
 
   const plan = $derived(plans.active);
   const programs = $derived(plan?.programs ?? []);
-  const versions = resource(() => (programs.length > 0 ? catalog.auditVersions(programs) : null));
+  const versions = resource(() =>
+    plan && programs.length > 0 ? catalog.auditVersions(programs, entryYearOf(plan.startTerm)) : null,
+  );
   const index = $derived(catalogIndex());
   const matches = $derived.by((): CourseRequirementMatch[] | null => {
     if (versions.status !== "ready" || versions.value === undefined || index.status === "loading") return null;

@@ -28,7 +28,11 @@
 
   // Degree programs and gen eds are Stellic data, for CMU members only.
   const index = resource(() => (signedIn ? catalog.programsIndex() : null));
-  const planVersions = resource(() => (signedIn && plan && plan.programs.length > 0 ? catalog.auditVersions(plan.programs) : null));
+  const planVersions = resource(() =>
+    signedIn && plan && plan.programs.length > 0
+      ? catalog.auditVersions(plan.programs, entryYearOf(plan.startTerm))
+      : null,
+  );
 
   // A program picked here before choosing one of its requirements (null when cleared); otherwise the filter's own
   // program, or with no filter the degree plan's first program, so its requirements are one pick away.

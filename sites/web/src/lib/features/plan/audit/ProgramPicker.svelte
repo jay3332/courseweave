@@ -5,6 +5,8 @@
   // query lists every program of that type.
   import { Plus } from "@lucide/svelte";
   import { catalog, resource } from "$lib/data";
+  import { bundlesForEntryYear } from "$lib/core/degree/year-bundles";
+  import type { ProgramVersion } from "$lib/core/degree-types";
   import { defaultVersion } from "$lib/core/programs";
   import type { ProgramInfo, ProgramSelection } from "$lib/core/plan-types";
   import Chip from "$lib/components/ui/Chip.svelte";
@@ -44,6 +46,11 @@
 
   const programs = $derived(index.value?.programs ?? []);
   const byCatalog = $derived(new Map(programs.map((p) => [p.catalogId, p])));
+
+  /** A chosen version with the gen eds the audit checks alongside it: year-split ones at the plan's entry year. */
+  function withBundles(version: ProgramVersion | undefined): ProgramVersion | undefined {
+    return version && index.value ? bundlesForEntryYear(version, index.value, entryYearHint ?? null) : version;
+  }
   const results = $derived(
     searchPrograms(programs, query, filter, new Set(value.map((v) => v.catalogId))),
   );
@@ -107,7 +114,7 @@
           <SelectedProgram
             {selection}
             info={byCatalog.get(selection.catalogId)}
-            version={versions.value?.get(selection.auditId)}
+            version={withBundles(versions.value?.get(selection.auditId))}
             onchange={(next) => onchange(value.map((v, j) => (j === i ? next : v)))}
             onremove={() => onchange(value.filter((_, j) => j !== i))}
           />

@@ -17,6 +17,7 @@
   import {
     courseHref,
     currentTerm,
+    entryYearOf,
     fceHours,
     planDerived,
     publishedTerms,
@@ -83,7 +84,12 @@
   // The selected programs' requirements: loaded again only when the programs change.
   const programsKey = $derived(JSON.stringify(plan.programs));
   const versions = resource(() =>
-    programsKey === "[]" ? null : catalog.auditVersions(untrack(() => plan.programs)),
+    programsKey === "[]"
+      ? null
+      : catalog.auditVersions(
+          untrack(() => plan.programs),
+          entryYearOf(plan.startTerm),
+        ),
   );
 
   const recordLike = $derived({ entries: record.entries, overrides: record.overrides });
