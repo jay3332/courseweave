@@ -23,6 +23,7 @@
   import { defaultCourseHref, setCourseHref, type CourseHref } from "$lib/components/course/links";
   import NotOfferedHere from "./NotOfferedHere.svelte";
   import ScheduleCalendar from "./ScheduleCalendar.svelte";
+  import SectionJumps from "./SectionJumps.svelte";
 
   let {
     code,
@@ -116,6 +117,7 @@
 <article
   bind:this={article}
   class="flex min-h-full flex-col overflow-clip rounded-[calc(var(--radius-card)-1px)] bg-surface"
+  style:--jump-top={ownScroll ? "0px" : "var(--header-h)"}
   aria-label="{display} details"
 >
   <div
@@ -189,6 +191,15 @@
         {:else}
           <CatalogFacts {courseId} terms={terms.value ?? []} layout="list" />
         {/if}
+        <SectionJumps
+          sections={[
+            { id: "course-about", label: "About" },
+            { id: "course-counts", label: "Counts toward" },
+            ...(course && term?.value ? [{ id: "course-sections", label: "Sections" }] : []),
+            { id: "course-fces", label: "Course evaluations" },
+            { id: "course-syllabi", label: "Past syllabi" },
+          ]}
+        />
       </header>
 
       <CourseAbout {courseId} termId={termId ?? contextTermId} />
@@ -210,3 +221,11 @@
     {/if}
   </div>
 </article>
+
+<style>
+  /* "Jump to" lands each section with its heading below the panel's sticky bar, and below the site header too when the
+     panel scrolls with the page. */
+  article :global(h2[id^="course-"]) {
+    scroll-margin-top: calc(var(--jump-top) + 4.5rem);
+  }
+</style>

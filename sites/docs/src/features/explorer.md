@@ -98,6 +98,11 @@ after it; both one 40px row, so the card doesn't jump), the requisite line with 
 A schedule whose name doesn't say it's one is named as a schedule (`schedule-label.ts`): "Add to schedule “From Plan
 2”", "In “From Plan 2”" and a calendar headed "Schedule “From Plan 2”", so a schedule copied from a degree plan
 doesn't read as the plan.
+
+Under the facts, "Jump to" (`SectionJumps.svelte`) links to the sections the view shows (sections, about, counts
+toward, offered, course evaluations, past syllabi, prerequisites): the page runs six screens or more, with the
+evaluations about three down. Each heading has a scroll margin that clears the sticky site header, and the link puts
+the section in the address.
 From 1024px the card sits beside the title at the top, in the calendar's column; narrower, it comes between the title
 and the facts. Where the course isn't shown (not offered that semester, a semester that didn't load) the semester
 select stays beside the back link instead.
@@ -127,7 +132,9 @@ the canonical `/course/<code>` link; the web API renders the same tags on the se
 
 `CourseDetailPanel.svelte` stacks the same sections into a side panel for the Courses page (`?course=` there), with
 the calendar before the sections. Its header matches the page's narrow layout: the number, the title, the same
-actions card (without the semester select, which the Courses toolbar has), then the facts. The panel's top bar holds
+actions card (without the semester select, which the Courses toolbar has), the facts, then "Jump to" for its sections;
+where the panel scrolls on its own, a jump scrolls only the panel (so the list beside it stays) and lands the heading
+below the panel's sticky bar. The panel's top bar holds
 the save star at its left, and Expand and Close ("All courses" on phones); the small code comes up beside the star once
 the big one has scrolled under it. The bar sticks to the panel's top where the panel scrolls on its own, and under the site
 header where it scrolls with the page; the panel clips its content to its rounded corners. Course
