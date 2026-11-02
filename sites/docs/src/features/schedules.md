@@ -75,7 +75,10 @@ nothing. `?schedule=<id>` shows a particular one (the profile links to it).
   The session switch (see Toolbar) shows one half of the semester when a course runs in a mini. A friend's friends-visible schedule
   (`GET /api/friends/{id}/schedules?term=`) shows as striped blocks with their name.
 - **Generator** (`ScheduleGenerator.svelte`): every conflict-free arrangement, ranked by start and end times, days
-  off, gaps, lunch and days on campus, with courses left out or locked; apply it or save it as a new schedule.
+  off, gaps, lunch and days on campus, with courses left out or locked; apply it or save it as a new schedule from
+  the dialog's footer, which stays in view. Arrangements with fewer sections whose times aren't announced (TBA) come
+  first (`byRank` in `core/generator.ts`), since such a section adds no gaps or days and would otherwise top every
+  ranking, and an option with one is tagged "1 section without times".
 - **Export** (`ExportMenu.svelte`): a .ics file, a PNG of the week, the course list as text, sharing, and "Send to
   Stellic or SIO" (`components/stellic/SendToStellicDialog.svelte`). That dialog only hands the student a script to run in their own
   signed-in Stellic or SIO tab, which shows what it will add and changes nothing until they confirm; this site never
