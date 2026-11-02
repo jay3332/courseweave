@@ -26,11 +26,11 @@
   ];
 
   // Courseweave's calendar display options; every calendar follows them.
-  const DISPLAY: { key: keyof CalendarDisplay; label: string; hint: string }[] = [
-    { key: "section", label: "Section", hint: "Lec 1, Rec A or Sec A next to the course number" },
-    { key: "title", label: "Course name", hint: "Under the course number, when there's space" },
-    { key: "time", label: "Meeting time", hint: "When the block is tall enough" },
-    { key: "location", label: "Room", hint: "Building and room, when there's space" },
+  const DISPLAY: { key: keyof CalendarDisplay; label: string }[] = [
+    { key: "section", label: "Section" },
+    { key: "title", label: "Course name" },
+    { key: "time", label: "Meeting time" },
+    { key: "location", label: "Room" },
   ];
 
   const STATUS: Record<SaveStatus, { text: string; icon: typeof Check; tone: string }> = {
@@ -128,7 +128,6 @@
         {#each DISPLAY as option (option.key)}
           <Checkbox
             label={option.label}
-            description={option.hint}
             checked={preferences.calendarDisplay[option.key]}
             onchange={(event) => preferences.setCalendarDisplay({ [option.key]: event.currentTarget.checked })}
           />

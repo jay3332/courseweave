@@ -15,11 +15,11 @@
   let open = $state(false);
   const display = $derived(preferences.calendarDisplay);
 
-  const OPTIONS: { key: keyof CalendarDisplay; label: string; hint: string }[] = [
-    { key: "section", label: "Section", hint: "Lec 1, Rec A or Sec A next to the course number" },
-    { key: "title", label: "Course name", hint: "Under the course number, when there is space" },
-    { key: "time", label: "Meeting time", hint: "When the class is tall enough" },
-    { key: "location", label: "Room", hint: "Building and room, when there is space" },
+  const OPTIONS: { key: keyof CalendarDisplay; label: string }[] = [
+    { key: "section", label: "Section" },
+    { key: "title", label: "Course name" },
+    { key: "time", label: "Meeting time" },
+    { key: "location", label: "Room" },
   ];
   const PICKERS = [
     { value: "dropdown", label: "Dropdowns" },
@@ -36,14 +36,11 @@
     </Button>
   {/snippet}
   {#snippet children()}
-    <p class="px-2 pt-1 pb-1 text-label-md font-normal text-muted">
-      The course number is always shown. Choose what else each class shows on the calendar.
-    </p>
+    <p class="px-2 pt-1 pb-1 text-label-md font-normal text-muted">Show</p>
     {#each OPTIONS as option (option.key)}
       <Checkbox
         checked={display[option.key]}
         label={option.label}
-        description={option.hint}
         onchange={(event) =>
           preferences.setCalendarDisplay({ [option.key]: (event.currentTarget as HTMLInputElement).checked })}
         class="flex w-full rounded-tag py-1 pr-2 hover:bg-hover"
