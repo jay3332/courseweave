@@ -212,13 +212,13 @@ device's choice.
 
 ## App shell
 
-The header shows the logo, the navigation (Courses, Instructors, Schedules, Plan, Profile), "Find a course", the
-theme switch and a Sign in or Sign out pill; below 1024px it becomes a menu button, the logo, a search button and the
-account control. "Find a course" (`CourseFinder.svelte`, also Ctrl+K or ⌘K on any page) searches the whole catalog
-and opens the chosen course's page, whose back link returns to the page it was opened from; it's an icon until the
-header is 1536px wide, then the name and its shortcut, so the navigation stays centered and the site's name on one
-line. Signed in,
-`SyncStatus` beside Sign out says whether changes have reached the account (Saved, Saving, Offline, Not saved) with
+The header shows the logo, the navigation (Courses, Instructors, Schedules, Plan, Profile) and, on the right, the
+save status while signed in, the theme switch, "Find a course" and a Sign in or Sign out pill; below 1024px it becomes
+a menu button, the logo, a search button and the account control. "Find a course" (`CourseFinder.svelte`, also Ctrl+K
+or ⌘K on any page) searches the whole catalog and opens the chosen course's page, whose back link returns to the page
+it was opened from; it's an icon until the header is 1536px wide, then the name and its shortcut, so the navigation
+stays centered and the site's name on one line. `SyncStatus` says whether changes have reached the account: a
+checkmark while saved or saving (the words are its tooltip and for screen readers), Offline or Not saved in words with
 a Retry after a failure; on phones it shows only while something isn't saved, and in full in the menu sheet. The shell
 reads the session from context:
 

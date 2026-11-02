@@ -66,6 +66,12 @@
       </ul>
     </nav>
     <div class="flex items-center gap-4 justify-self-end">
+      <!-- Signed in: whether changes have reached the account, a checkmark while all is saved, then the light or dark
+           switch and Find a course beside Sign out. -->
+      {#if session.status === "signed-in" && session.sync}
+        <SyncStatus sync={session.sync} compact={session.sync.status === "saved" || session.sync.status === "saving"} />
+      {/if}
+      <span class="flex p-1.5"><ThemeSwitch /></span>
       <!-- An icon beside the navigation's labels until there's room to name it and show its shortcut and still keep
            the navigation centered and the site's name on one line. -->
       <button
@@ -83,11 +89,9 @@
           class="hidden rounded-tag border border-line px-1.5 font-sans text-label-sm text-muted 2xl:inline">{shortcut}</kbd
         >
       </button>
-      <span class="flex p-1.5"><ThemeSwitch /></span>
       {#if session.status === "loading"}
         <Skeleton class="h-10 w-[110px] rounded-full" />
       {:else if session.status === "signed-in"}
-        {#if session.sync}<SyncStatus sync={session.sync} />{/if}
         <Button
           icon={LogOut}
           title={session.name ? `Signed in as ${session.name}` : undefined}
