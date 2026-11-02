@@ -8,6 +8,8 @@ export interface TreeContext {
   /** The semester being browsed, for "offered" hints: "Spring 2027". */
   termName: string;
   offered(courseId: string): boolean;
+  /** The newest built semester offering a course ("S27"), or null when none does. */
+  lastOffered(courseId: string): string | null;
   title(courseId: string): string | undefined;
   units(courseId: string): number | null;
   /** FCE hours a week, or null without evaluations. */
@@ -21,7 +23,7 @@ export interface TreeContext {
   /** Adds a suggested course to the plan; omitted where adding isn't possible. */
   onAddCourse?: (courseId: string, nodeId: number) => void;
   href(courseId: string, term?: string | null): string;
-  /** The Courses page listing what counts toward a requirement, fewest FCE hours first. */
+  /** The Courses page listing what counts toward a requirement. */
   requirementHref(auditId: number, nodeId: number): string;
   /** Beside the semesters: unplanned courses can be dragged onto one. */
   dragCourses: boolean;

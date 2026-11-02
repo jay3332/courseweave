@@ -1,14 +1,14 @@
 <script lang="ts">
-  // Courses that would satisfy an unmet pool requirement, offered ones first and then the fewest FCE hours, each with
-  // "Add" (and drag); the whole list opens on the Courses page.
+  // Courses that would satisfy an unmet pool requirement, those the semester shown offers first and then the most
+  // recently offered, each with "Add" (and drag); the whole list opens on the Courses page to sort and filter there.
   import { ArrowRight } from "@lucide/svelte";
-  import { courseOptions } from "$lib/core/audit";
   import { fmt } from "$lib/core/degree/audit/format";
   import type { ReqNode } from "$lib/core/degree-types";
   import { FCE_HOURS_HELP, formatHours } from "$lib/core/fce";
   import { codeOf } from "$lib/core/requisite-format";
   import AddButton from "./AddButton.svelte";
   import { dragNew, type TreeContext } from "./tree";
+  import { orderByOffering, satisfyingCourses } from "./ways-to-satisfy";
 
   let { node, ctx }: { node: ReqNode; ctx: TreeContext } = $props();
 
@@ -16,22 +16,15 @@
   const LIMIT = 120;
   let all = $state(false);
 
-  /** Fewer FCE hours first; courses without evaluations last. */
-  function lighter(a: string, b: string): number {
-    const ha = ctx.hours(a);
-    const hb = ctx.hours(b);
-    if (ha === hb) return a.localeCompare(b);
-    if (ha === null) return 1;
-    if (hb === null) return -1;
-    return ha - hb;
-  }
-
-  // Every match, not the first by number, so the lightest courses come up wherever they are in the catalog.
+  // Every match, not the first by number, so recently offered courses come up wherever they are in the catalog. The
+  // matches are kept per requirement, so a plan edit only drops what's planned and orders the rest again.
   const options = $derived.by(() => {
     if (ctx.catalog === null) return [];
-    return courseOptions(node, ctx.catalog, Infinity)
-      .filter((id) => !ctx.inPlan.has(id))
-      .toSorted((a, b) => Number(ctx.offered(b)) - Number(ctx.offered(a)) || lighter(a, b));
+    return orderByOffering(
+      satisfyingCourses(node, ctx.catalog).filter((id) => !ctx.inPlan.has(id)),
+      (id) => ctx.offered(id),
+      (id) => ctx.lastOffered(id),
+    );
   });
   const shown = $derived(options.slice(0, all ? LIMIT : SHOWN));
   const more = $derived(Math.min(options.length, LIMIT) - SHOWN);
@@ -41,9 +34,7 @@
 {#if options.length > 0}
   <div class="mt-2">
     <p class="text-label-md text-muted">
-      Ways to satisfy{offeredCount > 0
-        ? `, ${offeredCount.toLocaleString("en-US")} offered in ${ctx.termName}`
-        : ""}, fewest FCE hours first
+      Ways to satisfy{offeredCount > 0 ? `, ${offeredCount.toLocaleString("en-US")} offered in ${ctx.termName}` : ""}
     </p>
     <ul class="mt-1 flex flex-col">
       {#each shown as id (id)}
@@ -85,7 +76,7 @@
       {/if}
       <a
         href={ctx.requirementHref(ctx.auditId, node.id)}
-        title="Everything that counts toward {node.name} on the Courses page, fewest FCE hours first"
+        title="Everything that counts toward {node.name} on the Courses page"
         class="inline-flex min-h-10 items-center gap-1 text-label-md text-accent-ink hover:underline md:min-h-7"
       >
         Browse in Courses

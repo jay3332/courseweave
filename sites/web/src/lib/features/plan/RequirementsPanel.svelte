@@ -3,6 +3,7 @@
   // semester. Signed out, degree programs ask to sign in. Courseweave's AuditColumn (features/degree/AuditArea.tsx).
   import type { ResourceStatus } from "$lib/data";
   import { session } from "$lib/data";
+  import { offerings } from "$lib/components/course/data.svelte";
   import Spinner from "$lib/components/ui/Spinner.svelte";
   import type { AuditData } from "$lib/core/programs";
   import { requirementCoursesPath } from "$lib/core/routes";
@@ -31,9 +32,12 @@
 
   const page = planPage();
   const plan = $derived(page.plan);
+  // Which built semesters offer each course, for ordering the ways to satisfy a requirement.
+  const offeringsData = $derived(offerings());
   const base = $derived<Omit<TreeContext, "node" | "auditId" | "catalog" | "inPlan">>({
     termName: page.routed?.meta.name ?? "this semester",
     offered: (id) => page.routed?.courseById.has(id) ?? false,
+    lastOffered: (id) => offeringsData.value?.byId.get(id)?.terms[0] ?? null,
     title: (id) => page.lookup(id).title,
     units: (id) => page.lookup(id).units,
     hours: (id) => page.fceHours(id),

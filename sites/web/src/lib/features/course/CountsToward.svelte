@@ -77,7 +77,7 @@
               <li>
                 <a
                   href={filterHref(m)}
-                  title="Show courses that count toward this, fewest FCE hours first"
+                  title="Show courses that count toward this"
                   class="group -mx-2 flex min-h-10 items-baseline gap-2 rounded-tag px-2 py-2 hover:bg-hover sm:min-h-0 sm:py-1"
                 >
                   <span class="min-w-0 flex-1 text-body-2">

@@ -19,9 +19,9 @@ export function coursesPath(term?: string | null): string {
   return withTerm("/", term);
 }
 
-/** The course list narrowed to what counts toward a requirement, fewest FCE hours first. */
+/** The course list narrowed to what counts toward a requirement, in its usual order. */
 export function requirementCoursesPath(req: ReqRef, term?: string | null): string {
-  return withTerm("/", term, { req: reqParam(req), sort: "hours" });
+  return withTerm("/", term, { req: reqParam(req) });
 }
 
 /** A course's full page. Takes a five-digit id ("15122") or a code ("15-122"). */
