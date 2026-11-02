@@ -147,8 +147,9 @@ unlocks, with the length of its shortest prerequisite chain. Every course link r
 view. Without a course it lists the gateway courses, the ones the most other courses require. The search box ranks
 the semester's courses first, then the rest of the catalog.
 
-A `SegmentedControl` switches between two views, remembered on the device (`cmucourses:view:requisites`); `?view=graph`
-opens the graph, as the course page's "Prerequisite tree and what it unlocks" link does:
+A `SegmentedControl` switches between two views, remembered on the device (`cmucourses:view:requisites`), the graph
+until the device chooses; `?view=list` or `?view=graph` opens that view (the course page's "Prerequisite tree and what
+it unlocks" link asks for the graph), and choosing the list puts `?view=list` in the address:
 
 - **List**: the prerequisite tree (expandable, with cycles marked) with the student's status on each course, and the
   unlocks grouped by department (`RequiresAndUnlocks`).
