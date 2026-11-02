@@ -10,13 +10,13 @@ course components other pages reuse. They port Courseweave's explorer, catalog a
 
 | File | What it does |
 | --- | --- |
-| `query.ts` | The page's state in its URL: Courseweave's filter keys (`core/explorer/filters.ts`) plus `term`, `q`, `sort`, `view=chart`, `unoffered`, `course` and the Figma's extra filters: a units range (`ulo`, `uhi`), a course-number level (`num`) and the seasons a course is offered in (`offered`) |
+| `query.ts` | The page's state in its URL: Courseweave's filter keys (`core/explorer/filters.ts`) plus `term`, `q`, `sort`, `dir` (a sort turned around from its usual way: `asc` for ratings, `desc` for the rest), `view=chart`, `unoffered`, `course` and the extra filters: a units range (`ulo`, `uhi`), a course-number level (`num`), the seasons a course is offered in (`offered`) and fixed units only (`fixed=1`). Also which list header a sort belongs to and what a click on one does (`sortedColumn`, `sortByColumn`) |
 | `url-state.svelte.ts` | Keeps the query and the URL in step: edits replace the history entry after a pause, a semester change or an opened course adds one, and links or Back are read back in |
 | `explorer.svelte.ts` | Everything computed from the query: the semester (`resolveTerm`, `term=all` for all semesters), the documents it needs, the compiled requirement filter, the results and the courses other semesters offer |
-| `results.ts` | Ranked search (`scoreCourse`), Courseweave's filters and the extra ones, sorting; other semesters' matches and the "Show courses not offered" list |
-| `ExplorerRail.svelte` | The filter rail: saved only, fits my schedule, department, units (a range, and Courseweave's variable units as "Variable units only", `units=var`), offered in, level, requirement (gen eds or any program requirement, members only), days and times, session, delivery, scheduled only, FCE hours and rating, how cards aggregate FCEs, and courses not offered |
-| `ExplorerToolbar.svelte`, `chips.ts` | Search, result count, removable filter chips, semester, sort, the FCE chart and the cards/list switch |
-| `CourseResults.svelte` | Cards (20 at a time), rows (100 at a time) or the hours chart; more load as the end of the list scrolls into view |
+| `results.ts` | Ranked search (`scoreCourse`), Courseweave's filters and the extra ones, sorting (Courseweave's sorts and the meeting time, the earliest start among a course's lectures, either way round, with courses that have no value for the sort last both ways); other semesters' matches and the "Show courses not offered" list |
+| `ExplorerRail.svelte` | The filter rail: saved only, fits my schedule, department, units (a range, Courseweave's variable units as "Variable units only", `units=var`, and its opposite, "Fixed units only", `fixed=1`; checking one clears the other), offered in, level, requirement (gen eds or any program requirement, members only, starting on the degree plan's first program), days and times, session, delivery, scheduled only, FCE hours and rating, how cards aggregate FCEs, and courses not offered |
+| `ExplorerToolbar.svelte`, `chips.ts` | Search, result count, removable filter chips, semester, sort (named the other way round, such as "Lowest rated", when `dir` turns it), the FCE chart and the cards/list switch |
+| `CourseResults.svelte` | Cards (20 at a time, open so the description and FCEs show without a click, each with Show less), rows (100 at a time, under headers that sort) or the hours chart; more load as the end of the list scrolls into view |
 
 Selecting a course opens it in the detail panel (`?course=15-122`) beside the list from 1024px wide. The panel sticks
 under the site header and scrolls on its own; until the page scrolls it up there it's only as tall as the room below its
@@ -38,10 +38,14 @@ share. Each component needs only a course (or its id) and a semester:
 - `CourseCard` (the Figma card: requisite status with a popover of the expression as status chips, corequisites only
   when the course has some, semester select, save star, friends taking it; signed in, who teaches it in the card's
   semester, up to three names linked to their pages, from the listing or, for another semester, the teaching document;
-  expanded, the FCE aggregate and table), `CourseRow` in a `CourseList` (Courseweave's
+  beside its FCE hours, n, the responses they average; expanded, the FCE aggregate and table), `CourseRow` in a
+  `CourseList` (Courseweave's
   compact rows; from 34rem wide their hours column is Courseweave's workload cell: the FCE hours, "mini" before a
-  mini's, over a `WorkloadMeter` bar, with the workload described in its title and to screen readers) and `CourseCardSmall` (the Figma's small card, for saved courses and the record's Courses Taken and
-  Currently Taking, with `deptLabel`, `children` and `footer` slots).
+  mini's, over a `WorkloadMeter` bar, with the workload described in its title and to screen readers; n, the FCE
+  responses behind the hours and rating, sits under the rating from 48rem and ends the second line narrower. Given
+  `onsort`, the list's headers are buttons: a click sorts by that column (`columns.ts`), a second click turns the sort
+  around, and the sorted one shows its direction with an arrow) and `CourseCardSmall` (the Figma's small card, for
+  saved courses and the record's Courses Taken and Currently Taking, with `deptLabel`, `children` and `footer` slots).
 - `RequisiteStatus` (the requisite line with a Details toggle right after its last word, opening the details and
   waivers under it; in the course page's and the panel's actions card), `RequisiteLevelIcon`, `RequisiteExpression`,
   `RequisiteSummary`, `RequisiteTreeNode`, `RequiresAndUnlocks`, `UnlocksList`, `CourseChipList`.

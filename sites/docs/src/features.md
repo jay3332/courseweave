@@ -6,8 +6,8 @@ details.
 
 | Feature | Where | Needs | Details |
 | --- | --- | --- | --- |
-| Course search with ranked results, cards or compact rows, and an FCE hours chart | `/` | Public | [Explorer](features/explorer.md) |
-| Filters: saved only, fits my schedule, department, units, offered in, level, days and times, mini, delivery, FCE hours and rating | `/` | Public; FCE filters are member | [Explorer](features/explorer.md) |
+| Course search with ranked results, cards or compact rows sorted by their headers, FCE sample sizes, and an FCE hours chart | `/` | Public; FCEs are member | [Explorer](features/explorer.md) |
+| Filters: saved only, fits my schedule, department, units (variable or fixed only), offered in, level, days and times, mini, delivery, FCE hours and rating | `/` | Public; FCE filters are member | [Explorer](features/explorer.md) |
 | Requirement filter, gen eds included | `/` | Member (degree programs) | [Explorer](features/explorer.md) |
 | All semesters view of courses and instructors | `/?term=all`, `/instructors?term=all` | Public; instructors are member | [Explorer](features/explorer.md), [People](features/people.md) |
 | Course detail panel and full course page: sections, requisites checked against the record, what a course unlocks, cross-listings, counts toward, offering history | `/?course=`, `/course/[code]` | Public; instructors, rooms and counts toward are member | [Explorer](features/explorer.md) |

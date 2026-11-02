@@ -34,7 +34,7 @@ can load them; components import them as `$lib/data`, `$lib/state` and so on.
 | `teaching()` | Who teaches what in each semester (member data) |
 | `instructorList(scope)` | The instructor list's rows for a semester or `all` (member data); null for a catalog built without them |
 | `fceSummary()`, `fceAccess()`, `fceCourses(prefix)`, `courseFce(courseId)`, `fceCoursesIndex()`, `fceInstructors()` | FCEs, decoded from the documents' tuples (member data) |
-| `programsIndex()`, `program(auditId)`, `programs(ids)`, `auditVersions(selections)` | Degree programs and the versions an audit needs (member data) |
+| `programsIndex()`, `program(auditId)`, `programs(ids)`, `auditVersions(selections, entryYear)` | Degree programs and the versions an audit needs (member data), with gen eds Stellic splits by entry year at `entryYear`'s ([decision 46](decisions/0046-check-year-split-gen-eds-at-the-plans-entry-year.md)) |
 | `syllabi(prefix)`, `courseSyllabi(courseId)` | Past syllabi (member data); `syllabusPath(key)` in `$lib/api` links to a file |
 | `finals(termId)` | The registrar's final exam schedule; null until it's published |
 | `document(name)`, `build()` | Any document as JSON |

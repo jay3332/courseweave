@@ -1,6 +1,6 @@
-// The Courses page's state in its URL: Courseweave's filters (core/explorer/filters.ts, same keys) plus the
-// Figma's filters Courseweave doesn't have (a units range, a course-number level, the seasons a course is
-// offered in and fixed units only), the search, the sort and its direction, the semester and the view options.
+// The Courses page's state in its URL: Courseweave's filters (core/explorer/filters.ts, same keys) plus the ones
+// Courseweave doesn't have (the Figma's units range, course-number level and seasons a course is offered in, and
+// fixed units only), the search, the sort and its direction, the semester and the view options.
 import type { ListColumn, SortDir, SortedColumn } from "../../components/course/columns.ts";
 import {
   EMPTY_FILTERS,
