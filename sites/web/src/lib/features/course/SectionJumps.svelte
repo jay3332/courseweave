@@ -40,14 +40,22 @@
   }
 </script>
 
-<!-- The links handle the keyboard themselves (Enter clicks them); the nav only adjusts where their clicks scroll. -->
+<!--
+  The links handle the keyboard themselves (Enter clicks them); the nav only adjusts where their clicks scroll. On
+  phones they're one row that scrolls sideways, cut off at the screen's edge, rather than three rows of pills before
+  the content; wider, they wrap.
+-->
 <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_noninteractive_element_interactions -->
-<nav aria-label="On this page" class="flex flex-wrap items-center gap-2 {className}" {onclick}>
-  <span class="text-label-md text-muted">Jump to</span>
+<nav
+  aria-label="On this page"
+  class="flex items-center gap-2 max-sm:-mx-4 max-sm:overflow-x-auto max-sm:px-4 max-sm:[scrollbar-width:none] sm:flex-wrap {className}"
+  {onclick}
+>
+  <span class="shrink-0 text-label-md text-muted">Jump to</span>
   <ul class="contents">
     {#each sections as section (section.id)}
       <!-- Outlined: the page background is the soft tone's fill, so soft chips read as plain text here. -->
-      <li><Chip tone="outline" size="lg" href="#{section.id}">{section.label}</Chip></li>
+      <li class="shrink-0"><Chip tone="outline" size="lg" href="#{section.id}">{section.label}</Chip></li>
     {/each}
   </ul>
 </nav>
