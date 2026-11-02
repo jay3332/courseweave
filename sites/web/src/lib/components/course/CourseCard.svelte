@@ -5,6 +5,7 @@
   import Chip from "$lib/components/ui/Chip.svelte";
   import Select from "$lib/components/ui/Select.svelte";
   import Tooltip from "$lib/components/ui/Tooltip.svelte";
+  import { fceSample } from "./fce-sample";
   import { instructorSlug } from "$lib/core/data";
   import { departmentName } from "$lib/core/departments";
   import type { Course } from "$lib/core/types";
@@ -133,22 +134,14 @@
       {:else if hours === null}
         <span class="text-body-2 text-muted">No FCE hours</span>
       {:else}
-        {@const recent = fce.value?.courses.get(course.id)?.terms ?? 0}
-        {@const responses = fce.value?.courses.get(course.id)?.responses ?? 0}
-        {@const over = `over its last ${recent} ${recent === 1 ? "semester" : "semesters"} with evaluations`}
-        {@const sample = `n=${responses.toLocaleString("en-US")} FCE ${responses === 1 ? "response" : "responses"}`}
-        <!-- The course's recent average, which can differ from the aggregate below over the semesters chosen. Its
-             sample size (n, how many students' evaluations it averages) shows on hover. -->
-        <Tooltip
-          text={responses > 0
-            ? `${sample}\nHours a week students reported ${over}`
-            : `Hours a week students reported ${over}`}
-        >
+        {@const stats = fce.value?.courses.get(course.id)}
+        {@const sample = fceSample(stats?.responses ?? 0, stats?.terms ?? 0)}
+        <!-- The course's recent average, which can differ from the aggregate below over the semesters chosen. How
+             many evaluations it averages shows on hover. -->
+        <Tooltip text={sample}>
           {#snippet trigger(props)}
             <span {...props} class="whitespace-nowrap text-muted @2xl:text-ink"
-              ><span class="tabular">{hours?.toFixed(1)}</span> hrs/week<span class="sr-only">
-                {over}{responses > 0 ? `, ${sample}` : ""}</span
-              ></span
+              ><span class="tabular">{hours?.toFixed(1)}</span> hrs/week<span class="sr-only">, {sample}</span></span
             >
           {/snippet}
         </Tooltip>

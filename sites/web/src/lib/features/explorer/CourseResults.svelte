@@ -100,13 +100,11 @@
           {#if cardTerm(course) === ""}
             <CourseRow {course} termId={null} offered={[]} href={hrefFor(course)} />
           {:else}
-            <!-- Open, so the description and FCEs show without a click; "Show less" folds a card up. -->
             <CourseCard
               {course}
               termId={cardTerm(course)}
               offered={termId === null ? (offeredOf?.(course.id) ?? []) : undefined}
               href={hrefFor(course)}
-              expanded
             />
           {/if}
         </li>

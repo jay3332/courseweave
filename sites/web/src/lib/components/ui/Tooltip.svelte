@@ -12,6 +12,8 @@
 <script lang="ts">
   import { untrack, type Snippet } from "svelte";
   import { follow, hidePanel, showPanel, type Placement } from "./floating";
+  // The same surface as menus and popovers, so a tooltip reads as part of the page in either theme.
+  import { panelSurface } from "./styles";
 
   let {
     text,
@@ -76,7 +78,7 @@
   popover="manual"
   data-floating
   role="tooltip"
-  class="pointer-events-none max-w-64 rounded-[6px] bg-strong px-2 py-1 text-label-md whitespace-pre-line text-surface shadow-popover"
+  class="pointer-events-none max-w-72 {panelSurface} px-2.5 py-1.5 text-left text-label-md whitespace-pre-line"
 >
   {text}
 </div>
