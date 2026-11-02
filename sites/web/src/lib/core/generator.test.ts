@@ -157,6 +157,16 @@ describe("generateSchedules", () => {
     expect(pick(noFriday[0], "B")).toBe("TR");
     expect(noFriday[1].breakdown.daysOffUsed).toEqual([4]);
   });
+
+  // A lecture without times adds no gaps or days, which used to make it every arrangement's best pick.
+  it("ranks sections with times above ones without", () => {
+    const a = flat("A", [sec("1", [0, 2], h(9), h(9, 50))]);
+    const b = flat("B", [sec("timed", [0, 2], h(15), h(15, 50)), sec("tba", [], null, null)]);
+    const { results } = generateSchedules([a, b], prefs());
+    expect(results.map((r) => pick(r, "B"))).toEqual(["timed", "tba"]);
+    expect(results[0].breakdown.unscheduledSections).toBe(0);
+    expect(results[1].breakdown.unscheduledSections).toBe(1);
+  });
 });
 
 describe("generateSchedules with recitations", () => {
