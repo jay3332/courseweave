@@ -5,8 +5,8 @@
 -->
 <script lang="ts">
   import { Settings2 } from "@lucide/svelte";
+  import Button from "$lib/components/ui/Button.svelte";
   import Checkbox from "$lib/components/ui/Checkbox.svelte";
-  import IconButton from "$lib/components/ui/IconButton.svelte";
   import Popover from "$lib/components/ui/Popover.svelte";
   import SegmentedControl from "$lib/components/ui/SegmentedControl.svelte";
   import type { CalendarDisplay } from "$lib/core/state/store";
@@ -29,8 +29,11 @@
 
 <Popover bind:open label="Calendar display" placement="bottom-end" class="w-76 p-2">
   {#snippet trigger(props)}
-    <!-- As tall as the toolbar's other buttons: 40px on phones, 36px on desktops. -->
-    <IconButton {...props} label="Calendar display" icon={Settings2} variant="outline" class="lg:size-9" />
+    <!-- Named like Generate, Finals and Export beside it (an icon on phones, as Export is), and as tall: 40px on
+         phones, 36px on desktops. -->
+    <Button {...props} icon={Settings2} class="h-10 max-sm:w-10 max-sm:px-0 lg:h-9" title="Calendar display">
+      <span class="max-sm:sr-only">Display</span>
+    </Button>
   {/snippet}
   {#snippet children()}
     <p class="px-2 pt-1 pb-1 text-label-md font-normal text-muted">

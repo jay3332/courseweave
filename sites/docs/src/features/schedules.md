@@ -39,8 +39,8 @@ Move right do the same for the shown tab. The order is the `scheduleOrder` prefe
 follow, oldest first. A semester without a schedule shows "Schedule 1", created on the first edit, so visiting creates
 nothing. `?schedule=<id>` shows a particular one (the profile links to it).
 
-- **Toolbar**: one row under the tabs with Generate, Finals, Export and the calendar display button (a settings icon,
-  `DisplayMenu.svelte`, whose popover chooses what blocks show besides the code: section, course name, time and room,
+- **Toolbar**: one row under the tabs with Generate, Finals, Export and the calendar display button ("Display" with a
+  settings icon, an icon alone on phones as Export is; `DisplayMenu.svelte`), whose popover chooses what blocks show besides the code: section, course name, time and room,
   and how the course list picks sections, dropdowns or compact letters). On screens 80rem and wider the
   session switch (Full semester, Mini 1, Mini 2) sits at the row's start when a placed course runs in a mini;
   narrower screens show it above the calendar. While the rail is a sheet, the row starts with the button that opens
