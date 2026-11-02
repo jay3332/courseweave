@@ -65,21 +65,22 @@
         {/each}
       </ul>
     </nav>
-    <div class="flex items-center gap-4 justify-self-end xl:gap-8">
-      <!-- An icon beside the navigation's labels until there's room to name it and show its shortcut. -->
+    <div class="flex items-center gap-4 justify-self-end">
+      <!-- An icon beside the navigation's labels until there's room to name it and show its shortcut and still keep
+           the navigation centered and the site's name on one line. -->
       <button
         type="button"
         onclick={() => (finderOpen = true)}
         aria-haspopup="dialog"
         aria-keyshortcuts={mac ? "Meta+K" : "Control+K"}
         title="Find a course ({shortcut})"
-        class="inline-flex h-10 shrink-0 items-center gap-2 rounded-full border border-line-strong px-2.5 text-label-lg whitespace-nowrap text-muted transition-colors hover:bg-hover hover:text-ink xl:px-3"
+        class="inline-flex h-10 shrink-0 items-center gap-2 rounded-full border border-line-strong px-2.5 text-label-lg whitespace-nowrap text-muted transition-colors hover:bg-hover hover:text-ink 2xl:px-3"
       >
         <Search aria-hidden="true" class="size-5 shrink-0" />
-        <span class="max-xl:sr-only">Find a course</span>
+        <span class="max-2xl:sr-only">Find a course</span>
         <kbd
           aria-hidden="true"
-          class="hidden rounded-tag border border-line px-1.5 font-sans text-label-sm text-muted xl:inline">{shortcut}</kbd
+          class="hidden rounded-tag border border-line px-1.5 font-sans text-label-sm text-muted 2xl:inline">{shortcut}</kbd
         >
       </button>
       <span class="flex p-1.5"><ThemeSwitch /></span>
