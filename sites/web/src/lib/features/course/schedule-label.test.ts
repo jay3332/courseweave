@@ -11,13 +11,13 @@ describe("schedule names in actions", () => {
   });
 
   it("quotes other names after \"schedule\", so a copied plan's name doesn't read as the plan", () => {
-    expect(scheduleInSentence("From Plan 2")).toBe("schedule “From Plan 2”");
-    expect(scheduleHeading("From Plan 2")).toBe("Schedule “From Plan 2”");
-    expect(scheduleInSentence("Schedules-ish")).toBe("schedule “Schedules-ish”");
+    expect(scheduleInSentence("From Plan 2")).toBe("schedule \u201CFrom Plan 2\u201D");
+    expect(scheduleHeading("From Plan 2")).toBe("Schedule \u201CFrom Plan 2\u201D");
+    expect(scheduleInSentence("Schedules-ish")).toBe("schedule \u201CSchedules-ish\u201D");
   });
 
   it("only quotes the name where room is short", () => {
-    expect(scheduleShort("From Plan 2")).toBe("“From Plan 2”");
+    expect(scheduleShort("From Plan 2")).toBe("\u201CFrom Plan 2\u201D");
     expect(scheduleShort("Schedule 1")).toBe("Schedule 1");
   });
 

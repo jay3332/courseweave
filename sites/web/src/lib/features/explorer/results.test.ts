@@ -8,7 +8,12 @@ import { EMPTY_EXTRA, type ExplorerSort } from "./query.ts";
 import { filterCourses } from "./results.ts";
 
 /** A course with one lecture meeting on `days` from `start` (minutes after midnight), or TBA. */
-const course = (id: string, units: number | null, start: number | null, days: Day[] = [0, 2, 4]): Course => ({
+const course = (
+  id: string,
+  units: number | null,
+  start: number | null,
+  days: Day[] = [0, 2, 4],
+): Course => ({
   id,
   code: `${id.slice(0, 2)}-${id.slice(2)}`,
   title: id,
@@ -24,7 +29,9 @@ const course = (id: string, units: number | null, start: number | null, days: Da
       mini: null,
       mode: "IPE",
       instructors: [],
-      meetings: [{ days, start, end: start === null ? null : start + 50, building: null, room: null }],
+      meetings: [
+        { days, start, end: start === null ? null : start + 50, building: null, room: null },
+      ],
     },
   ],
   crossListed: [],

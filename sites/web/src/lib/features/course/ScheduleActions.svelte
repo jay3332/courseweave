@@ -1,7 +1,7 @@
 <script lang="ts">
   // The course against the semester's active schedule: a full-width "Add to Schedule 1", or once it's in, a status
   // chip with Remove and Open schedule right beside it. Both take one 40px row, so adding or removing doesn't move
-  // what comes after. A schedule named otherwise reads "Add to schedule “From Plan 2”" (schedule-label.ts).
+  // what comes after. A schedule named otherwise reads "Add to schedule 'From Plan 2'" (in curly quotes) (schedule-label.ts).
   import { Check, Plus } from "@lucide/svelte";
   import { textAction } from "$lib/components/course/text-action";
   import Button from "$lib/components/ui/Button.svelte";

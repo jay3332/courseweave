@@ -214,11 +214,14 @@ export function sortDir(sort: ExplorerSort, dir: SortDir | null): SortDir | null
 
 /** The sort's name in the Sort by menu, turned around when `dir` turns it. */
 export function sortLabel(sort: ExplorerSort, dir: SortDir | null): string {
-  return sortDir(sort, dir) === null ? SORT_LABELS[sort] : (TURNS[sort]?.reversed ?? SORT_LABELS[sort]);
+  return sortDir(sort, dir) === null
+    ? SORT_LABELS[sort]
+    : (TURNS[sort]?.reversed ?? SORT_LABELS[sort]);
 }
 
 const COLUMNS: readonly ListColumn[] = ["number", "title", "meets", "hours", "rating", "units"];
-const isColumn = (sort: ExplorerSort): sort is ListColumn => (COLUMNS as readonly string[]).includes(sort);
+const isColumn = (sort: ExplorerSort): sort is ListColumn =>
+  (COLUMNS as readonly string[]).includes(sort);
 
 /** The column the list is sorted by and which way, for its headers; null when no column shows the sort. */
 export function sortedColumn(sort: ExplorerSort, dir: SortDir | null): SortedColumn | null {
@@ -231,7 +234,11 @@ export function sortedColumn(sort: ExplorerSort, dir: SortDir | null): SortedCol
  * The query after a click on a column's header: the column's sort its usual way (fewest FCE hours, best rating,
  * otherwise going up), or the other way round when the list is sorted by that column already.
  */
-export function sortByColumn(query: ExplorerQuery, current: SortedColumn | null, column: ListColumn): ExplorerQuery {
+export function sortByColumn(
+  query: ExplorerQuery,
+  current: SortedColumn | null,
+  column: ListColumn,
+): ExplorerQuery {
   const again = current?.column === column;
   if (column === "hours")
     return { ...query, sort: again && current.dir === "asc" ? "hours-desc" : "hours", dir: null };

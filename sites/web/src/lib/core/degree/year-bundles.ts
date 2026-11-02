@@ -36,7 +36,9 @@ function forYear(
   }
   if (best === null || best.info.catalogId === a.catalogId) return a;
   const version = defaultVersion(best.info, year, campus);
-  return version === null ? a : { catalogId: best.info.catalogId, name: best.info.name, auditId: version.auditId };
+  return version === null
+    ? a
+    : { catalogId: best.info.catalogId, name: best.info.name, auditId: version.auditId };
 }
 
 /**

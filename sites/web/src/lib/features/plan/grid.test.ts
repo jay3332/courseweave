@@ -6,7 +6,9 @@ import { emptyYearRuns, gridRows, type GridItem } from "./grid.ts";
 const cols = (...terms: string[]) => terms.map((term) => ({ term }));
 /** Each item as its year, or its run of years after "gap:". */
 const keys = (items: GridItem<{ term: string }>[]) =>
-  items.map((item) => (item.kind === "gap" ? `gap:${item.years.map((y) => y.key).join(",")}` : item.year.key));
+  items.map((item) =>
+    item.kind === "gap" ? `gap:${item.years.map((y) => y.key).join(",")}` : item.year.key,
+  );
 
 describe("gridRows", () => {
   it("groups semesters into academic years, fall first", () => {
@@ -63,7 +65,11 @@ describe("emptyYearRuns", () => {
   });
 
   it("folds a single year away", () => {
-    expect(keys(emptyYearRuns("F25", cols("F25", "S26", "F27", "S28"), {}).items)).toEqual(["F25", "gap:F26", "F27"]);
+    expect(keys(emptyYearRuns("F25", cols("F25", "S26", "F27", "S28"), {}).items)).toEqual([
+      "F25",
+      "gap:F26",
+      "F27",
+    ]);
   });
 
   it("leaves years with a semester alone, even when one of their semesters is missing", () => {

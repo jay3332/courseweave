@@ -6,7 +6,12 @@ import type { ProgramInfo, ProgramsIndex } from "../plan-types.ts";
 import { bundlesForEntryYear } from "./year-bundles.ts";
 
 // Shaped like the real programs: SCS's gen ed is one Stellic program per entry year.
-const bundle = (catalogId: number, name: string, auditId: number, entryYear: number): ProgramInfo => ({
+const bundle = (
+  catalogId: number,
+  name: string,
+  auditId: number,
+  entryYear: number,
+): ProgramInfo => ({
   catalogId,
   name,
   kind: "requirements",
@@ -23,7 +28,11 @@ const index: ProgramsIndex = {
   ],
 };
 
-const EY2020: AttachedProgram = { catalogId: 1554, name: "EY2020 SCS - General Education", auditId: 16422 };
+const EY2020: AttachedProgram = {
+  catalogId: 1554,
+  name: "EY2020 SCS - General Education",
+  auditId: 16422,
+};
 const general: DoubleCountRule = {
   programs: [],
   programNames: [],
@@ -54,7 +63,13 @@ const major = (attached: AttachedProgram[], entryYear: number | null = 2025): Pr
     },
   ],
   concentrations: [],
-  root: { id: 1, name: "BS in Artificial Intelligence", rule: { kind: "all" }, children: [], notes: [] },
+  root: {
+    id: 1,
+    name: "BS in Artificial Intelligence",
+    rule: { kind: "all" },
+    children: [],
+    notes: [],
+  },
 });
 
 describe("gen eds split by entry year", () => {
@@ -89,12 +104,17 @@ describe("gen eds split by entry year", () => {
   it("leaves bundles alone that aren't named for an entry year or have no newer namesake", () => {
     const core = major([{ catalogId: 99, name: "CMU Core Requirements", auditId: null }]);
     expect(bundlesForEntryYear(core, index, 2025)).toBe(core);
-    const old = major([{ catalogId: 1400, name: "EY2019 - SCS General Education Requirements (AI)", auditId: 5026 }]);
+    const old = major([
+      { catalogId: 1400, name: "EY2019 - SCS General Education Requirements (AI)", auditId: 5026 },
+    ]);
     expect(bundlesForEntryYear(old, index, 2025)).toBe(old);
   });
 
   it("doesn't check a gen ed twice when the major names both", () => {
-    const both = major([EY2020, { catalogId: 1964, name: "EY2023+ SCS - General Education", auditId: 20440 }]);
+    const both = major([
+      EY2020,
+      { catalogId: 1964, name: "EY2023+ SCS - General Education", auditId: 20440 },
+    ]);
     expect(bundlesForEntryYear(both, index, 2025).attached.map((a) => a.catalogId)).toEqual([1964]);
   });
 });

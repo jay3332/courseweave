@@ -55,51 +55,51 @@
         </button>
       </section>
     {:else}
-    {@const year = item.year}
-    {@const units = year.slots.reduce((n, s) => n + (s.column?.totals.units ?? 0), 0)}
-    <section aria-labelledby="year-{year.key}" class="flex flex-col gap-3">
-      <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <h2 id="year-{year.key}" class="text-heading-5 text-strong">{academicYearLabel(year.key)}</h2>
-        <span class="tabular text-label-md font-normal text-muted">{units} units</span>
-        {#if !year.hasSummer && !table}
-          <button
-            type="button"
-            onclick={() => plans.addTerm(page.plan.id, year.summer)}
-            class="ml-auto inline-flex min-h-10 items-center gap-1 rounded-full px-3 text-label-md text-ink hover:bg-hover md:min-h-8"
-          >
-            <Plus aria-hidden="true" class="size-3.5" />
-            Add {termLabel(year.summer)}
-          </button>
-        {/if}
-      </div>
-      <div
-        class={table
-          ? "flex flex-col gap-3"
-          : `grid grid-cols-1 items-start gap-4 @3xl:grid-cols-2 ${year.hasSummer ? "@6xl:grid-cols-3" : ""}`}
-      >
-        {#each year.slots as slot (slot.term)}
-          {#if slot.column}
-            <TermCard column={slot.column} {requirements} />
-          {:else}
+      {@const year = item.year}
+      {@const units = year.slots.reduce((n, s) => n + (s.column?.totals.units ?? 0), 0)}
+      <section aria-labelledby="year-{year.key}" class="flex flex-col gap-3">
+        <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          <h2 id="year-{year.key}" class="text-heading-5 text-strong">{academicYearLabel(year.key)}</h2>
+          <span class="tabular text-label-md font-normal text-muted">{units} units</span>
+          {#if !year.hasSummer && !table}
             <button
               type="button"
-              onclick={() => plans.addTerm(page.plan.id, slot.term)}
-              class="{addClass} {table ? 'min-h-11' : 'min-h-28 self-stretch'}"
+              onclick={() => plans.addTerm(page.plan.id, year.summer)}
+              class="ml-auto inline-flex min-h-10 items-center gap-1 rounded-full px-3 text-label-md text-ink hover:bg-hover md:min-h-8"
             >
-              <Plus aria-hidden="true" class="size-4" />
-              Add {termLabel(slot.term)}
+              <Plus aria-hidden="true" class="size-3.5" />
+              Add {termLabel(year.summer)}
             </button>
           {/if}
-        {/each}
-        {#if !year.hasSummer && table}
-          <!-- Detailed layout: the summer goes after the year's spring, so that's where it's added. -->
-          <button type="button" onclick={() => plans.addTerm(page.plan.id, year.summer)} class="{addClass} min-h-10">
-            <Plus aria-hidden="true" class="size-3.5" />
-            Add {termLabel(year.summer)}
-          </button>
-        {/if}
-      </div>
-    </section>
+        </div>
+        <div
+          class={table
+            ? "flex flex-col gap-3"
+            : `grid grid-cols-1 items-start gap-4 @3xl:grid-cols-2 ${year.hasSummer ? "@6xl:grid-cols-3" : ""}`}
+        >
+          {#each year.slots as slot (slot.term)}
+            {#if slot.column}
+              <TermCard column={slot.column} {requirements} />
+            {:else}
+              <button
+                type="button"
+                onclick={() => plans.addTerm(page.plan.id, slot.term)}
+                class="{addClass} {table ? 'min-h-11' : 'min-h-28 self-stretch'}"
+              >
+                <Plus aria-hidden="true" class="size-4" />
+                Add {termLabel(slot.term)}
+              </button>
+            {/if}
+          {/each}
+          {#if !year.hasSummer && table}
+            <!-- Detailed layout: the summer goes after the year's spring, so that's where it's added. -->
+            <button type="button" onclick={() => plans.addTerm(page.plan.id, year.summer)} class="{addClass} min-h-10">
+              <Plus aria-hidden="true" class="size-3.5" />
+              Add {termLabel(year.summer)}
+            </button>
+          {/if}
+        </div>
+      </section>
     {/if}
   {/each}
   {#if !rows.nextInLastYear}

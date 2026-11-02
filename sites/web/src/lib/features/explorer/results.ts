@@ -88,7 +88,11 @@ export function firstMeeting(course: Course): { start: number; day: number } | n
     for (const meeting of section.meetings) {
       if (!isScheduled(meeting)) continue;
       const day = Math.min(...meeting.days);
-      if (first === null || meeting.start < first.start || (meeting.start === first.start && day < first.day))
+      if (
+        first === null ||
+        meeting.start < first.start ||
+        (meeting.start === first.start && day < first.day)
+      )
         first = { start: meeting.start, day };
     }
   return first;
@@ -99,8 +103,16 @@ function byMeetingTime(items: readonly { course: Course }[]): Course[] {
   const keyed = items.map(({ course }) => ({ course, first: firstMeeting(course) }));
   keyed.sort((a, b) => {
     if (a.first === null || b.first === null)
-      return a.first === b.first ? a.course.id.localeCompare(b.course.id) : a.first === null ? 1 : -1;
-    return a.first.start - b.first.start || a.first.day - b.first.day || a.course.id.localeCompare(b.course.id);
+      return a.first === b.first
+        ? a.course.id.localeCompare(b.course.id)
+        : a.first === null
+          ? 1
+          : -1;
+    return (
+      a.first.start - b.first.start ||
+      a.first.day - b.first.day ||
+      a.course.id.localeCompare(b.course.id)
+    );
   });
   return keyed.map((k) => k.course);
 }
@@ -134,7 +146,10 @@ function hasSortValue(
 
 /** The list the other way round, keeping the items without a value for the sort at the end. */
 function turnAround<T>(sorted: readonly T[], has: (item: T) => boolean): T[] {
-  return [...sorted.filter((item) => has(item)).toReversed(), ...sorted.filter((item) => !has(item))];
+  return [
+    ...sorted.filter((item) => has(item)).toReversed(),
+    ...sorted.filter((item) => !has(item)),
+  ];
 }
 
 export interface OtherMatch {
