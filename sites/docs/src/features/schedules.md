@@ -98,7 +98,8 @@ Final exams are a dialog on the schedules page (`features/finals/FinalsDialog.sv
 `/schedules?term=<id>&finals=1`; `/finals` redirects there. It shows the schedule's exams matched by section
 (`matchFinals` in `finals.ts`), warnings for overlaps, back-to-back exams and three or more within 24 hours, a .ics
 download, a search of the semester's whole registrar schedule (`finals-table.ts`), a notice while the registrar
-hasn't published it, and the SIO calendar import (`SioImport.svelte`) for exams its file lacks.
+hasn't published it, and the SIO calendar import (`SioImport.svelte`) for exams its file lacks: two numbered steps
+with their buttons in the same order, "Export from SIO" (SIO in a new tab) and then "Upload SIO calendar".
 
 ## Profile
 
