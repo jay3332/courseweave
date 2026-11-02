@@ -37,7 +37,9 @@ beside its requirements:
 - **Record prompt** while the record is empty, above the semesters.
 - **Semester grid** (`SemesterGrid.svelte`): incoming credit (AP, IB, transfer, placements), then academic years with
   fall, spring and, when planned, summer (`grid.ts`), slots to add back a removed semester, the next semester and
-  summers. A cards or detailed layout (the `planLayout` preference); the detailed one is a table per semester with
+  summers. A run of years with no semester (between a pre-college summer and the first fall, or a year away) folds
+  into one line, "2024–25 to 2025–26 · No semesters", whose "Add a semester" opens their slots and moves the focus to
+  the first (`emptyYearRuns()`). A cards or detailed layout (the `planLayout` preference); the detailed one is a table per semester with
   the requirements each course satisfies, when it's usually offered and its prerequisites colored against the plan.
 - **Semester cards** (`TermCard.svelte`): record courses (read-only, with grades; a W or other no-credit grade counts
   0 units, as on Courses Taken, unlike Courseweave) and planned courses, each with

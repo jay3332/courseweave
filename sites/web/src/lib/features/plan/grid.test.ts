@@ -1,9 +1,12 @@
 /* oxlint-disable typescript/no-floating-promises -- node:test awaits describe and it itself */
 import { describe, it } from "node:test";
 import { expect } from "../../testing.ts";
-import { gridRows } from "./grid.ts";
+import { emptyYearRuns, gridRows, type GridItem } from "./grid.ts";
 
 const cols = (...terms: string[]) => terms.map((term) => ({ term }));
+/** Each item as its year, or its run of years after "gap:". */
+const keys = (items: GridItem<{ term: string }>[]) =>
+  items.map((item) => (item.kind === "gap" ? `gap:${item.years.map((y) => y.key).join(",")}` : item.year.key));
 
 describe("gridRows", () => {
   it("groups semesters into academic years, fall first", () => {
@@ -44,5 +47,26 @@ describe("gridRows", () => {
     const { years, next } = gridRows("F25", []);
     expect(years).toEqual([]);
     expect(next).toBe("S26");
+  });
+});
+
+describe("emptyYearRuns", () => {
+  it("folds the years between a pre-college summer and the first fall into one item", () => {
+    const { items, next } = emptyYearRuns("M24", cols("M24", "F26", "S27"), {});
+    expect(keys(items)).toEqual(["F23", "gap:F24,F25", "F26"]);
+    expect(next).toBe("F27");
+  });
+
+  it("shows the years again once they're opened", () => {
+    const { items } = emptyYearRuns("M24", cols("M24", "F26", "S27"), { F24: true, F25: true });
+    expect(keys(items)).toEqual(["F23", "F24", "F25", "F26"]);
+  });
+
+  it("folds a single year away", () => {
+    expect(keys(emptyYearRuns("F25", cols("F25", "S26", "F27", "S28"), {}).items)).toEqual(["F25", "gap:F26", "F27"]);
+  });
+
+  it("leaves years with a semester alone, even when one of their semesters is missing", () => {
+    expect(keys(emptyYearRuns("F25", cols("F25", "F26", "S27"), {}).items)).toEqual(["F25", "F26"]);
   });
 });
