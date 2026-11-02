@@ -26,8 +26,10 @@ beside its requirements:
   button that opens the rail's sheet ("Programs and requirements") and the progress bar in one line.
 - **Rail** (`PlanRail.svelte`, a sheet on phones): the programs (`audit/ProgramPicker.svelte`: each with its
   requirements version by entry year and campus, its concentrations, any number of them, pressed again to clear, and
-  what's checked alongside; then the program search, whose panel holds the type filter for majors, minors,
-  additional majors and concentrations while it's in use, and lists a whole type with no query), the progress (the
+  what's checked alongside, with gen eds Stellic splits by entry year at the plan's
+  ([decision 46](../decisions/0046-check-year-split-gen-eds-at-the-plans-entry-year.md)); then the program search,
+  whose panel holds the type filter for majors, minors, additional majors and concentrations while it's in use, and
+  lists a whole type with no query), the progress (the
   overall bar, `DegreeProgressBar.svelte`: done, in progress, planned, still needed; and the numbers from
   `numbers.ts` as `StatBox`es: units planned of the degree's total, units completed, requirements met or planned,
   semesters with the first one), and "Requisites" (`RequisiteProblems.svelte`): courses planned before their
@@ -35,7 +37,9 @@ beside its requirements:
 - **Record prompt** while the record is empty, above the semesters.
 - **Semester grid** (`SemesterGrid.svelte`): incoming credit (AP, IB, transfer, placements), then academic years with
   fall, spring and, when planned, summer (`grid.ts`), slots to add back a removed semester, the next semester and
-  summers. A cards or detailed layout (the `planLayout` preference); the detailed one is a table per semester with
+  summers. A run of years with no semester (between a pre-college summer and the first fall, or a year away) folds
+  into one line, "2024-25 to 2025-26, No semesters", whose "Add a semester" opens their slots and moves the focus to
+  the first (`emptyYearRuns()`). A cards or detailed layout (the `planLayout` preference); the detailed one is a table per semester with
   the requirements each course satisfies, when it's usually offered and its prerequisites colored against the plan.
 - **Semester cards** (`TermCard.svelte`): record courses (read-only, with grades; a W or other no-credit grade counts
   0 units, as on Courses Taken, unlike Courseweave) and planned courses, each with
@@ -48,10 +52,14 @@ beside its requirements:
   courses, and edits go to the schedule, with a section picked for added courses), copies a schedule's courses,
   opens the semester on the schedules page, or removes it.
 - **Requirements** (`RequirementsPanel.svelte`, `audit/*`): each program's state, areas done and unit progress, then
-  the requirement tree with done, planned, in progress and still needed states, the courses counted toward each,
-  "ways to satisfy" a pool with Add, rules the audit can't check, and free electives. "Add" puts a course in the
-  semester `suggestTerm()` picks (offered, with room, prerequisites met by then) and jumps to it. "Expand" opens the
-  requirements in a dialog.
+  the requirement tree with done, planned, in progress and still needed states, the courses counted toward each
+  (course options with their FCE hours), "ways to satisfy" a pool with Add (`audit/ways-to-satisfy.ts`: every course
+  that could count, matched against the catalog once per requirement; those the semester shown offers first, then the
+  rest by the newest semester offering them, so courses not offered in years sink, then by number; each with its FCE
+  hours and units. "Browse in Courses" opens the course list filtered to the requirement in its usual order, by
+  number, to sort and filter there, `requirementCoursesPath()`), rules the audit can't check, and free electives.
+  "Add" puts a course in the semester `suggestTerm()` picks (offered, with room, prerequisites met by then) and jumps
+  to it. "Expand" opens the requirements in a dialog.
 
 When the main column is at least 1120px wide (with the rail open, from about 1700px; hiding the rail makes room
 sooner) the requirements are a sticky column beside the semesters, a third of the column wide (320 to 600px; 300 to 560px beside the detailed table). Stuck, the
@@ -60,7 +68,8 @@ short of either; until the page scrolls it up there (under the import banner), i
 top (`roomBelow`), so its end is on screen too. Below that they're the
 rail's last group (its sheet on phones, "Programs and requirements"), without cards (`AuditPanel`'s `flat`).
 Requirement rows are one line at any width: the status icon, the number, the title (truncated, whole in its tooltip),
-then the semester a course counted in ("F27") and its units. Add appears over the row's end when the row is hovered or
+then a calendar-off icon when the semester shown doesn't offer the course (its number is gray too; the icon's tooltip
+says why), the semester a course counted in ("F27") and its units. Add appears over the row's end when the row is hovered or
 focused; on touch, where nothing hovers, it's a + in the row (`AddButton.svelte`). Drag and drop
 (HTML drag events, `DRAG_TYPE` and `DRAG_NEW_COURSE`) moves courses between and within semesters and adds courses
 from the requirements, the options a requirement doesn't need included; it's on with a fine pointer from 768px. The course menus and "Add" do the same from the

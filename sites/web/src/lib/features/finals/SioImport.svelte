@@ -74,7 +74,9 @@
     <li>Download your calendar export from SIO</li>
     <li>Import the .ics file below</li>
   </ol>
+  <!-- In the steps' order: SIO's export (a new tab), then the upload. -->
   <div class="flex flex-wrap gap-3">
+    <Button size="sm" icon={Download} href={SIO_EXPORT}>Export from SIO</Button>
     {#if session.status === "signed-in"}
       <input
         bind:this={input}
@@ -91,7 +93,6 @@
     {:else}
       <Button variant="primary" size="sm" icon={LogIn} onclick={() => session.signIn()}>Sign in to upload</Button>
     {/if}
-    <Button size="sm" icon={Download} href={SIO_EXPORT}>Export from SIO</Button>
   </div>
   <p class="sr-only" aria-live="polite">{status}</p>
 

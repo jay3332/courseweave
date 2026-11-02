@@ -39,8 +39,8 @@ Move right do the same for the shown tab. The order is the `scheduleOrder` prefe
 follow, oldest first. A semester without a schedule shows "Schedule 1", created on the first edit, so visiting creates
 nothing. `?schedule=<id>` shows a particular one (the profile links to it).
 
-- **Toolbar**: one row under the tabs with Generate, Finals, Export and the calendar display button (a settings icon,
-  `DisplayMenu.svelte`, whose popover chooses what blocks show besides the code: section, course name, time and room,
+- **Toolbar**: one row under the tabs with Generate, Finals, Export and the calendar display button ("Display" with a
+  settings icon, an icon alone on phones as Export is; `DisplayMenu.svelte`), whose popover chooses what blocks show besides the code: section, course name, time and room,
   and how the course list picks sections, dropdowns or compact letters). On screens 80rem and wider the
   session switch (Full semester, Mini 1, Mini 2) sits at the row's start when a placed course runs in a mini;
   narrower screens show it above the calendar. While the rail is a sheet, the row starts with the button that opens
@@ -48,7 +48,7 @@ nothing. `?schedule=<id>` shows a particular one (the profile links to it).
   keeps the total units (in the warning color over 54 factorable), hours a week and conflicts in view
   (`WorkloadTotals.svelte`, `compact`).
 - **Rail**: the semester; the courses, headed by their count and totals (`WorkloadTotals.svelte`: units, expected
-  hours a week from FCEs when signed in, conflicts, the factorable and pass/fail split with its explanation, and the
+  hours a week from FCEs when signed in, conflicts, the factorable and pass/fail split with its explanation in an (i) tooltip, and the
   over-54-units warning), the course search that adds to them (`AddCourseSearch.svelte`: arrowing or hovering
   previews a course's sections on the calendar, Enter adds it with sections that fit; the results float in the top
   layer, as wide as the field, with the title on its own line so it stays readable in the narrow rail and the
@@ -75,7 +75,11 @@ nothing. `?schedule=<id>` shows a particular one (the profile links to it).
   The session switch (see Toolbar) shows one half of the semester when a course runs in a mini. A friend's friends-visible schedule
   (`GET /api/friends/{id}/schedules?term=`) shows as striped blocks with their name.
 - **Generator** (`ScheduleGenerator.svelte`): every conflict-free arrangement, ranked by start and end times, days
-  off, gaps, lunch and days on campus, with courses left out or locked; apply it or save it as a new schedule.
+  off, gaps, lunch and days on campus, with courses left out or locked; apply it or save it as a new schedule from
+  the dialog's footer, which stays in view. Arrangements with fewer sections that have no set times come first
+  (`byRank` in `core/generator.ts`), since such a section adds no gaps or days and would otherwise top every ranking.
+  Those are times not announced yet, sections arranged with the instructor (lessons, research) and online ones on the
+  student's own time; an option with one is tagged "1 section with no set times", in plain text rather than as a fault.
 - **Export** (`ExportMenu.svelte`): a .ics file, a PNG of the week, the course list as text, sharing, and "Send to
   Stellic or SIO" (`components/stellic/SendToStellicDialog.svelte`). That dialog only hands the student a script to run in their own
   signed-in Stellic or SIO tab, which shows what it will add and changes nothing until they confirm; this site never
@@ -95,7 +99,8 @@ Final exams are a dialog on the schedules page (`features/finals/FinalsDialog.sv
 `/schedules?term=<id>&finals=1`; `/finals` redirects there. It shows the schedule's exams matched by section
 (`matchFinals` in `finals.ts`), warnings for overlaps, back-to-back exams and three or more within 24 hours, a .ics
 download, a search of the semester's whole registrar schedule (`finals-table.ts`), a notice while the registrar
-hasn't published it, and the SIO calendar import (`SioImport.svelte`) for exams its file lacks.
+hasn't published it, and the SIO calendar import (`SioImport.svelte`) for exams its file lacks: two numbered steps
+with their buttons in the same order, "Export from SIO" (SIO in a new tab) and then "Upload SIO calendar".
 
 ## Profile
 

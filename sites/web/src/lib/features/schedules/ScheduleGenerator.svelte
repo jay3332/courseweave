@@ -136,6 +136,13 @@
           ? { text: `No lunch break ${b.lunchBlockedDays} ${b.lunchBlockedDays === 1 ? "day" : "days"}`, bad: true }
           : { text: "Lunch break daily", bad: false },
       );
+    // No set times: not announced yet, arranged with the instructor (lessons, research) or online on the student's own
+    // time. Nothing to check them against, so they're named, but not as a fault.
+    if (b.unscheduledSections > 0)
+      out.push({
+        text: `${b.unscheduledSections} ${b.unscheduledSections === 1 ? "section" : "sections"} with no set times`,
+        bad: false,
+      });
     return out;
   }
 
@@ -171,7 +178,32 @@
   }
 </script>
 
-<Dialog bind:open title="Generate schedules" size="lg" class="sm:max-w-[min(1080px,calc(100vw-2rem))]">
+<!-- In the dialog's footer, so they stay in view below the option's calendar and course list. -->
+{#snippet actions()}
+  {#if result}
+    <Button
+      onclick={() => {
+        onsaveasnew(`${name} (option ${current + 1})`, result.sections);
+        open = false;
+      }}>Save as new schedule</Button
+    >
+    <Button
+      variant="primary"
+      onclick={() => {
+        onapply(result.sections);
+        open = false;
+      }}>Apply to this schedule</Button
+    >
+  {/if}
+{/snippet}
+
+<Dialog
+  bind:open
+  title="Generate schedules"
+  size="lg"
+  class="sm:max-w-[min(1080px,calc(100vw-2rem))]"
+  footer={view.entries.length > 0 && result ? actions : undefined}
+>
   {#if view.entries.length === 0}
     <p class="py-6 text-center text-body-2 text-ink">
       Your schedule has no courses yet. Add the courses you want to take, then come back to see every arrangement of
@@ -373,21 +405,6 @@
                 </li>
               {/each}
             </ul>
-            <div class="mt-4 flex flex-wrap gap-2">
-              <Button
-                variant="primary"
-                onclick={() => {
-                  onapply(result.sections);
-                  open = false;
-                }}>Apply to this schedule</Button
-              >
-              <Button
-                onclick={() => {
-                  onsaveasnew(`${name} (option ${current + 1})`, result.sections);
-                  open = false;
-                }}>Save as new schedule</Button
-              >
-            </div>
           {/if}
 
           {#if outcome.results.length > 1}

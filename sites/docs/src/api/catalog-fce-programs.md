@@ -164,6 +164,9 @@ so it isn't reported twice.
   named like "General Education", "Degree Check" or "Core Requirements"), each at the version for the major's entry
   year and campus. Among the bundle's versions for that campus or no campus (all of them when there are none), it's
   the newest that started by the entry year, or else the newest. Concentration bundles are picked the same way.
+  Where Stellic splits a bundle into one program per entry year ("EY2020 SCS - General Education" to "EY2023+ SCS -
+  General Education"), the website checks the one for the plan's entry year instead of the one named here, and points
+  the major's sharing rule at it ([decision 46](../decisions/0046-check-year-split-gen-eds-at-the-plans-entry-year.md)).
 - `concentrations`: each of the major's Stellic concentrations with up to three requirement bundles whose names
   contain the concentration's, best first. A bundle scores for being named a concentration or track, for sharing
   words with the major's name, for the major's department, and for the major's campus; it loses for another

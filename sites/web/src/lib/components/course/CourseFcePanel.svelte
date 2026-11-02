@@ -75,7 +75,7 @@
 </script>
 
 <section aria-label="Course evaluations" class="min-w-0">
-  <svelte:element this={heading} class="text-heading-4 text-strong">Course evaluations</svelte:element>
+  <svelte:element this={heading} id="course-fces" class="text-heading-4 text-strong">Course evaluations</svelte:element>
   {#if meta}<p class="mt-0.5 mb-3 text-label-md text-muted">{meta}</p>{:else}<div class="mb-3"></div>{/if}
 
   {#if locked}

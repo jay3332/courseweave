@@ -10,13 +10,13 @@ course components other pages reuse. They port Courseweave's explorer, catalog a
 
 | File | What it does |
 | --- | --- |
-| `query.ts` | The page's state in its URL: Courseweave's filter keys (`core/explorer/filters.ts`) plus `term`, `q`, `sort`, `view=chart`, `unoffered`, `course` and the Figma's extra filters: a units range (`ulo`, `uhi`), a course-number level (`num`) and the seasons a course is offered in (`offered`) |
+| `query.ts` | The page's state in its URL: Courseweave's filter keys (`core/explorer/filters.ts`) plus `term`, `q`, `sort`, `dir` (a sort turned around from its usual way: `asc` for ratings, `desc` for the rest), `view=chart`, `unoffered`, `course` and the extra filters: a units range (`ulo`, `uhi`), a course-number level (`num`), the seasons a course is offered in (`offered`) and fixed units only (`fixed=1`). Also which list header a sort belongs to and what a click on one does (`sortedColumn`, `sortByColumn`) |
 | `url-state.svelte.ts` | Keeps the query and the URL in step: edits replace the history entry after a pause, a semester change or an opened course adds one, and links or Back are read back in |
 | `explorer.svelte.ts` | Everything computed from the query: the semester (`resolveTerm`, `term=all` for all semesters), the documents it needs, the compiled requirement filter, the results and the courses other semesters offer |
-| `results.ts` | Ranked search (`scoreCourse`), Courseweave's filters and the extra ones, sorting; other semesters' matches and the "Show courses not offered" list |
-| `ExplorerRail.svelte` | The filter rail: saved only, fits my schedule, department, units (a range, and Courseweave's variable units as "Variable units only", `units=var`), offered in, level, requirement (gen eds or any program requirement, members only), days and times, session, delivery, scheduled only, FCE hours and rating, how cards aggregate FCEs, and courses not offered |
-| `ExplorerToolbar.svelte`, `chips.ts` | Search, result count, removable filter chips, semester, sort, the FCE chart and the cards/list switch |
-| `CourseResults.svelte` | Cards (20 at a time), rows (100 at a time) or the hours chart; more load as the end of the list scrolls into view |
+| `results.ts` | Ranked search (`scoreCourse`), Courseweave's filters and the extra ones, sorting (Courseweave's sorts and the meeting time, the earliest start among a course's lectures, either way round, with courses that have no value for the sort last both ways); other semesters' matches and the "Show courses not offered" list |
+| `ExplorerRail.svelte` | The filter rail: saved only, fits my schedule, department, units (a range, Courseweave's variable units as "Variable units only", `units=var`, and its opposite, "Fixed units only", `fixed=1`; checking one clears the other), offered in, level, requirement (gen eds or any program requirement, members only, starting on the degree plan's first program), days and times, session, delivery, scheduled only, FCE hours and rating, how cards aggregate FCEs, and courses not offered |
+| `ExplorerToolbar.svelte`, `chips.ts` | Search, result count, removable filter chips, semester, sort (named the other way round, such as "Lowest rated", when `dir` turns it), the FCE chart and the cards/list switch |
+| `CourseResults.svelte` | Cards (20 at a time, each opening with Show more), rows (100 at a time, under headers that sort) or the hours chart; more load as the end of the list scrolls into view |
 
 Selecting a course opens it in the detail panel (`?course=15-122`) beside the list from 1024px wide. The panel sticks
 under the site header and scrolls on its own; until the page scrolls it up there it's only as tall as the room below its
@@ -38,10 +38,15 @@ share. Each component needs only a course (or its id) and a semester:
 - `CourseCard` (the Figma card: requisite status with a popover of the expression as status chips, corequisites only
   when the course has some, semester select, save star, friends taking it; signed in, who teaches it in the card's
   semester, up to three names linked to their pages, from the listing or, for another semester, the teaching document;
-  expanded, the FCE aggregate and table), `CourseRow` in a `CourseList` (Courseweave's
+  its FCE hours, with what they average in their tooltip, "Averaged from 21 responses over 4 semesters"
+  (`fce-sample.ts`); expanded, the FCE aggregate and table), `CourseRow` in a `CourseList` (Courseweave's
   compact rows; from 34rem wide their hours column is Courseweave's workload cell: the FCE hours, "mini" before a
-  mini's, over a `WorkloadMeter` bar, with the workload described in its title and to screen readers) and `CourseCardSmall` (the Figma's small card, for saved courses and the record's Courses Taken and
-  Currently Taking, with `deptLabel`, `children` and `footer` slots).
+  mini's, over a `WorkloadMeter` bar, with the workload described to screen readers; the hours and the rating have
+  tooltips with the workload or what the rating is, and what they average. The two numbers sit above the row's link
+  so they take the hover, and are links to the same place themselves, so clicking them still opens the course. Given
+  `onsort`, the list's headers are buttons: a click sorts by that column (`columns.ts`), a second click turns the sort
+  around, and the sorted one shows its direction with an arrow) and `CourseCardSmall` (the Figma's small card, for
+  saved courses and the record's Courses Taken and Currently Taking, with `deptLabel`, `children` and `footer` slots).
 - `RequisiteStatus` (the requisite line with a Details toggle right after its last word, opening the details and
   waivers under it; in the course page's and the panel's actions card), `RequisiteLevelIcon`, `RequisiteExpression`,
   `RequisiteSummary`, `RequisiteTreeNode`, `RequiresAndUnlocks`, `UnlocksList`, `CourseChipList`.
@@ -91,6 +96,13 @@ The header is one unit: the big course number with its save star beside it, the 
 then the facts. What the student does with the course sits in one card (`CourseActions.svelte`): the semester select,
 the schedule action (a full-width "Add to Schedule 1", or an "In Schedule 1" chip with Remove and Open schedule right
 after it; both one 40px row, so the card doesn't jump), the requisite line with its Details, and friends taking it.
+A schedule whose name doesn't say it's one is named as a schedule, in curly quotes (`schedule-label.ts`): `Add to schedule "From Plan 2"`, `In "From Plan 2"` and a calendar headed `Schedule "From Plan 2"`, so a schedule copied from a
+degree plan doesn't read as the plan.
+
+Under the facts, "Jump to" (`SectionJumps.svelte`) links to the sections the view shows (sections, about, counts
+toward, offered, course evaluations, past syllabi, prerequisites): the page runs six screens or more, with the
+evaluations about three down. Each heading has a scroll margin that clears the sticky site header, and the link puts
+the section in the address.
 From 1024px the card sits beside the title at the top, in the calendar's column; narrower, it comes between the title
 and the facts. Where the course isn't shown (not offered that semester, a semester that didn't load) the semester
 select stays beside the back link instead.
@@ -120,7 +132,9 @@ the canonical `/course/<code>` link; the web API renders the same tags on the se
 
 `CourseDetailPanel.svelte` stacks the same sections into a side panel for the Courses page (`?course=` there), with
 the calendar before the sections. Its header matches the page's narrow layout: the number, the title, the same
-actions card (without the semester select, which the Courses toolbar has), then the facts. The panel's top bar holds
+actions card (without the semester select, which the Courses toolbar has), the facts, then "Jump to" for its sections;
+where the panel scrolls on its own, a jump scrolls only the panel (so the list beside it stays) and lands the heading
+below the panel's sticky bar. The panel's top bar holds
 the save star at its left, and Expand and Close ("All courses" on phones); the small code comes up beside the star once
 the big one has scrolled under it. The bar sticks to the panel's top where the panel scrolls on its own, and under the site
 header where it scrolls with the page; the panel clips its content to its rounded corners. Course
@@ -133,8 +147,9 @@ unlocks, with the length of its shortest prerequisite chain. Every course link r
 view. Without a course it lists the gateway courses, the ones the most other courses require. The search box ranks
 the semester's courses first, then the rest of the catalog.
 
-A `SegmentedControl` switches between two views, remembered on the device (`cmucourses:view:requisites`); `?view=graph`
-opens the graph, as the course page's "Prerequisite tree and what it unlocks" link does:
+A `SegmentedControl` switches between two views, remembered on the device (`cmucourses:view:requisites`), the graph
+until the device chooses; `?view=list` or `?view=graph` opens that view (the course page's "Prerequisite tree and what
+it unlocks" link asks for the graph), and choosing the list puts `?view=list` in the address:
 
 - **List**: the prerequisite tree (expandable, with cycles marked) with the student's status on each course, and the
   unlocks grouped by department (`RequiresAndUnlocks`).

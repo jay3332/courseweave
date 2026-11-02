@@ -14,7 +14,7 @@
   import { storedView, type ListView } from "$lib/components/ui/ViewToggle.svelte";
   import { parseCourseCode } from "$lib/core/data";
   import { departmentName } from "$lib/core/departments";
-  import { FCE_SORTS, hasSectionFilters, type SortKey } from "$lib/core/explorer/filters";
+  import { FCE_SORTS, hasSectionFilters } from "$lib/core/explorer/filters";
   import { codeOf } from "$lib/core/requisite-format";
   import { coursePath } from "$lib/core/routes";
   import type { Course } from "$lib/core/types";
@@ -26,7 +26,14 @@
   import ExplorerRail from "$lib/features/explorer/ExplorerRail.svelte";
   import ExplorerToolbar from "$lib/features/explorer/ExplorerToolbar.svelte";
   import OtherCourses from "$lib/features/explorer/OtherCourses.svelte";
-  import { clearFilters, SORT_LABELS } from "$lib/features/explorer/query";
+  import {
+    clearFilters,
+    SORT_LABELS,
+    sortByColumn,
+    sortedColumn,
+    sortLabel,
+    type ExplorerSort,
+  } from "$lib/features/explorer/query";
 
   const session = getSession();
   const x = new Explorer();
@@ -112,10 +119,17 @@
 
   const termOptions = $derived(semesterOptions(x.terms.value ?? []));
   const sortOptions = $derived(
-    (Object.keys(SORT_LABELS) as SortKey[])
-      .filter((key) => !FCE_SORTS.includes(key) || x.fceMap !== null)
-      .map((key) => ({ value: key, label: SORT_LABELS[key], disabled: key === "relevance" && x.q === "" })),
+    (Object.keys(SORT_LABELS) as ExplorerSort[])
+      .filter((key) => (key === "meets" ? !x.allMode : !FCE_SORTS.includes(key) || x.fceMap !== null))
+      .map((key) => ({
+        value: key,
+        // The current sort says which way it runs when a column header turned it around.
+        label: key === x.sort ? sortLabel(key, x.dir) : SORT_LABELS[key],
+        disabled: key === "relevance" && x.q === "",
+      })),
   );
+  // The list's column headers: which one the results are sorted by, and a click sorts by another or turns it around.
+  const sorted = $derived(sortedColumn(x.sort, x.dir));
   const chipList = $derived(
     filterChips(
       { ...query, filters: x.filters },
@@ -191,7 +205,7 @@
     onterm={(term) => url.update({ ...query, term }, true)}
     {sortOptions}
     sortValue={x.sort}
-    onsort={(sort) => url.update({ ...query, sort })}
+    onsort={(sort) => url.update({ ...query, sort, dir: null })}
     fceAvailable={x.fceMap !== null}
     {chart}
     onchart={(on) => url.update({ ...query, chart: on })}
@@ -313,6 +327,8 @@
           keepList={inPanel}
           {selectedId}
           {active}
+          {sorted}
+          onsort={(column) => url.update(sortByColumn(query, sorted, column))}
           bind:limit
           footer={others}
         />

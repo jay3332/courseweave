@@ -7,6 +7,7 @@
   import WeekGrid from "$lib/components/calendar/WeekGrid.svelte";
   import { schedulesPath } from "$lib/core/routes";
   import type { CourseSchedule } from "./course-schedule.svelte";
+  import { scheduleHeading } from "./schedule-label";
 
   let {
     sched,
@@ -22,7 +23,7 @@
     class?: string;
   } = $props();
 
-  const name = $derived(sched.scheduleName ?? "Your schedule");
+  const name = $derived(scheduleHeading(sched.scheduleName));
 </script>
 
 <section aria-labelledby={headingId} class="min-w-0 {className}">

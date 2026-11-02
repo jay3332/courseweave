@@ -59,3 +59,32 @@ export function gridRows<C extends { term: string }>(startTerm: string, columns:
   });
   return { years: rows, next, nextInLastYear };
 }
+
+/** A run of academic years without a single semester, shown as one line until it's opened. */
+export interface EmptyYears<C> {
+  kind: "gap";
+  years: YearRow<C>[];
+}
+
+export type GridItem<C> = { kind: "year"; year: YearRow<C> } | EmptyYears<C>;
+
+/**
+ * The grid's rows with each run of years that have no semester, only "Add" slots, folded into one item, except
+ * the years in `opened`. A pre-college summer before the first fall leaves such a run, and so does a year away.
+ */
+export function emptyYearRuns<C extends { term: string }>(
+  startTerm: string,
+  columns: C[],
+  opened: Readonly<Record<string, boolean>>,
+): Omit<GridRows<C>, "years"> & { items: GridItem<C>[] } {
+  const { years, next, nextInLastYear } = gridRows(startTerm, columns);
+  const items: GridItem<C>[] = [];
+  for (const year of years) {
+    const empty = year.slots.every((slot) => slot.column === null);
+    const last = items.at(-1);
+    if (!empty || opened[year.key] === true) items.push({ kind: "year", year });
+    else if (last?.kind === "gap") last.years.push(year);
+    else items.push({ kind: "gap", years: [year] });
+  }
+  return { items, next, nextInLastYear };
+}

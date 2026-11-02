@@ -2,12 +2,13 @@
   import { afterNavigate } from "$app/navigation";
   import { page } from "$app/state";
   import logo from "$lib/assets/logo.png";
-  import { LogIn, LogOut, Menu } from "@lucide/svelte";
+  import { LogIn, LogOut, Menu, Search } from "@lucide/svelte";
   import Avatar from "../ui/Avatar.svelte";
   import Button from "../ui/Button.svelte";
   import IconButton from "../ui/IconButton.svelte";
   import Sheet from "../ui/Sheet.svelte";
   import Skeleton from "../ui/Skeleton.svelte";
+  import CourseFinder from "./CourseFinder.svelte";
   import { NAV_ITEMS, isActive } from "./nav";
   import { getSession } from "./session";
   import SyncStatus from "./SyncStatus.svelte";
@@ -15,11 +16,28 @@
 
   const session = getSession();
   let menuOpen = $state(false);
+  let finderOpen = $state(false);
 
   afterNavigate(() => {
     menuOpen = false;
   });
+
+  // "Find a course" opens with Ctrl+K, or Cmd+K on a Mac, from any page.
+  const mac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/u.test(navigator.platform);
+  const shortcut = mac ? "\u2318K" : "Ctrl K";
+
+  function onwindowkeydown(event: KeyboardEvent): void {
+    if (event.key.toLowerCase() !== "k" || event.altKey || event.shiftKey) return;
+    if (!(mac ? event.metaKey : event.ctrlKey)) return;
+    // Not on top of another dialog (Generate schedules, say); the menu sheet makes way for it.
+    if (!finderOpen && !menuOpen && document.querySelector("dialog:modal") !== null) return;
+    event.preventDefault();
+    menuOpen = false;
+    finderOpen = true;
+  }
 </script>
+
+<svelte:window onkeydown={onwindowkeydown} />
 
 <header
   class="sticky top-0 z-30 bg-surface shadow-header-mobile lg:bg-paper lg:shadow-header"
@@ -49,12 +67,33 @@
         {/each}
       </ul>
     </nav>
-    <div class="flex items-center gap-4 justify-self-end xl:gap-8">
+    <div class="flex items-center gap-4 justify-self-end">
+      <!-- Signed in: whether changes have reached the account, a checkmark while all is saved, then the light or dark
+           switch and Find a course beside Sign out. -->
+      {#if session.status === "signed-in" && session.sync}
+        <SyncStatus sync={session.sync} compact={session.sync.status === "saved" || session.sync.status === "saving"} />
+      {/if}
       <span class="flex p-1.5"><ThemeSwitch /></span>
+      <!-- An icon beside the navigation's labels until there's room to name it and show its shortcut and still keep
+           the navigation centered and the site's name on one line. -->
+      <button
+        type="button"
+        onclick={() => (finderOpen = true)}
+        aria-haspopup="dialog"
+        aria-keyshortcuts={mac ? "Meta+K" : "Control+K"}
+        title="Find a course ({shortcut})"
+        class="inline-flex h-10 shrink-0 items-center gap-2 rounded-full border border-line-strong px-2.5 text-label-lg whitespace-nowrap text-muted transition-colors hover:bg-hover hover:text-ink 2xl:px-3"
+      >
+        <Search aria-hidden="true" class="size-5 shrink-0" />
+        <span class="max-2xl:sr-only">Find a course</span>
+        <kbd
+          aria-hidden="true"
+          class="hidden rounded-tag border border-line px-1.5 font-sans text-label-sm text-muted 2xl:inline">{shortcut}</kbd
+        >
+      </button>
       {#if session.status === "loading"}
         <Skeleton class="h-10 w-[110px] rounded-full" />
       {:else if session.status === "signed-in"}
-        {#if session.sync}<SyncStatus sync={session.sync} />{/if}
         <Button
           icon={LogOut}
           title={session.name ? `Signed in as ${session.name}` : undefined}
@@ -82,6 +121,13 @@
       <img src={logo} alt="" width="40" height="40" class="size-10 rounded-[10px]" />
     </a>
     <div class="flex items-center justify-self-end">
+      <IconButton
+        label="Find a course"
+        icon={Search}
+        aria-haspopup="dialog"
+        class="mr-1"
+        onclick={() => (finderOpen = true)}
+      />
       {#if session.status === "loading"}
         <Skeleton variant="circle" class="size-[33px]" />
       {:else if session.status === "signed-in"}
@@ -137,3 +183,5 @@
     {/if}
   </div>
 </Sheet>
+
+<CourseFinder bind:open={finderOpen} />

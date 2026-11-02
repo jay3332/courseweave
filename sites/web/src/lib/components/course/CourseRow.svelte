@@ -1,14 +1,16 @@
 <script lang="ts">
   import { Star } from "@lucide/svelte";
   import { getSession } from "$lib/components/shell/session";
-  import { FCE_HOURS_HELP, courseIsMini, formatHours } from "$lib/core/fce";
+  import { courseIsMini, formatHours } from "$lib/core/fce";
   import { workloadDescription } from "$lib/core/fce/workload";
   import { meetingSummary } from "$lib/core/explorer/summary";
   import { termLabel } from "$lib/core/requisites";
   import { coursePath } from "$lib/core/routes";
   import { formatUnits } from "$lib/core/time";
   import type { Course } from "$lib/core/types";
+  import Tooltip from "$lib/components/ui/Tooltip.svelte";
   import { fceSummary } from "./data.svelte";
+  import { fceSample } from "./fce-sample";
   import SaveButton from "./SaveButton.svelte";
   import WorkloadMeter from "./WorkloadMeter.svelte";
 
@@ -42,6 +44,8 @@
   const showFce = $derived(fce.status === "ready" && fce.value !== null);
   const mini = $derived(courseIsMini(course, stats));
   const workload = $derived(stats ? workloadDescription(stats.hours, course.units, mini) : "");
+  // How many evaluations the hours and rating average, in their tooltips.
+  const sample = $derived(stats ? fceSample(stats.responses, stats.terms) : "");
   const offeredText = $derived(
     offered === undefined
       ? ""
@@ -92,7 +96,10 @@
           </span>
         {/if}
         {#if showFce && stats}
-          <span class="narrow-fce ml-auto flex shrink-0 gap-2 text-muted" title={workload}>
+          <span
+            class="narrow-fce ml-auto flex shrink-0 gap-2 text-muted"
+            title={[workload, sample].filter(Boolean).join(". ")}
+          >
             {#if stats.hours !== null}<span><span class="tabular text-ink">{formatHours(stats.hours)}</span> h/wk</span>{/if}
             {#if stats.courseRate !== null}<span class="inline-flex items-center gap-0.5"
                 ><span class="tabular text-ink">{stats.courseRate.toFixed(1)}</span><Star
@@ -119,14 +126,27 @@
   <span class="col-hours pt-px text-right text-body-2">
     {#if showFce}
       {#if stats?.hours != null}
-        <span class="block" title="{workload}. {FCE_HOURS_HELP}">
-          <span class="block whitespace-nowrap" aria-hidden="true">
-            {#if mini}<span class="mr-1 text-label-sm font-semibold text-muted">mini</span>{/if}<span
-              class="tabular text-ink">{formatHours(stats.hours)}</span
-            ><span class="ml-0.5 text-label-md text-muted">h</span>
-          </span>
+        <span class="block">
+          <!-- Above the row's link so hovering the number shows its tooltip; a link to the same place itself, so
+               clicking it still opens the course. -->
+          <Tooltip text={[workload, sample].filter(Boolean).join("\n")} placement="top-end">
+            {#snippet trigger(props)}
+              <a
+                {...props}
+                {href}
+                tabindex="-1"
+                aria-hidden="true"
+                data-course-preview="off"
+                class="relative z-10 block whitespace-nowrap"
+              >
+                {#if mini}<span class="mr-1 text-label-sm font-semibold text-muted">mini</span>{/if}<span
+                  class="tabular text-ink">{formatHours(stats?.hours)}</span
+                ><span class="ml-0.5 text-label-md text-muted">h</span>
+              </a>
+            {/snippet}
+          </Tooltip>
           <WorkloadMeter hours={stats.hours} units={course.units} {mini} class="mt-1.5" />
-          <span class="sr-only">{workload}</span>
+          <span class="sr-only">{workload}{sample ? `, ${sample}` : ""}</span>
         </span>
       {:else}
         <span class="text-label-md text-muted">No FCE</span>
@@ -134,12 +154,24 @@
     {/if}
   </span>
 
-  <span class="col-rating pt-px text-right text-body-2" title="Overall course rating from FCEs, 1 to 5">
+  <span class="col-rating pt-px text-right text-body-2">
     {#if showFce}
       {#if stats?.courseRate != null}
-        <span class="tabular text-ink">{stats.courseRate.toFixed(1)}</span>
+        <Tooltip text={["Overall course rating from FCEs, 1 to 5", sample].filter(Boolean).join("\n")} placement="top-end">
+          {#snippet trigger(props)}
+            <a
+              {...props}
+              {href}
+              tabindex="-1"
+              aria-hidden="true"
+              data-course-preview="off"
+              class="tabular relative z-10 block text-ink">{stats?.courseRate?.toFixed(1)}</a
+            >
+          {/snippet}
+        </Tooltip>
+        <span class="sr-only">{stats.courseRate.toFixed(1)} course rating{sample ? `, ${sample}` : ""}</span>
       {:else}
-        <span class="text-label-md text-muted">-</span>
+        <span class="block text-label-md text-muted">-</span>
       {/if}
     {/if}
   </span>

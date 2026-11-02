@@ -70,6 +70,8 @@ export interface ScoreBreakdown {
   /** Days where the lunch window has no long-enough free stretch. */
   lunchBlockedDays: number;
   daysOnCampus: number;
+  /** Chosen sections with no meeting times yet (TBA), which nothing above can measure or check for conflicts. */
+  unscheduledSections: number;
 }
 
 export interface GeneratedSchedule {
@@ -77,7 +79,7 @@ export interface GeneratedSchedule {
   sections: Record<string, Choice>;
   /** courseId -> other choices that meet at exactly the same times as the chosen one. */
   alternatives: Record<string, Choice[]>;
-  /** Lower is better. */
+  /** Lower is better, among arrangements with as many sections without times (`byRank`). */
   penalty: number;
   breakdown: ScoreBreakdown;
 }
@@ -173,6 +175,7 @@ export function evaluate(
     gapMinutes: 0,
     lunchBlockedDays: 0,
     daysOnCampus: 0,
+    unscheduledSections: sections.filter((s) => !s.meetings.some(isScheduled)).length,
   };
   let earlyMinutes = 0;
   let lateMinutes = 0;
@@ -262,8 +265,20 @@ function longestFree(intervals: [number, number][], from: number, to: number): n
   return Math.max(best, to - cursor);
 }
 
-function byPenalty(a: GeneratedSchedule, b: GeneratedSchedule): number {
-  return a.penalty - b.penalty || a.breakdown.gapMinutes - b.breakdown.gapMinutes;
+/**
+ * Best first: fewer sections without times, then the lower penalty. A section without times adds no gaps or days, so
+ * on penalty alone it would beat every timed choice of its course. When all of a course's sections lack times, every
+ * arrangement has them, and the penalty decides.
+ */
+function byRank(
+  a: { penalty: number; breakdown: ScoreBreakdown },
+  b: { penalty: number; breakdown: ScoreBreakdown },
+): number {
+  return (
+    a.breakdown.unscheduledSections - b.breakdown.unscheduledSections ||
+    a.penalty - b.penalty ||
+    a.breakdown.gapMinutes - b.breakdown.gapMinutes
+  );
 }
 
 /**
@@ -283,8 +298,8 @@ export function generateSchedules(
     .filter((c) => c.options.length > 0)
     .map((c) => {
       const groups = groupOptions(c);
-      const solo = new Map(groups.map((g) => [g, evaluate(g.parts, prefs, options.minis).penalty]));
-      groups.sort((a, b) => solo.get(a)! - solo.get(b)!);
+      const solo = new Map(groups.map((g) => [g, evaluate(g.parts, prefs, options.minis)]));
+      groups.sort((a, b) => byRank(solo.get(a)!, solo.get(b)!));
       return { courseId: c.courseId, groups };
     })
     .sort((a, b) => a.groups.length - b.groups.length);
@@ -328,7 +343,7 @@ export function generateSchedules(
       parts.push(...g.parts);
     });
     results.push({ sections, alternatives, ...evaluate(parts, prefs, options.minis) });
-    if (results.length >= maxResults * 2) results = results.sort(byPenalty).slice(0, maxResults);
+    if (results.length >= maxResults * 2) results = results.sort(byRank).slice(0, maxResults);
   };
 
   const visit = (i: number): boolean => {
@@ -356,7 +371,7 @@ export function generateSchedules(
   };
   if (usable.length) visit(0);
 
-  results = results.sort(byPenalty).slice(0, maxResults);
+  results = results.sort(byRank).slice(0, maxResults);
 
   const blockingPairs: [string, string][] = [];
   if (!results.length) {

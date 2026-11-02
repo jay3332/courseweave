@@ -39,7 +39,8 @@
     { value: "list", label: "List", icon: ListTree },
     { value: "graph", label: "Graph", icon: Network },
   ];
-  let view = $state<RequisitesView>(untrack(() => requestedView) ?? storedViewOf("requisites", VIEWS) ?? "list");
+  // The graph unless the link asks otherwise or this device chose the list.
+  let view = $state<RequisitesView>(untrack(() => requestedView) ?? storedViewOf("requisites", VIEWS) ?? "graph");
   $effect(() => {
     if (requestedView !== null) view = requestedView;
   });
@@ -51,7 +52,7 @@
     view = chosen;
     storeView("requisites", chosen);
     const url = new URL(page.url);
-    if (chosen === "graph") url.searchParams.set("view", "graph");
+    if (chosen === "list") url.searchParams.set("view", "list");
     else url.searchParams.delete("view");
     void goto(url, { replaceState: true, noScroll: true, keepFocus: true });
   }
@@ -65,7 +66,7 @@
   const index = $derived(catalogIndex());
 
   // Every course link moves the explorer to that course, so the chain can be walked either way, in the same view.
-  const recenter = (id: string): string => requisitesPath(id, termId, view === "graph" ? "graph" : null);
+  const recenter = (id: string): string => requisitesPath(id, termId, view === "list" ? "list" : null);
   // The student's standing on each requisite, once there's something to check against (as the course page does).
   const requisites = $derived(termId === null ? null : termRequisites(termId));
   const checking = $derived((requisites?.ctx?.credits.size ?? 0) > 0);

@@ -11,7 +11,8 @@
     return /^\d{5}$/u.test(digits) ? digits : code;
   });
   const requestedTerm = $derived(page.url.searchParams.get("term"));
-  // `?view=graph` opens the graph (the course page's "Prerequisite tree" link); otherwise the device's last choice.
+  // `?view=list` or `?view=graph` opens that view (the course page's "Prerequisite tree" link asks for the graph);
+  // otherwise the device's last choice, and the graph on a device that hasn't chosen.
   const requestedView = $derived.by(() => {
     const view = page.url.searchParams.get("view");
     return view === "graph" || view === "list" ? view : null;

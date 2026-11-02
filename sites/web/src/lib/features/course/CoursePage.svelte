@@ -34,6 +34,7 @@
   import OfferingHistory from "./OfferingHistory.svelte";
   import { requisitesPath } from "./paths";
   import ScheduleCalendar from "./ScheduleCalendar.svelte";
+  import SectionJumps from "./SectionJumps.svelte";
 
   let {
     courseId,
@@ -129,6 +130,17 @@
 
   /** A white section card on the page background. */
   const card = "min-w-0 rounded-card border border-pressed bg-surface p-5 sm:p-6";
+
+  // "Jump to" under the header: the sections this view shows, in page order.
+  const jumps = $derived([
+    ...(course ? [{ id: "course-sections", label: "Sections" }] : []),
+    { id: "course-about", label: "About" },
+    { id: "course-counts", label: "Counts toward" },
+    ...(course ? [{ id: "course-offered", label: "Offered" }] : []),
+    { id: "course-fces", label: "Course evaluations" },
+    { id: "course-syllabi", label: "Past syllabi" },
+    { id: "course-requisites", label: "Prerequisites" },
+  ]);
 </script>
 
 {#snippet termSelect(variant: "field" | "compact", className = "")}
@@ -227,6 +239,7 @@
           {:else}
             <CatalogFacts {courseId} terms={terms.value ?? []} />
           {/if}
+          <SectionJumps sections={jumps} class="mt-5" />
         </div>
       </header>
 
@@ -294,3 +307,10 @@
     </article>
   {/if}
 </PageContainer>
+
+<style>
+  /* "Jump to" lands each section with its heading below the sticky site header. */
+  article :global(h2[id^="course-"]) {
+    scroll-margin-top: calc(var(--header-h) + 1rem);
+  }
+</style>

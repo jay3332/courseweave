@@ -11,7 +11,7 @@ Courseweave's source is the reference implementation: when this page says "as Co
 | Courseweave feature | In CMU Courses |
 | --- | --- |
 | Course search, ranked, with filters (department, units, level, days and times, fits my schedule, requirement, offered in, mini, FCE hours and ratings) | Courses page (`/`), filter rail from the Figma plus Courseweave's extra filters |
-| Course list rows and the detail panel | Course cards from the Figma, expandable in place, with a cards/list switch; list rows are Courseweave's |
+| Course list rows and the detail panel | Course cards from the Figma, expandable in place, with a cards/list switch; list rows are Courseweave's, under headers that sort either way |
 | Full course page: description, requisite tree checked against the record, unlocks, cross-listings, sections and meetings, offering history, counts toward, FCE charts, syllabi | `/course/[code]` |
 | All semesters view of courses and instructors | "All semesters" in the semester picker |
 | Instructor explorer and FCE history | Instructors page (`/instructors`, `/instructors/[id]`), signed in only |

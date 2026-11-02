@@ -9,8 +9,13 @@ import {
   extraFilterCount,
   extraMatches,
   parseExplorer,
+  sortByColumn,
+  sortDir,
+  sortedColumn,
+  sortLabel,
   writeExplorer,
   type ExplorerQuery,
+  type ExplorerSort,
 } from "./query.ts";
 
 const entry = (patch: Partial<CatalogEntry>): CatalogEntry => ({
@@ -32,11 +37,12 @@ describe("explorer query", () => {
       term: "S27",
       q: "algorithms",
       sort: "units",
+      dir: "desc",
       chart: true,
       unoffered: true,
       course: "15-122",
       filters: { ...EMPTY_FILTERS, depts: ["CS"], fits: true, req: { auditId: 1, nodeId: 2 } },
-      extra: { unitsLow: 9, unitsHigh: 12, number: "3", seasons: ["fall", "summer"] },
+      extra: { unitsLow: 9, unitsHigh: 12, number: "3", seasons: ["fall", "summer"], fixed: true },
     };
     expect(parseExplorer(writeExplorer(query))).toEqual(query);
   });
@@ -48,8 +54,11 @@ describe("explorer query", () => {
   });
 
   it("ignores malformed values", () => {
-    const query = parseExplorer(new URLSearchParams("ulo=-3&uhi=x&num=12&offered=winter,fall"));
+    const query = parseExplorer(
+      new URLSearchParams("ulo=-3&uhi=x&num=12&offered=winter,fall&fixed=yes&dir=up"),
+    );
     expect(query.extra).toEqual({ ...EMPTY_EXTRA, seasons: ["fall"] });
+    expect(query.dir).toBe(null);
   });
 
   it("orders a reversed units range", () => {
@@ -66,10 +75,55 @@ describe("explorer query", () => {
   });
 
   it("counts the extra filters", () => {
-    expect(extraFilterCount({ unitsLow: 0, unitsHigh: 12, number: "1", seasons: ["fall"] })).toBe(
-      3,
-    );
+    expect(
+      extraFilterCount({ unitsLow: 0, unitsHigh: 12, number: "1", seasons: ["fall"], fixed: true }),
+    ).toBe(4);
     expect(extraFilterCount(EMPTY_EXTRA)).toBe(0);
+  });
+});
+
+describe("sorting by a column", () => {
+  const query = parseExplorer(new URLSearchParams("q=x&sort=title"));
+  /** The query after clicking `column`'s header `times` times. */
+  const click = (column: Parameters<typeof sortByColumn>[2], times: number): ExplorerQuery => {
+    let next = query;
+    for (let i = 0; i < times; i++)
+      next = sortByColumn(next, sortedColumn(next.sort as ExplorerSort, next.dir), column);
+    return next;
+  };
+
+  it("sorts FCE hours fewest first, then most first, then fewest again", () => {
+    expect([click("hours", 1).sort, click("hours", 1).dir]).toEqual(["hours", null]);
+    expect([click("hours", 2).sort, click("hours", 2).dir]).toEqual(["hours-desc", null]);
+    expect(click("hours", 3).sort).toBe("hours");
+  });
+
+  it("sorts ratings best first, then lowest first", () => {
+    expect([click("rating", 1).sort, click("rating", 1).dir]).toEqual(["rating", null]);
+    expect([click("rating", 2).sort, click("rating", 2).dir]).toEqual(["rating", "asc"]);
+    expect(click("rating", 3).dir).toBe(null);
+  });
+
+  it("sorts other columns going up, then down, and starts over on another column", () => {
+    expect([click("meets", 1).sort, click("meets", 1).dir]).toEqual(["meets", null]);
+    expect(click("meets", 2).dir).toBe("desc");
+    const units = sortByColumn(click("meets", 2), sortedColumn("meets", "desc"), "units");
+    expect([units.sort, units.dir]).toEqual(["units", null]);
+  });
+
+  it("marks the header for the sort and its direction", () => {
+    expect(sortedColumn("hours-desc", null)).toEqual({ column: "hours", dir: "desc" });
+    expect(sortedColumn("rating", null)).toEqual({ column: "rating", dir: "desc" });
+    expect(sortedColumn("number", "desc")).toEqual({ column: "number", dir: "desc" });
+    expect(sortedColumn("ratio", null)).toBe(null);
+  });
+
+  it("turns around only the sorts that have another way, and says so in the menu", () => {
+    expect(sortDir("hours", "desc")).toBe(null);
+    expect(sortDir("rating", "desc")).toBe(null);
+    expect(sortDir("rating", "asc")).toBe("asc");
+    expect(sortLabel("rating", "asc")).toBe("Lowest rated");
+    expect(sortLabel("number", "asc")).toBe("Number");
   });
 });
 
@@ -89,6 +143,14 @@ describe("extra filters", () => {
       extraMatches({ id: "15400", units: null, entry: entry({ units: 1, unitsMax: 6 }) }, range),
     ).toBe(false);
     expect(extraMatches({ id: "15400", units: null }, range)).toBe(false);
+  });
+
+  it("leaves variable units out with fixed units only", () => {
+    const fixed = { ...EMPTY_EXTRA, fixed: true };
+    expect(extraMatches({ id: "15122", units: 12 }, fixed)).toBe(true);
+    expect(
+      extraMatches({ id: "15400", units: null, entry: entry({ units: 3, unitsMax: 9 }) }, fixed),
+    ).toBe(false);
   });
 
   it("matches the course-number level", () => {

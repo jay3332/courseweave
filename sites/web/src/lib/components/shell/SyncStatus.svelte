@@ -1,5 +1,5 @@
 <script lang="ts">
-  // Whether the student's changes have reached their account, beside Sign out (Courseweave's AccountMenu status):
+  // Whether the student's changes have reached their account, in the header (Courseweave's AccountMenu status):
   // quiet while saved or saving, and a retry when a save failed or the browser is offline.
   import { CircleAlert, Check, CloudOff, RefreshCw } from "@lucide/svelte";
   import type { ShellSync } from "./session";
@@ -10,7 +10,7 @@
     class: className = "",
   }: {
     sync: ShellSync;
-    /** Phones: the icon (and Retry) only; the text stays for screen readers. */
+    /** The icon (and Retry) only, as on phones and in the desktop header while saved; the text stays for screen readers. */
     compact?: boolean;
     class?: string;
   } = $props();

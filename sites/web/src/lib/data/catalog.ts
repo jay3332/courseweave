@@ -19,6 +19,7 @@ import {
 import { setFceMiniSource } from "../core/fce-minis.ts";
 import type { NameIndex } from "../core/fce-names.ts";
 import { indexOfferings, type Offerings } from "../core/offerings.ts";
+import { bundlesForEntryYear } from "../core/degree/year-bundles.ts";
 import type { ProgramSelection, ProgramsIndex } from "../core/plan-types.ts";
 import { loadAuditVersions } from "../core/programs.ts";
 import type { SyllabiChunk, SyllabusEntry } from "../core/syllabus-files.ts";
@@ -270,10 +271,24 @@ export class Catalog {
     return new Map(versions.map((v) => [v.auditId, v]));
   }
 
-  /** The versions an audit of these programs uses: the selected ones plus attached gen eds and concentrations. */
-  auditVersions(programs: ProgramSelection[]): Promise<Map<number, ProgramVersion>> {
+  /**
+   * The versions an audit of these programs uses: the selected ones plus attached gen eds and concentrations. Gen eds
+   * Stellic splits by entry year are the ones for students who entered in `entryYear` (core/degree/year-bundles.ts).
+   */
+  auditVersions(
+    programs: ProgramSelection[],
+    entryYear: number | null = null,
+  ): Promise<Map<number, ProgramVersion>> {
     if (programs.length === 0) return Promise.resolve(new Map<number, ProgramVersion>());
-    return loadAuditVersions({ programs, courses: [] }, (id) => this.program(id));
+    // Without the program list, bundles stay the ones the majors name.
+    const index = this.programsIndex().catch(() => null);
+    const selected = new Set(programs.map((p) => p.auditId));
+    return loadAuditVersions({ programs, courses: [] }, async (id) => {
+      const [version, programsIndex] = await Promise.all([this.program(id), index]);
+      return programsIndex !== null && selected.has(id)
+        ? bundlesForEntryYear(version, programsIndex, entryYear)
+        : version;
+    });
   }
 
   /** Past syllabi for every course with this number prefix (member data); empty when none has any. */
