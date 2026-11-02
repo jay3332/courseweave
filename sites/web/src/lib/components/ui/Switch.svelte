@@ -44,11 +44,12 @@
   aria-label={hideLabel ? label : undefined}
   {disabled}
   onclick={toggle}
-  class="group inline-flex items-center gap-3 rounded-full text-label-lg text-ink disabled:opacity-50 {hideLabel
+  class="group inline-flex items-center gap-3 rounded-full text-left text-label-lg text-ink disabled:opacity-50 {hideLabel
     ? ''
     : '-mx-1.5 px-1.5'} {className}"
   {...rest}
 >
+  <!-- A label that wraps (in a narrow rail) lines up on the left, as text does, not centered as in a button. -->
   {#if !hideLabel && labelPosition === "start"}<span>{label}</span>{/if}
   <span
     class="relative inline-flex h-6 w-[42px] shrink-0 items-center rounded-full border transition-colors {filled

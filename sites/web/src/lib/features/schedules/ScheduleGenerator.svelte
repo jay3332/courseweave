@@ -136,11 +136,12 @@
           ? { text: `No lunch break ${b.lunchBlockedDays} ${b.lunchBlockedDays === 1 ? "day" : "days"}`, bad: true }
           : { text: "Lunch break daily", bad: false },
       );
-    // Times not announced yet: the arrangement can't be checked for conflicts with them.
+    // No set times: not announced yet, arranged with the instructor (lessons, research) or online on the student's own
+    // time. Nothing to check them against, so they're named, but not as a fault.
     if (b.unscheduledSections > 0)
       out.push({
-        text: `${b.unscheduledSections} ${b.unscheduledSections === 1 ? "section" : "sections"} without times`,
-        bad: true,
+        text: `${b.unscheduledSections} ${b.unscheduledSections === 1 ? "section" : "sections"} with no set times`,
+        bad: false,
       });
     return out;
   }

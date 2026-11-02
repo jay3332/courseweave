@@ -9,6 +9,7 @@
   import { CircleCheck, Info, TriangleAlert } from "@lucide/svelte";
   import { catalog, resource } from "$lib/data";
   import type { Term } from "$lib/core/data";
+  import HelpTip from "$lib/components/ui/HelpTip.svelte";
   import { FACTORABLE_HELP, plural } from "$lib/core/planner/format";
   import { formatHours } from "$lib/core/fce";
   import { scheduleLoad } from "$lib/core/fce/workload";
@@ -23,7 +24,6 @@
     class: className = "",
   }: { view: ScheduleView; term: Term; variant?: "footer" | "rail" | "compact"; class?: string } = $props();
 
-  const id = $props.id();
   const fce = resource(() => catalog.fceSummary());
   const load = $derived(
     fce.value === undefined || fce.value === null
@@ -37,7 +37,6 @@
   );
   const heavy = $derived(units.factorable > HEAVY_UNITS);
   const conflicts = $derived(conflictCount(view));
-  let help = $state(false);
 </script>
 
 {#snippet sep()}<span aria-hidden="true" class="text-faint">&middot;</span>{/snippet}
@@ -77,21 +76,8 @@
     {#if units.nonFactorable > 0}
       <span>,&nbsp;<strong class="font-semibold text-ink">{units.nonFactorable}</strong> pass/fail</span>
     {/if}
-    <button
-      type="button"
-      aria-expanded={help}
-      aria-controls={help ? id : undefined}
-      aria-label="What are factorable units?"
-      title="What are factorable units?"
-      onclick={() => (help = !help)}
-      class="ml-0.5 inline-grid size-6 place-items-center rounded-full text-muted hover:bg-hover hover:text-ink"
-    >
-      <Info aria-hidden="true" class="size-3.5" />
-    </button>
+    <HelpTip text={FACTORABLE_HELP} label="What are factorable units?" icon={Info} class="ml-0.5" />
   </p>
-  {#if help}
-    <p {id} class="rounded-tag bg-surface-2 px-2.5 py-2 text-label-md font-normal text-ink">{FACTORABLE_HELP}</p>
-  {/if}
 {/snippet}
 
 {#if view.entries.length > 0}
@@ -153,21 +139,8 @@
         {#if units.nonFactorable > 0}
           <span>,&nbsp;<strong class="font-semibold text-ink">{units.nonFactorable}</strong> pass/fail</span>
         {/if}
-        <button
-          type="button"
-          aria-expanded={help}
-          aria-controls={help ? id : undefined}
-          aria-label="What are factorable units?"
-          title="What are factorable units?"
-          onclick={() => (help = !help)}
-          class="ml-0.5 inline-grid size-6 place-items-center rounded-full text-muted hover:bg-hover hover:text-ink"
-        >
-          <Info aria-hidden="true" class="size-3.5" />
-        </button>
+        <HelpTip text={FACTORABLE_HELP} label="What are factorable units?" icon={Info} class="ml-0.5" />
       </p>
-      {#if help}
-        <p {id} class="rounded-tag bg-surface-2 px-2.5 py-2 text-label-md font-normal text-ink">{FACTORABLE_HELP}</p>
-      {/if}
     </div>
   {/if}
 {/if}

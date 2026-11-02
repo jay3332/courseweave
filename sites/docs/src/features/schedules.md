@@ -48,7 +48,7 @@ nothing. `?schedule=<id>` shows a particular one (the profile links to it).
   keeps the total units (in the warning color over 54 factorable), hours a week and conflicts in view
   (`WorkloadTotals.svelte`, `compact`).
 - **Rail**: the semester; the courses, headed by their count and totals (`WorkloadTotals.svelte`: units, expected
-  hours a week from FCEs when signed in, conflicts, the factorable and pass/fail split with its explanation, and the
+  hours a week from FCEs when signed in, conflicts, the factorable and pass/fail split with its explanation in an (i) tooltip, and the
   over-54-units warning), the course search that adds to them (`AddCourseSearch.svelte`: arrowing or hovering
   previews a course's sections on the calendar, Enter adds it with sections that fit; the results float in the top
   layer, as wide as the field, with the title on its own line so it stays readable in the narrow rail and the
@@ -76,9 +76,10 @@ nothing. `?schedule=<id>` shows a particular one (the profile links to it).
   (`GET /api/friends/{id}/schedules?term=`) shows as striped blocks with their name.
 - **Generator** (`ScheduleGenerator.svelte`): every conflict-free arrangement, ranked by start and end times, days
   off, gaps, lunch and days on campus, with courses left out or locked; apply it or save it as a new schedule from
-  the dialog's footer, which stays in view. Arrangements with fewer sections whose times aren't announced (TBA) come
-  first (`byRank` in `core/generator.ts`), since such a section adds no gaps or days and would otherwise top every
-  ranking, and an option with one is tagged "1 section without times".
+  the dialog's footer, which stays in view. Arrangements with fewer sections that have no set times come first
+  (`byRank` in `core/generator.ts`), since such a section adds no gaps or days and would otherwise top every ranking.
+  Those are times not announced yet, sections arranged with the instructor (lessons, research) and online ones on the
+  student's own time; an option with one is tagged "1 section with no set times", in plain text rather than as a fault.
 - **Export** (`ExportMenu.svelte`): a .ics file, a PNG of the week, the course list as text, sharing, and "Send to
   Stellic or SIO" (`components/stellic/SendToStellicDialog.svelte`). That dialog only hands the student a script to run in their own
   signed-in Stellic or SIO tab, which shows what it will add and changes nothing until they confirm; this site never

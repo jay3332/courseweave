@@ -15,7 +15,7 @@
     onclick={() => rail.open()}
     class="inline-flex h-10 items-center gap-1.5 rounded-full text-label-md transition-colors {rail.count > 0
       ? 'bg-strong px-3 text-surface'
-      : '-ml-1 px-1 text-strong hover:bg-hover'} {className}"
+      : '-ml-3 px-3 text-strong hover:bg-hover'} {className}"
   >
     <Icon aria-hidden="true" class="size-[18px]" />
     {#if rail.buttonLabel !== undefined}
