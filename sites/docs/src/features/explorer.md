@@ -38,11 +38,11 @@ share. Each component needs only a course (or its id) and a semester:
 - `CourseCard` (the Figma card: requisite status with a popover of the expression as status chips, corequisites only
   when the course has some, semester select, save star, friends taking it; signed in, who teaches it in the card's
   semester, up to three names linked to their pages, from the listing or, for another semester, the teaching document;
-  beside its FCE hours, n, the responses they average; expanded, the FCE aggregate and table), `CourseRow` in a
+  its FCE hours, with n, the responses they average, in their tooltip; expanded, the FCE aggregate and table), `CourseRow` in a
   `CourseList` (Courseweave's
   compact rows; from 34rem wide their hours column is Courseweave's workload cell: the FCE hours, "mini" before a
-  mini's, over a `WorkloadMeter` bar, with the workload described in its title and to screen readers; n, the FCE
-  responses behind the hours and rating, sits under the rating from 48rem and ends the second line narrower. Given
+  mini's, over a `WorkloadMeter` bar, with the workload described to screen readers; n, the FCE responses behind
+  the hours and rating, is in the tooltips of both numbers (above the row's link, so they take the hover). Given
   `onsort`, the list's headers are buttons: a click sorts by that column (`columns.ts`), a second click turns the sort
   around, and the sorted one shows its direction with an arrow) and `CourseCardSmall` (the Figma's small card, for
   saved courses and the record's Courses Taken and Currently Taking, with `deptLabel`, `children` and `footer` slots).

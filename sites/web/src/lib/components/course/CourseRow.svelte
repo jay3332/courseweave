@@ -1,13 +1,14 @@
 <script lang="ts">
   import { Star } from "@lucide/svelte";
   import { getSession } from "$lib/components/shell/session";
-  import { FCE_HOURS_HELP, courseIsMini, formatHours } from "$lib/core/fce";
+  import { courseIsMini, formatHours } from "$lib/core/fce";
   import { workloadDescription } from "$lib/core/fce/workload";
   import { meetingSummary } from "$lib/core/explorer/summary";
   import { termLabel } from "$lib/core/requisites";
   import { coursePath } from "$lib/core/routes";
   import { formatUnits } from "$lib/core/time";
   import type { Course } from "$lib/core/types";
+  import Tooltip from "$lib/components/ui/Tooltip.svelte";
   import { fceSummary } from "./data.svelte";
   import SaveButton from "./SaveButton.svelte";
   import WorkloadMeter from "./WorkloadMeter.svelte";
@@ -42,11 +43,11 @@
   const showFce = $derived(fce.status === "ready" && fce.value !== null);
   const mini = $derived(courseIsMini(course, stats));
   const workload = $derived(stats ? workloadDescription(stats.hours, course.units, mini) : "");
-  // How many students' evaluations the hours and rating average: n, the sample size.
+  // How many students' evaluations the hours and rating average: n, the sample size, shown in their tooltips.
   const responses = $derived(stats && stats.responses > 0 ? stats.responses : null);
   const responsesText = $derived.by(() => {
     if (!stats || responses === null) return "";
-    const count = `${responses.toLocaleString("en-US")} FCE ${responses === 1 ? "response" : "responses"}`;
+    const count = `n=${responses.toLocaleString("en-US")} FCE ${responses === 1 ? "response" : "responses"}`;
     return `${count} over its last ${stats.terms} ${stats.terms === 1 ? "semester" : "semesters"} with evaluations`;
   });
   const offeredText = $derived(
@@ -99,7 +100,10 @@
           </span>
         {/if}
         {#if showFce && stats}
-          <span class="narrow-fce ml-auto flex shrink-0 gap-2 text-muted" title={workload}>
+          <span
+            class="narrow-fce ml-auto flex shrink-0 gap-2 text-muted"
+            title={[workload, responsesText].filter(Boolean).join(". ")}
+          >
             {#if stats.hours !== null}<span><span class="tabular text-ink">{formatHours(stats.hours)}</span> h/wk</span>{/if}
             {#if stats.courseRate !== null}<span class="inline-flex items-center gap-0.5"
                 ><span class="tabular text-ink">{stats.courseRate.toFixed(1)}</span><Star
@@ -107,14 +111,7 @@
                   class="size-3 fill-current"
                 /><span class="sr-only">course rating</span></span
               >{/if}
-            {#if responses !== null}<span class="tabular" title={responsesText}>n={responses}</span>{/if}
           </span>
-          <!-- Between the narrow layout and the one with a Rating column: the hours have a column, n doesn't. -->
-          {#if responses !== null}
-            <span class="narrow-n ml-auto shrink-0 text-muted" title={responsesText}
-              ><span class="tabular">n={responses}</span><span class="sr-only">, {responsesText}</span></span
-            >
-          {/if}
         {/if}
       </span>
     {/if}
@@ -133,14 +130,19 @@
   <span class="col-hours pt-px text-right text-body-2">
     {#if showFce}
       {#if stats?.hours != null}
-        <span class="block" title="{workload}. {FCE_HOURS_HELP}">
-          <span class="block whitespace-nowrap" aria-hidden="true">
-            {#if mini}<span class="mr-1 text-label-sm font-semibold text-muted">mini</span>{/if}<span
-              class="tabular text-ink">{formatHours(stats.hours)}</span
-            ><span class="ml-0.5 text-label-md text-muted">h</span>
-          </span>
+        <span class="block">
+          <!-- Above the row's link, so hovering the number shows its sample size. -->
+          <Tooltip text={[responsesText, workload].filter(Boolean).join("\n")} placement="top-end">
+            {#snippet trigger(props)}
+              <span {...props} class="relative z-10 block whitespace-nowrap" aria-hidden="true">
+                {#if mini}<span class="mr-1 text-label-sm font-semibold text-muted">mini</span>{/if}<span
+                  class="tabular text-ink">{formatHours(stats?.hours)}</span
+                ><span class="ml-0.5 text-label-md text-muted">h</span>
+              </span>
+            {/snippet}
+          </Tooltip>
           <WorkloadMeter hours={stats.hours} units={course.units} {mini} class="mt-1.5" />
-          <span class="sr-only">{workload}</span>
+          <span class="sr-only">{workload}{responsesText ? `, ${responsesText}` : ""}</span>
         </span>
       {:else}
         <span class="text-label-md text-muted">No FCE</span>
@@ -148,18 +150,23 @@
     {/if}
   </span>
 
-  <span
-    class="col-rating pt-px text-right text-body-2"
-    title="Overall course rating from FCEs, 1 to 5{responsesText ? `, from ${responsesText}` : ''}"
-  >
+  <span class="col-rating pt-px text-right text-body-2">
     {#if showFce}
       {#if stats?.courseRate != null}
-        <span class="tabular block text-ink">{stats.courseRate.toFixed(1)}</span>
+        <Tooltip
+          text={["Overall course rating from FCEs, 1 to 5", responsesText].filter(Boolean).join("\n")}
+          placement="top-end"
+        >
+          {#snippet trigger(props)}
+            <span {...props} class="tabular relative z-10 block text-ink"
+              >{stats?.courseRate?.toFixed(1)}<span class="sr-only"
+                >{responsesText ? ` course rating, ${responsesText}` : " course rating"}</span
+              ></span
+            >
+          {/snippet}
+        </Tooltip>
       {:else}
         <span class="block text-label-md text-muted">-</span>
-      {/if}
-      {#if responses !== null}
-        <span class="tabular block text-label-md text-muted">n={responses}</span>
       {/if}
     {/if}
   </span>
@@ -178,8 +185,7 @@
 
   .col-meets,
   .col-hours,
-  .col-rating,
-  .narrow-n {
+  .col-rating {
     display: none;
   }
 
@@ -203,10 +209,6 @@
 
     .narrow-fce {
       display: none;
-    }
-
-    .narrow-n {
-      display: inline;
     }
 
     .title {

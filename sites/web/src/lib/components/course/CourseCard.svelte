@@ -4,6 +4,7 @@
   import Button from "$lib/components/ui/Button.svelte";
   import Chip from "$lib/components/ui/Chip.svelte";
   import Select from "$lib/components/ui/Select.svelte";
+  import Tooltip from "$lib/components/ui/Tooltip.svelte";
   import { instructorSlug } from "$lib/core/data";
   import { departmentName } from "$lib/core/departments";
   import type { Course } from "$lib/core/types";
@@ -134,24 +135,23 @@
       {:else}
         {@const recent = fce.value?.courses.get(course.id)?.terms ?? 0}
         {@const responses = fce.value?.courses.get(course.id)?.responses ?? 0}
-        <!-- The course's recent average, which can differ from the aggregate below over the semesters chosen; n is
-             how many students' evaluations it averages. -->
-        <span
-          class="whitespace-nowrap text-muted @2xl:text-ink"
-          title="Hours a week students reported over its last {recent} {recent === 1
-            ? 'semester'
-            : 'semesters'} with evaluations, from {responses.toLocaleString('en-US')} {responses === 1
-            ? 'response'
-            : 'responses'}"
-          ><span class="tabular">{hours.toFixed(1)}</span> hrs/week<span class="sr-only">
-            over its last {recent} {recent === 1 ? "semester" : "semesters"} with evaluations</span
-          ></span
+        {@const over = `over its last ${recent} ${recent === 1 ? "semester" : "semesters"} with evaluations`}
+        {@const sample = `n=${responses.toLocaleString("en-US")} FCE ${responses === 1 ? "response" : "responses"}`}
+        <!-- The course's recent average, which can differ from the aggregate below over the semesters chosen. Its
+             sample size (n, how many students' evaluations it averages) shows on hover. -->
+        <Tooltip
+          text={responses > 0
+            ? `${sample}\nHours a week students reported ${over}`
+            : `Hours a week students reported ${over}`}
         >
-        {#if responses > 0}
-          <span class="tabular text-body-2 whitespace-nowrap text-muted"
-            >n={responses}<span class="sr-only"> {responses === 1 ? "response" : "responses"}</span></span
-          >
-        {/if}
+          {#snippet trigger(props)}
+            <span {...props} class="whitespace-nowrap text-muted @2xl:text-ink"
+              ><span class="tabular">{hours?.toFixed(1)}</span> hrs/week<span class="sr-only">
+                {over}{responses > 0 ? `, ${sample}` : ""}</span
+              ></span
+            >
+          {/snippet}
+        </Tooltip>
       {/if}
     </div>
 
