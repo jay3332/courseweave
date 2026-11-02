@@ -22,13 +22,15 @@
     menuOpen = false;
   });
 
-  // "Find a course" opens with Ctrl+K, or ⌘K on a Mac, from any page.
+  // "Find a course" opens with Ctrl+K, or Cmd+K on a Mac, from any page.
   const mac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/u.test(navigator.platform);
-  const shortcut = mac ? "⌘K" : "Ctrl K";
+  const shortcut = mac ? "\u2318K" : "Ctrl K";
 
   function onwindowkeydown(event: KeyboardEvent): void {
     if (event.key.toLowerCase() !== "k" || event.altKey || event.shiftKey) return;
     if (!(mac ? event.metaKey : event.ctrlKey)) return;
+    // Not on top of another dialog (Generate schedules, say); the menu sheet makes way for it.
+    if (!finderOpen && !menuOpen && document.querySelector("dialog:modal") !== null) return;
     event.preventDefault();
     menuOpen = false;
     finderOpen = true;

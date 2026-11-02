@@ -126,12 +126,12 @@ Import primitives from `$lib/components/ui`, layouts from `$lib/components/layou
 | `StatusChip` | `status` satisfied, planned, in-progress, unsatisfied | Check, arrow or x on the status colors |
 | `CourseChip` | `code`, `title`, `status`, `tone`, `href`, `link` | Links to `/course/[code]`; shows the course preview |
 | `Card` | `as`, `href`, `padding` none, sm, md, lg; `interactive` | White card with the Figma border |
-| `Dialog` | `bind:open`, `title`, `description`, `size`, `dismissible`, `footer` snippet | Modal; traps focus, Escape, scroll lock, returns focus |
+| `Dialog` | `bind:open`, `title`, `description`, `size`, `dismissible`, `footer` snippet, `header` snippet in place of the title, `bodyClass` | Modal; traps focus, Escape, scroll lock, returns focus; a `data-autofocus` field inside takes the focus |
 | `Sheet` | `bind:open`, `title`, `side` left, right, bottom; `backLabel` | Full screen on phones; content stays mounted |
 | `Popover` | `bind:open`, `trigger` snippet (spread its props on a button), `placement`, `matchWidth` | Closes on outside click and Escape |
 | `Menu` | `items` (label, icon, onselect or href, danger), `label`, `trigger` snippet | Arrow keys, Home, End |
-| `Tooltip` | `text`, `trigger` snippet | Hover and focus |
-| `HelpTip` | `text`, `label` | A (?) with a short how-to hint, for help most people don't need on screen |
+| `Tooltip` | `text`, `trigger` snippet | Hover and focus; on the menus' surface (`panelSurface`) |
+| `HelpTip` | `text`, `label`, `icon` (CircleHelp, or Info for a definition) | A (?) with a short how-to hint, for help most people don't need on screen |
 | `toast()` | `toast(message, { kind, action, duration })` | Rendered by the root layout's `Toaster` |
 | `Tabs` | `tabs`, `bind:value`, `label`, `panel` snippet | |
 | `SegmentedControl` | `options` (label, icon, iconOnly), `bind:value`, `label`, `size`, `full` | Radio group; `full` fills the width with equal segments, as rail filters do. `size` sets the whole control's height to match the buttons beside it: `sm` 40px, 36px from 1024px (toolbars); `md` 40px |
@@ -215,8 +215,12 @@ device's choice.
 The header shows the logo, the navigation (Courses, Instructors, Schedules, Plan, Profile) and, on the right, the
 save status while signed in, the theme switch, "Find a course" and a Sign in or Sign out pill; below 1024px it becomes
 a menu button, the logo, a search button and the account control. "Find a course" (`CourseFinder.svelte`, also Ctrl+K
-or ⌘K on any page) searches the whole catalog and opens the chosen course's page, whose back link returns to the page
-it was opened from; it's an icon until the header is 1536px wide, then the name and its shortcut, so the navigation
+or Cmd+K on a Mac, on any page, though not over another dialog) is a dialog whose header is its search field. It
+searches the whole catalog and, signed in, every instructor in any semester or the FCE history by name; a query
+starting with @ searches only instructors, also by a course they teach ("@15-122"), `finder.ts`. Each course shows its
+units and the last semester it was offered, each instructor where they teach. A (?) beside the field holds these tips,
+and Esc (a button with a mouse, an X on touch) closes it. The chosen course's page has a back link to the page it was
+opened from. The header's button is an icon until the header is 1536px wide, then the name and its shortcut, so the navigation
 stays centered and the site's name on one line. `SyncStatus` says whether changes have reached the account: a
 checkmark while saved or saving (the words are its tooltip and for screen readers), Offline or Not saved in words with
 a Retry after a failure; on phones it shows only while something isn't saved, and in full in the menu sheet. The shell

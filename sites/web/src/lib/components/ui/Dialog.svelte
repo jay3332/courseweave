@@ -12,10 +12,13 @@
     dismissible = true,
     children,
     footer,
+    header,
+    bodyClass = "px-5 py-5 sm:px-6",
     onclose,
     class: className = "",
   }: {
     open?: boolean;
+    /** The heading, or with `header` only the dialog's name for screen readers. */
     title: string;
     description?: string;
     /** sm 400px, md 560px, lg 760px wide (always within the viewport). */
@@ -25,6 +28,10 @@
     children: Snippet;
     /** Action buttons, right-aligned. */
     footer?: Snippet;
+    /** In place of the title and close button, such as a search field; Escape and clicks outside still close it. */
+    header?: Snippet;
+    /** The body's padding. */
+    bodyClass?: string;
     onclose?: () => void;
     class?: string;
   } = $props();
@@ -45,7 +52,8 @@
       // doesn't wear a focus ring nobody asked for; Tab still reaches that control next.
       const opened = previous instanceof HTMLElement && previous !== document.body;
       const first = opened ? focusableWithin(body ?? element).at(0) : undefined;
-      (first ?? body ?? element).focus();
+      // A field marked `data-autofocus` (a search dialog's) takes the focus however the dialog opened.
+      (element.querySelector<HTMLElement>("[data-autofocus]") ?? first ?? body ?? element).focus();
     } else if (!open && element.open) {
       element.close();
     }
@@ -62,7 +70,8 @@
 <dialog
   bind:this={dialog}
   data-scroll-lock
-  aria-labelledby="{id}-title"
+  aria-labelledby={header ? undefined : `${id}-title`}
+  aria-label={header ? title : undefined}
   aria-describedby={description ? `${id}-description` : undefined}
   oncancel={(event) => {
     event.preventDefault();
@@ -79,7 +88,9 @@
     size
   ]} {className}"
 >
-  {#if open}
+  {#if open && header}
+    <header class="border-b border-line">{@render header()}</header>
+  {:else if open}
     <header class="flex items-start justify-between gap-4 border-b border-line px-5 py-4 sm:px-6">
       <div class="min-w-0">
         <h2 id="{id}-title" class="text-heading-5 text-strong">{title}</h2>
@@ -91,7 +102,9 @@
         <IconButton label="Close" icon={X} size="sm" class="-mr-2" onclick={() => (open = false)} />
       {/if}
     </header>
-    <div data-dialog-body tabindex="-1" class="min-h-0 flex-1 overflow-y-auto px-5 py-5 outline-none sm:px-6">
+  {/if}
+  {#if open}
+    <div data-dialog-body tabindex="-1" class="min-h-0 flex-1 overflow-y-auto outline-none {bodyClass}">
       {@render children()}
     </div>
     {#if footer}

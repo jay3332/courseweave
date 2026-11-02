@@ -3,7 +3,12 @@
 // however many previews ask, through the same cache as the course components (../course/data.svelte.ts).
 import { catalog } from "$lib/data";
 import { shared, type Shared } from "../course/data.svelte";
-import { instructorDirectory, type InstructorDirectory } from "./directory";
+import {
+  decodeInstructorList,
+  instructorDirectory,
+  type InstructorDirectory,
+  type ListedDoc,
+} from "./directory";
 import { loadInstructorRows, type InstructorRow } from "./instructor-fce";
 
 /**
@@ -14,6 +19,17 @@ export function instructorsIn(scope: string): Shared<InstructorDirectory | null>
   return shared(`instructors:${scope}`, async () => {
     const file = await catalog.instructorList(scope);
     return file === null ? null : instructorDirectory(file);
+  });
+}
+
+/**
+ * Everyone in any semester or FCE history as searchable rows, for the header's search (member data); null when the
+ * catalog was built without the compact documents.
+ */
+export function instructorSearchDocs(): Shared<ListedDoc[] | null> {
+  return shared("instructor-docs:all", async () => {
+    const file = await catalog.instructorList("all");
+    return file === null ? null : decodeInstructorList(file);
   });
 }
 
