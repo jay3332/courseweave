@@ -117,7 +117,10 @@ Friends are new in CMU Courses; the Figma's "Profile Page (Friends)" sets the lo
 
 - **Account**: name, Andrew ID and email from `GET /api/me`, whether everything is saved (`personal.status`, with a
   retry after an error), and Sign out, which saves first. Signed out, it explains what signing in adds.
-- **Appearance**: the theme, for this device.
+- **Appearance**: the theme (Default, Telegram, Discord, Claude, Mono, Playful or Soft, each shown as a swatch in its
+  own colors) and Light, Dark or Device, for this device (`AppearanceOptions.svelte`, also in the header's Appearance
+  button and the phone menu). Mono is always dark and Soft always light; the note under Mode says so while one is
+  chosen.
 - **Calendar**: Courseweave's calendar display options (section, meeting time, room) in `preferences`, saved to the
   account, or kept in the tab until sign-in.
 - **Friends and sharing**: what friends can see now, linking to the switches on Friends.

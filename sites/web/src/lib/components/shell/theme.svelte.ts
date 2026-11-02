@@ -3,6 +3,8 @@
 // using the same key.
 import { MediaQuery } from "svelte/reactivity";
 import { readLocal, writeLocal } from "../ui/storage";
+import { skin } from "./skin.svelte";
+import { isDark, type SkinId } from "./skins";
 
 export type ThemePreference = "light" | "dark" | "system";
 
@@ -18,9 +20,14 @@ class Theme {
 
   preference = $state<ThemePreference>(stored());
 
-  /** Whether the page is dark right now. */
+  /** Whether the page is dark right now. A skin with one mode (Mono is dark, Soft is light) decides for itself. */
   get dark(): boolean {
-    return this.preference === "dark" || (this.preference === "system" && this.#systemDark.current);
+    return this.darkFor(skin.id);
+  }
+
+  /** Whether `skinId` would be dark with this choice: the theme picker previews each skin as it would look. */
+  darkFor(skinId: SkinId): boolean {
+    return isDark(skinId, this.preference, this.#systemDark.current);
   }
 
   set(preference: ThemePreference): void {

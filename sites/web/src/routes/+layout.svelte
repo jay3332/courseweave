@@ -10,6 +10,7 @@
   import { installUpdateReload, session } from "$lib/data";
   import { device, isAllSemesters, personal, trackOrigin } from "$lib/state";
   import { shellSession } from "$lib/state/shell-session";
+  import { applySkin, skin } from "$lib/components/shell/skin.svelte";
   import { applyTheme, theme } from "$lib/components/shell/theme.svelte";
   import Toaster from "$lib/components/ui/Toaster.svelte";
   import { toast } from "$lib/components/ui/toast.svelte";
@@ -24,6 +25,9 @@
 
   $effect(() => {
     applyTheme(theme.dark);
+  });
+  $effect(() => {
+    applySkin(skin.id);
   });
 
   // A tab opened before a deploy reloads instead of failing to load the new build's pages.

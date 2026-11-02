@@ -1,0 +1,359 @@
+/*
+ * Skins: other looks as sets of the design tokens in layout.css (lib/components/shell/skin.svelte.ts lists them).
+ * `data-skin` on <html> picks one; without it the site is the default CMU Courses look. Each skin gives its light
+ * tokens on `:root[data-skin=…]` and its dark ones on `:root[data-skin=…].dark`; Mono is only dark and Soft only light,
+ * and the theme store keeps them there. Brand colors that fail 4.5:1 for text are deepened for the fills text sits
+ * on, and each such value says what it was. After the tokens, each skin's few signature touches.
+ */
+@layer base {
+  /* ---- Telegram: Telegram Web's Night and Day, from the Gemini Telegram userscript (tg.js) ---- */
+  :root[data-skin="telegram"] {
+    --font-sans: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    --color-paper: #f4f4f5;
+    --color-surface: #ffffff;
+    --color-surface-2: #f1f1f2;
+    --color-ink: #1f1f1f;
+    --color-strong: #000000;
+    --color-muted: #64696e; /* was Telegram's #707579: 4.24:1 on the page's #f4f4f5 */
+    --color-faint: #9aa1a8;
+    --color-line: #e1e3e6;
+    --color-line-strong: #a7abaf; /* was #b8bcc0: field and checkbox outlines as clear as the default's */
+    --color-pressed: #dadce0;
+    --color-accent: #7262d0; /* was #8774e1: white on it measured 3.74:1 */
+    --color-accent-hover: #6454c4;
+    --color-accent-ink: #6a5bc0;
+    --color-on-accent: #ffffff;
+    --color-ok-bg: #e6f4e6;
+    --color-ok: #2d7931; /* was #2e7d32: exactly 4.5:1 on its own tint */
+    --color-warn-bg: #fff3e0;
+    --color-warn: #8a5a00;
+    --color-danger-bg: #fdecec;
+    --color-danger: #c62828;
+    --radius-tag: 6px;
+    --radius-field: 12px;
+    --radius-card: 12px;
+    --shadow-popover: 0 0.25rem 0.5rem 0.125rem rgb(0 0 0 / 0.14);
+  }
+
+  :root[data-skin="telegram"].dark {
+    --color-paper: #181818;
+    --color-surface: #212121;
+    --color-surface-2: #2c2c2c;
+    --color-ink: #f1f1f1;
+    --color-strong: #ffffff;
+    --color-muted: #aaaaaa;
+    --color-faint: #707070;
+    --color-line: #2f2f2f;
+    --color-line-strong: #5f5f5f;
+    --color-pressed: #333333;
+    --color-accent: #7262d0;
+    --color-accent-hover: #6454c4; /* darker, as in Day: a lighter violet left white text at 3.99:1 */
+    --color-accent-ink: #b4a8ee; /* Telegram's link: the violet mixed 62% with white */
+    --color-on-accent: #ffffff;
+    --color-ok-bg: #1d3320;
+    --color-ok: #6fcf75;
+    --color-warn-bg: #3a2f14;
+    --color-warn: #f0c060;
+    --color-danger-bg: #3d1f20;
+    --color-danger: #ff7b7c;
+    --shadow-popover: 0 0.25rem 0.5rem 0.125rem rgb(0 0 0 / 0.28);
+    --shadow-dialog: 0 16px 48px -8px rgb(0 0 0 / 0.7);
+    --block-text-mix: 76%; /* calendar blocks' faint labels at 4.5:1 for every course color; was 78% */
+  }
+
+  /* The chat wallpaper: the script's violet, magenta, indigo and pink glows behind the page; Day's pastel wash. */
+  :root[data-skin="telegram"] body {
+    background-image: linear-gradient(135deg, #ece6f8 0%, #f5eaf6 35%, #e9ecfa 70%, #f8eaf1 100%);
+    background-attachment: fixed;
+  }
+
+  :root[data-skin="telegram"].dark body {
+    background-image:
+      radial-gradient(circle at 15% 20%, rgb(93 52 176 / 0.3), transparent 55%),
+      radial-gradient(circle at 85% 25%, rgb(154 47 134 / 0.24), transparent 55%),
+      radial-gradient(circle at 20% 85%, rgb(47 58 158 / 0.26), transparent 55%),
+      radial-gradient(circle at 80% 80%, rgb(194 71 127 / 0.22), transparent 55%);
+    background-attachment: fixed;
+  }
+
+  /* ---- Discord: Discord's light and dark greys and blurple (discord-tg.js, discord.js) ---- */
+  :root[data-skin="discord"] {
+    --font-sans: "Noto Sans", "gg sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    --color-paper: #f2f3f5;
+    --color-surface: #ffffff;
+    --color-surface-2: #ebedef;
+    --color-ink: #313338;
+    --color-strong: #060607;
+    --color-muted: #5c5e66;
+    --color-faint: #80848e;
+    --color-line: #e3e5e8;
+    --color-line-strong: #a7abb2; /* was #b5bac1: outlines as clear as the default's */
+    --color-pressed: #dfe1e5;
+    --color-accent: #5865f2;
+    --color-accent-hover: #4752c4;
+    --color-accent-ink: #4752c4;
+    --color-on-accent: #ffffff;
+    --color-ok-bg: #e3f4e9;
+    --color-ok: #1f7a3f;
+    --color-warn-bg: #fdf2de;
+    --color-warn: #8f5200;
+    --color-danger-bg: #fbe7e7;
+    --color-danger: #c4282d;
+    --radius-tag: 4px;
+    --radius-field: 8px;
+    --radius-card: 8px;
+    --shadow-popover: 0 8px 16px rgb(0 0 0 / 0.16);
+  }
+
+  :root[data-skin="discord"].dark {
+    --color-paper: #1a1a1e;
+    --color-surface: #242429;
+    --color-surface-2: #2c2d32;
+    --color-ink: #dbdee1;
+    --color-strong: #fbfbfb;
+    --color-muted: #a5a6ad; /* was #96979e: kept above 6:1 on the cards */
+    --color-faint: #81828a;
+    --color-line: #303036;
+    --color-line-strong: #64656e; /* was #4f505a: outlines as clear as the default's */
+    --color-pressed: #36363c;
+    --color-accent: #5865f2;
+    --color-accent-hover: #4752c4; /* Discord's own hover; a lighter blurple left white text at 3.71:1 */
+    --color-accent-ink: #8a93f5; /* the script's brand text: blurple mixed 70% with white */
+    --color-on-accent: #ffffff;
+    --color-ok-bg: #1d2e23;
+    --color-ok: #4fc27a;
+    --color-warn-bg: #3a2f12;
+    --color-warn: #f0b232;
+    --color-danger-bg: #3a1d1f;
+    --color-danger: #f57979;
+    --shadow-popover: 0 12px 24px rgb(0 0 0 / 0.24);
+    --shadow-dialog: 0 16px 48px -8px rgb(0 0 0 / 0.7);
+    --block-text-mix: 70%; /* calendar blocks' faint labels at 4.5:1 for every course color; was 78% */
+  }
+
+  /* ---- Claude: Claude's classic warm cream and clay with serif headings (claude.js, palette "warm") ---- */
+  :root[data-skin="claude"] {
+    --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --font-heading: "Source Serif 4", "Tiempos Headline", Georgia, "Times New Roman", serif;
+    --color-paper: #faf9f5;
+    --color-surface: #ffffff;
+    --color-surface-2: #f5f4ed;
+    --color-ink: #3d3d3a;
+    --color-strong: #141413;
+    --color-muted: #6b6a64; /* was #73726c: 4.58:1 on the cream, and lower on #f5f4ed */
+    --color-faint: #a3a29b;
+    --color-line: #e8e6dc;
+    --color-line-strong: #adaa9e; /* was #c9c6b8: outlines as clear as the default's */
+    --color-pressed: #e3e0d4;
+    --color-accent: #b4542f; /* was the clay #d97757: white on it measured 3.12:1 */
+    --color-accent-hover: #a14a29;
+    --color-accent-ink: #a8502b;
+    --color-on-accent: #ffffff;
+    --color-ok-bg: #e9f1e4;
+    --color-ok: #3d6b2f;
+    --color-warn-bg: #f8eedb;
+    --color-warn: #835a12;
+    --color-danger-bg: #f9e5e2;
+    --color-danger: #b3261e;
+    --radius-tag: 6px;
+    --radius-field: 10px;
+    --radius-card: 12px;
+    --shadow-popover: 0 8px 28px rgb(0 0 0 / 0.12);
+  }
+
+  :root[data-skin="claude"].dark {
+    --color-paper: #262624;
+    --color-surface: #30302e;
+    --color-surface-2: #383835;
+    --color-ink: #dedcd1;
+    --color-strong: #faf9f5;
+    --color-muted: #a8a69d; /* was #9c9a92: 4.69:1 on the cards */
+    --color-faint: #75736c;
+    --color-line: #3e3e3a;
+    --color-line-strong: #706f6a; /* was #5e5d58: outlines as clear as the default's */
+    --color-pressed: #44433f;
+    --color-accent: #b4542f;
+    --color-accent-hover: #a14a29; /* darker, as in light: a lighter clay left white text at 4.05:1 */
+    --color-accent-ink: #e29379; /* was #e08a6d: 4.36:1 on a selected row */
+    --color-on-accent: #ffffff;
+    --color-ok-bg: #26331f;
+    --color-ok: #9ccf8a;
+    --color-warn-bg: #3a3019;
+    --color-warn: #e8c070;
+    --color-danger-bg: #3d2220;
+    --color-danger: #f2898b; /* was #ee6a6c: 3.87:1 in the FCE table's shaded rows */
+    --shadow-popover: 0 8px 28px rgb(0 0 0 / 0.4);
+    --shadow-dialog: 0 16px 48px -8px rgb(0 0 0 / 0.7);
+    --block-text-mix: 56%; /* calendar blocks' faint labels at 4.5:1 on the lighter cards; was 78% (3.71:1) */
+  }
+
+  :root[data-skin="claude"] :is(h1, h2, h3) {
+    font-family: var(--font-heading);
+    font-weight: 500;
+    letter-spacing: -0.01em;
+  }
+
+  /* ---- Mono: MajorPay's default, black and white with color only where it means something (always dark) ---- */
+  :root[data-skin="mono"] {
+    --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+    --color-paper: #000000;
+    --color-surface: #0a0a0a;
+    --color-surface-2: #111111;
+    --color-ink: #ededed;
+    --color-strong: #ffffff;
+    --color-muted: #a1a1a1;
+    --color-faint: #878787;
+    --color-line: #1f1f1f;
+    --color-line-strong: #545454; /* was #454545: outlines as clear as the default's */
+    --color-pressed: #2e2e2e;
+    --color-accent: #ededed;
+    --color-accent-hover: #ffffff;
+    --color-accent-ink: #ededed;
+    --color-on-accent: #0a0a0a;
+    --color-ok-bg: rgb(98 192 115 / 0.12);
+    --color-ok: #62c073;
+    --color-warn-bg: rgb(255 178 36 / 0.1);
+    --color-warn: #ffb224;
+    --color-danger-bg: rgb(255 97 102 / 0.12);
+    --color-danger: #ff6166;
+    --color-selected: #161616;
+    --radius-tag: 6px;
+    --radius-field: 10px;
+    --radius-card: 12px;
+    --shadow-header: 0 1px 0 #1f1f1f;
+    --shadow-header-mobile: 0 1px 0 #1f1f1f;
+    --shadow-popover: 0 0 0 1px #1f1f1f, 0 24px 60px rgb(0 0 0 / 0.7);
+    --shadow-dialog: 0 0 0 1px #1f1f1f, 0 24px 60px rgb(0 0 0 / 0.8);
+  }
+
+  /* MajorPay's one decoration: a soft eclipse at the top of the page. */
+  :root[data-skin="mono"] body {
+    background-image: radial-gradient(42rem 22rem at 50% -4rem, rgb(255 255 255 / 0.1), transparent 70%);
+    background-repeat: no-repeat;
+  }
+
+  /* ---- Playful: MajorPay's chunky, bright theme, light and dark ---- */
+  :root[data-skin="playful"] {
+    --font-sans: "Nunito", ui-rounded, system-ui, sans-serif;
+    --font-heading: "Fredoka", "Nunito", ui-rounded, sans-serif;
+    --color-paper: #eef9ff;
+    --color-surface: #ffffff;
+    --color-surface-2: #e9f9ff;
+    --color-ink: #4b4b4b;
+    --color-strong: #3c3c3c;
+    --color-muted: #4d6177; /* MajorPay's readability pass: was #5a6f84 */
+    --color-faint: #8aa0b4;
+    --color-line: #d7e6f2;
+    --color-line-strong: #9fabb6; /* was #b9c7d4: outlines as clear as the default's */
+    --color-pressed: #d7e6f2;
+    --color-accent: #58cc02;
+    --color-accent-hover: #61d90a;
+    --color-accent-ink: #0b6497; /* MajorPay's selected blue, as text: was #1078b3 */
+    --color-on-accent: #0e3b00; /* MajorPay's readability pass: near-white on the green measured 2.03:1 */
+    --color-ok-bg: #e8f8dd;
+    --color-ok: #2b7f00;
+    --color-warn-bg: #fff7d6;
+    --color-warn: #836700;
+    --color-danger-bg: #ffe8e8;
+    --color-danger: #c52c2c; /* was #cf2e2e: 4.40:1 on its own tint */
+    --radius-tag: 8px;
+    --radius-field: 16px;
+    --radius-card: 22px;
+    --shadow-popover: 0 6px 0 #c7dfea, 0 22px 46px rgb(9 81 120 / 0.2);
+    --block-text-mix: 36%; /* calendar blocks' faint labels at 4.5:1 with the softer #3c3c3c; was 64% (3.44:1) */
+    --playful-lip: #d2dee9;
+    --playful-lip-accent: #46a302;
+  }
+
+  :root[data-skin="playful"].dark {
+    --color-paper: #141f25;
+    --color-surface: #1b2930;
+    --color-surface-2: #212f36;
+    --color-ink: #dce6ec;
+    --color-strong: #f1f7fb;
+    --color-muted: #aab9c4;
+    --color-faint: #8b9ca8;
+    --color-line: #2a3840;
+    --color-line-strong: #5a6972; /* was #4a5a64: outlines as clear as the default's */
+    --color-pressed: #38464f;
+    --color-accent: #93d334;
+    --color-accent-hover: #a1df40;
+    --color-accent-ink: #49c0f8;
+    --color-on-accent: #141f25;
+    --color-ok-bg: rgb(147 211 52 / 0.12);
+    --color-ok: #93d334;
+    --color-warn-bg: rgb(254 201 21 / 0.1);
+    --color-warn: #fec915;
+    --color-danger-bg: rgb(255 107 107 / 0.12);
+    --color-danger: #ff8888; /* was #ff7b7b: 4.32:1 on a selected row */
+    --shadow-popover: 0 6px 0 #0c1418, 0 22px 46px rgb(0 0 0 / 0.5);
+    --shadow-dialog: 0 16px 48px -8px rgb(0 0 0 / 0.7);
+    --block-text-mix: 64%; /* calendar blocks' faint labels at 4.5:1 for every course color; was 78% */
+    --playful-lip: #38464f;
+    --playful-lip-accent: #7db931;
+  }
+
+  /* Rounded, a little heavier text and Fredoka headings; cards and primary buttons sit on a hard "lip". */
+  :root[data-skin="playful"] body {
+    font-weight: 600;
+  }
+
+  :root[data-skin="playful"] :is(h1, h2, h3) {
+    font-family: var(--font-heading);
+    font-weight: 600;
+  }
+
+  :root[data-skin="playful"] .rounded-card.border {
+    box-shadow: 0 4px 0 var(--playful-lip);
+  }
+
+  :root[data-skin="playful"] :is(button, a).bg-accent {
+    box-shadow: 0 4px 0 var(--playful-lip-accent);
+  }
+
+  /* ---- Soft: MajorPay's light, calm pastel theme (always light) ---- */
+  :root[data-skin="soft"] {
+    --color-paper: #fafbfc;
+    --color-surface: #ffffff;
+    --color-surface-2: #f1f5f9;
+    --color-ink: #334155;
+    --color-strong: #1a1d23;
+    --color-muted: #5b6b82; /* MajorPay's readability pass: was #64748b */
+    --color-faint: #94a3b8;
+    --color-line: #e9edf3;
+    --color-line-strong: #a2aab4; /* was #cbd5e1: field and checkbox outlines measured 1.48:1 */
+    --color-pressed: #e2e8f0;
+    --color-accent: #6163f0; /* MajorPay's readability pass: was #6366f1 */
+    --color-accent-hover: #4f46e5;
+    --color-accent-ink: #4f46e5;
+    --color-on-accent: #ffffff;
+    --color-ok-bg: #dcfce7;
+    --color-ok: #166534;
+    --color-warn-bg: #fef3c7;
+    --color-warn: #b05108;
+    --color-danger-bg: #fee2e2;
+    --color-danger: #c62222; /* was #dc2626: 3.95:1 on its own tint */
+    --radius-tag: 6px;
+    --radius-field: 12px;
+    --radius-card: 16px;
+    --shadow-header: 0 1px 0 rgb(226 232 240 / 0.9);
+    --shadow-header-mobile: 0 1px 0 rgb(226 232 240 / 0.9);
+    --shadow-popover: 0 1px 2px rgb(15 23 42 / 0.06), 0 24px 48px rgb(15 23 42 / 0.14);
+    --shadow-dialog: 0 1px 2px rgb(15 23 42 / 0.06), 0 24px 48px rgb(15 23 42 / 0.18);
+    --block-text-mix: 60%; /* calendar blocks' faint labels at 4.5:1 for every course color; was 64% */
+  }
+
+  /* MajorPay's pastel glow at the top of the page, and soft shadows under cards. */
+  :root[data-skin="soft"] body {
+    background-image:
+      radial-gradient(34rem 20rem at 18% -2rem, rgb(102 126 234 / 0.14), transparent 70%),
+      radial-gradient(30rem 18rem at 82% 0rem, rgb(240 147 251 / 0.14), transparent 70%);
+    background-repeat: no-repeat;
+  }
+
+  :root[data-skin="soft"] .rounded-card.border {
+    box-shadow:
+      0 1px 2px rgb(15 23 42 / 0.04),
+      0 10px 30px rgb(15 23 42 / 0.06);
+  }
+}

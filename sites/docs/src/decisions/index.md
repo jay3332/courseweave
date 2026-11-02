@@ -48,3 +48,4 @@
 | 44 | [Put the degree plan's programs and progress in a rail](0044-put-the-degree-plans-programs-and-progress-in-a-rail.md) | accepted |
 | 45 | [Lay out the requisite graph ourselves](0045-lay-out-the-requisite-graph-ourselves.md) | accepted |
 | 46 | [Check gen eds that Stellic splits by entry year at the plan's entry year](0046-check-year-split-gen-eds-at-the-plans-entry-year.md) | accepted |
+| 47 | [Offer other looks as sets of the design tokens](0047-offer-other-looks-as-sets-of-the-design-tokens.md) | accepted |

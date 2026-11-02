@@ -12,7 +12,8 @@
   import { NAV_ITEMS, isActive } from "./nav";
   import { getSession } from "./session";
   import SyncStatus from "./SyncStatus.svelte";
-  import ThemeSwitch from "./ThemeSwitch.svelte";
+  import AppearanceMenu from "./AppearanceMenu.svelte";
+  import AppearanceOptions from "./AppearanceOptions.svelte";
 
   const session = getSession();
   let menuOpen = $state(false);
@@ -40,7 +41,7 @@
 <header
   class="sticky top-0 z-30 bg-surface shadow-header-mobile lg:bg-paper lg:shadow-header"
 >
-  <!-- Desktop: logo, centered icon-and-label navigation, theme switch and session pill. -->
+  <!-- Desktop: logo, centered icon-and-label navigation, Find a course, Appearance and the session pill. -->
   <div class="hidden h-[85px] grid-cols-[1fr_auto_1fr] items-center gap-6 px-8 lg:grid">
     <a href="/" class="flex items-center gap-4 justify-self-start rounded-[6px]">
       <img src={logo} alt="" width="36" height="35" class="h-[35px] w-9 rounded-tag" />
@@ -83,7 +84,7 @@
           class="hidden rounded-tag border border-line px-1.5 font-sans text-label-sm text-muted 2xl:inline">{shortcut}</kbd
         >
       </button>
-      <span class="flex p-1.5"><ThemeSwitch /></span>
+      <AppearanceMenu />
       {#if session.status === "loading"}
         <Skeleton class="h-10 w-[110px] rounded-full" />
       {:else if session.status === "signed-in"}
@@ -159,7 +160,7 @@
     </ul>
   </nav>
   <div class="border-t border-line px-6 py-4">
-    <ThemeSwitch showLabel class="w-full justify-between" />
+    <AppearanceOptions compact />
   </div>
   <div class="border-t border-line px-6 py-4">
     {#if session.status === "signed-in"}

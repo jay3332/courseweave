@@ -2,7 +2,7 @@
   import { goto } from "$app/navigation";
   import { AlertTriangle, Check, CloudOff, LogIn, LogOut, RefreshCw, Trash2 } from "@lucide/svelte";
   import { getSession } from "$lib/components/shell/session";
-  import { theme, type ThemePreference } from "$lib/components/shell/theme.svelte";
+  import AppearanceOptions from "$lib/components/shell/AppearanceOptions.svelte";
   import Button from "$lib/components/ui/Button.svelte";
   import Checkbox from "$lib/components/ui/Checkbox.svelte";
   import Dialog from "$lib/components/ui/Dialog.svelte";
@@ -18,12 +18,6 @@
   const shell = getSession();
   const signedIn = $derived(shell.status === "signed-in");
   const user = $derived(account.user);
-
-  const themes = [
-    { value: "light", label: "Light" },
-    { value: "dark", label: "Dark" },
-    { value: "system", label: "System" },
-  ];
 
   // Courseweave's calendar display options; every calendar follows them.
   const DISPLAY: { key: keyof CalendarDisplay; label: string; hint: string }[] = [
@@ -110,13 +104,8 @@
 
   <section aria-labelledby="settings-appearance">
     <h2 id="settings-appearance" class="text-heading-6 text-strong">Appearance</h2>
-    <p class="mt-1 mb-3 text-body-2 text-muted">Theme for this device.</p>
-    <SegmentedControl
-      options={themes}
-      label="Theme"
-      value={theme.preference}
-      onchange={(value) => theme.set(value as ThemePreference)}
-    />
+    <p class="mt-1 mb-3 text-body-2 text-muted">The theme and light or dark, for this device.</p>
+    <AppearanceOptions columns={3} />
   </section>
 
   <section aria-labelledby="settings-calendar">

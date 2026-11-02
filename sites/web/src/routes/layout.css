@@ -1,4 +1,6 @@
 @import "tailwindcss";
+/* Other looks as token sets on <html data-skin> (lib/components/shell/skins.ts lists them). */
+@import "./skins.css";
 @plugin "@tailwindcss/typography";
 
 /*

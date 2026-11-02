@@ -51,20 +51,43 @@
     />
     <title>CMU Courses</title>
     <script>
-      // Apply the color theme before first paint so the page never flashes the
-      // wrong theme. Keep the storage key in sync with the theme store
-      // (src/lib/components/shell/theme.svelte.ts).
+      // Apply the color theme and skin before first paint so the page never flashes the
+      // wrong look. Keep the storage keys, the one-mode skins and the fonts in sync with
+      // the theme and skin stores (src/lib/components/shell/theme.svelte.ts, skin.svelte.ts).
       (function () {
         var preference = null;
+        var skin = null;
         try {
           preference = localStorage.getItem("cmucourses:theme");
+          skin = localStorage.getItem("cmucourses:skin");
         } catch (error) {
           preference = null;
         }
-        var dark =
-          preference === "dark" ||
-          (preference !== "light" && window.matchMedia("(prefers-color-scheme: dark)").matches);
-        document.documentElement.classList.toggle("dark", dark);
+        var oneMode = { mono: "dark", soft: "light" };
+        var fonts = {
+          telegram: "family=Roboto:wght@400;500;700",
+          discord: "family=Noto+Sans:wght@400;500;600;700",
+          claude: "family=Source+Serif+4:opsz,wght@8..60,400..600",
+          mono: "family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500",
+          playful: "family=Nunito:wght@400;600;700;800&family=Fredoka:wght@500;600",
+          soft: null,
+        };
+        var root = document.documentElement;
+        var dark = oneMode[skin]
+          ? oneMode[skin] === "dark"
+          : preference === "dark" ||
+            (preference !== "light" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+        root.classList.toggle("dark", dark);
+        if (skin && Object.prototype.hasOwnProperty.call(fonts, skin)) {
+          root.setAttribute("data-skin", skin);
+          if (fonts[skin]) {
+            var link = document.createElement("link");
+            link.id = "skin-fonts";
+            link.rel = "stylesheet";
+            link.href = "https://fonts.googleapis.com/css2?" + fonts[skin] + "&display=swap";
+            document.head.appendChild(link);
+          }
+        }
       })();
     </script>
     %sveltekit.head%

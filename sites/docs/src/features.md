@@ -21,7 +21,7 @@ details.
 | Academic record: SIO and Stellic PDF import in the browser, grades, exam and transfer credit, waivers, QPA | `/profile/taken`, `/profile/taking` | Member | [Plan and record](features/plan-and-record.md) |
 | Instructors: search, cards or rows, aggregate FCEs, teaching history and timetable | `/instructors`, `/instructors/[id]` | Member | [People](features/people.md) |
 | Friends: requests, invite links, sharing settings, friends taking a course, a friend's schedule | `/profile/friends`, `/invite/[token]`, course cards, schedules | Member | [People](features/people.md) |
-| Settings: theme, calendar display, account, delete my data | `/profile/settings` | Theme for everyone; the rest member | [People](features/people.md) |
+| Settings: theme (Default, Telegram, Discord, Claude, Mono, Playful, Soft) and light or dark, calendar display, account, delete my data | `/profile/settings`, the header's Appearance button | Theme for everyone; the rest member | [People](features/people.md) |
 | Course pages for search engines and a sitemap | `/course/[code]`, `/sitemap.xml` | Public | [Web API](api/web-api.md) |
 
 ## Boundaries

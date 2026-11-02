@@ -64,6 +64,15 @@ choice (`cmucourses:theme` in localStorage) or the system setting, and `theme` i
 `lib/components/shell/theme.svelte.ts` keeps it in sync afterwards. `.light` and `.dark` also work on any element, so a
 subtree can show the other theme.
 
+Themes (skins) are other values for the same tokens, chosen per device beside light and dark
+([decision 47](decisions/0047-offer-other-looks-as-sets-of-the-design-tokens.md)). `data-skin` on `<html>` picks one
+(`cmucourses:skin`, applied by the same inline script) and `routes/skins.css` holds each skin's light and dark values;
+`lib/components/shell/skins.ts` lists them, and Mono is only dark and Soft only light. Components never name a skin:
+use the tokens, and a new token needs a value in each skin or the skin shows the default's. Text tokens keep 4.5:1 on
+`paper`, `surface`, `surface-2` and `selected` in every skin, and `line-strong` stays at least as visible as the
+default's; a brand color that falls short is deepened, with a comment giving the original. The `.light` and `.dark`
+subtrees show the default look.
+
 ## Conventions
 
 - Icons are `@lucide/svelte`, sized with classes (`size-5` in buttons, `size-6` in navigation). Decorative icons get
@@ -213,11 +222,12 @@ device's choice.
 ## App shell
 
 The header shows the logo, the navigation (Courses, Instructors, Schedules, Plan, Profile), "Find a course", the
-theme switch and a Sign in or Sign out pill; below 1024px it becomes a menu button, the logo, a search button and the
-account control. "Find a course" (`CourseFinder.svelte`, also Ctrl+K or ⌘K on any page) searches the whole catalog
+Appearance button and a Sign in or Sign out pill; below 1024px it becomes a menu button, the logo, a search button and
+the account control. "Find a course" (`CourseFinder.svelte`, also Ctrl+K or ⌘K on any page) searches the whole catalog
 and opens the chosen course's page, whose back link returns to the page it was opened from; it's an icon until the
 header is 1536px wide, then the name and its shortcut, so the navigation stays centered and the site's name on one
-line. Signed in,
+line. Appearance (`AppearanceMenu.svelte`) opens the theme and the light, dark or device choice
+(`AppearanceOptions.svelte`), which the phone menu and Profile › Settings also show. Signed in,
 `SyncStatus` beside Sign out says whether changes have reached the account (Saved, Saving, Offline, Not saved) with
 a Retry after a failure; on phones it shows only while something isn't saved, and in full in the menu sheet. The shell
 reads the session from context:

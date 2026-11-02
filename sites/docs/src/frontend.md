@@ -125,8 +125,8 @@ added to it, so visiting a semester creates no records. `personal.onboardingDue`
 drive the "add your record" prompt.
 
 `device` keeps the last semester visited (`device.rememberTerm(id)`, `device.lastTerm`) and, signed out, the prompt's
-answer, in localStorage. The color theme and the cards/list choice belong to the design system
-(`components/shell/theme.svelte.ts`, `components/ui/ViewToggle.svelte`). `resolveTerm()` and `isAllSemesters()` in
+answer, in localStorage. The color theme, the skin and the cards/list choice belong to the design system
+(`components/shell/theme.svelte.ts`, `components/shell/skin.svelte.ts`, `components/ui/ViewToggle.svelte`). `resolveTerm()` and `isAllSemesters()` in
 `state/term-scope.ts` pick the semester a page shows from its `term` parameter; `trackOrigin()` and `planOrigin()` in
 `state/nav-origin.ts` give course pages their "Back to plan".
 
