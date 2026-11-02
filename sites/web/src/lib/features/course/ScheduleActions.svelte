@@ -1,17 +1,20 @@
 <script lang="ts">
   // The course against the semester's active schedule: a full-width "Add to Schedule 1", or once it's in, a status
   // chip with Remove and Open schedule right beside it. Both take one 40px row, so adding or removing doesn't move
-  // what comes after.
+  // what comes after. A schedule named otherwise reads "Add to schedule “From Plan 2”" (schedule-label.ts).
   import { Check, Plus } from "@lucide/svelte";
   import { textAction } from "$lib/components/course/text-action";
   import Button from "$lib/components/ui/Button.svelte";
   import { schedulesPath } from "$lib/core/routes";
   import type { CourseSchedule } from "./course-schedule.svelte";
+  import { scheduleInSentence, scheduleShort } from "./schedule-label";
 
   let { sched, class: className = "" }: { sched: CourseSchedule; class?: string } = $props();
 
   const entry = $derived(sched.entry);
-  const name = $derived(sched.scheduleName ?? "your schedule");
+  const name = $derived(scheduleInSentence(sched.scheduleName));
+  // The chip is short, so the actions beside it stay on its row where they fit.
+  const short = $derived(scheduleShort(sched.scheduleName));
 </script>
 
 <div class="flex min-w-0 flex-col gap-2 {className}">
@@ -22,7 +25,7 @@
       >
         <Check aria-hidden="true" class="size-4 shrink-0" />
         <span class="truncate">
-          In {name}{#if entry.entry.hidden}<span class="font-normal">, hidden</span>{/if}{#if entry.entry.passFail && sched.course?.passFail !== true}<span
+          In {short}{#if entry.entry.hidden}<span class="font-normal">, hidden</span>{/if}{#if entry.entry.passFail && sched.course?.passFail !== true}<span
               class="font-normal">, pass/fail</span
             >{/if}
         </span>
@@ -36,7 +39,7 @@
       </span>
     {:else}
       <Button variant="primary" icon={Plus} full onclick={() => sched.addDefault()}>
-        Add to {sched.scheduleName ?? "schedule"}
+        <span class="min-w-0 truncate">Add to {name}</span>
       </Button>
     {/if}
   </div>

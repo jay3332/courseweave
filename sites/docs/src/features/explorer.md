@@ -95,6 +95,9 @@ The header is one unit: the big course number with its save star beside it, the 
 then the facts. What the student does with the course sits in one card (`CourseActions.svelte`): the semester select,
 the schedule action (a full-width "Add to Schedule 1", or an "In Schedule 1" chip with Remove and Open schedule right
 after it; both one 40px row, so the card doesn't jump), the requisite line with its Details, and friends taking it.
+A schedule whose name doesn't say it's one is named as a schedule (`schedule-label.ts`): "Add to schedule “From Plan
+2”", "In “From Plan 2”" and a calendar headed "Schedule “From Plan 2”", so a schedule copied from a degree plan
+doesn't read as the plan.
 From 1024px the card sits beside the title at the top, in the calendar's column; narrower, it comes between the title
 and the facts. Where the course isn't shown (not offered that semester, a semester that didn't load) the semester
 select stays beside the back link instead.
