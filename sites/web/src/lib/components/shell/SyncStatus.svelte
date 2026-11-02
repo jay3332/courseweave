@@ -1,7 +1,7 @@
 <script lang="ts">
   // Whether the student's changes have reached their account, beside Sign out (Courseweave's AccountMenu status):
   // quiet while saved or saving, and a retry when a save failed or the browser is offline.
-  import { CircleAlert, Check, CloudOff, RefreshCw } from "@lucide/svelte";
+  import { CircleAlert, CloudCheck, CloudOff, RefreshCw } from "@lucide/svelte";
   import type { ShellSync } from "./session";
 
   let {
@@ -15,8 +15,9 @@
     class?: string;
   } = $props();
 
+  // A cloud, as Offline's, so "Saved" reads as reaching the account rather than as the saved courses.
   const LOOKS = {
-    saved: { text: "Saved", icon: Check, tone: "text-muted" },
+    saved: { text: "Saved", icon: CloudCheck, tone: "text-muted" },
     saving: { text: "Saving\u2026", icon: RefreshCw, tone: "text-muted" },
     offline: { text: "Offline", icon: CloudOff, tone: "text-warn" },
     error: { text: "Not saved", icon: CircleAlert, tone: "text-danger" },

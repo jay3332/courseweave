@@ -228,7 +228,8 @@ and opens the chosen course's page, whose back link returns to the page it was o
 header is 1536px wide, then the name and its shortcut, so the navigation stays centered and the site's name on one
 line. Appearance (`AppearanceMenu.svelte`) opens the theme and the light, dark or device choice
 (`AppearanceOptions.svelte`), which the phone menu and Profile › Settings also show. Signed in,
-`SyncStatus` beside Sign out says whether changes have reached the account (Saved, Saving, Offline, Not saved) with
+`SyncStatus` beside Sign out says whether changes have reached the account (Saved and Offline with cloud icons, so
+"Saved" doesn't read as the saved courses; Saving; Not saved) with
 a Retry after a failure; on phones it shows only while something isn't saved, and in full in the menu sheet. The shell
 reads the session from context:
 
