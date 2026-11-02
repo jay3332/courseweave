@@ -8,9 +8,10 @@
   import Select from "$lib/components/ui/Select.svelte";
   import Skeleton from "$lib/components/ui/Skeleton.svelte";
   import Switch from "$lib/components/ui/Switch.svelte";
-  import FceStats from "$lib/components/course/FceStats.svelte";
+  import { fceSample } from "$lib/components/course/fce-sample";
   import FceTable from "$lib/components/course/FceTable.svelte";
   import { departmentName } from "$lib/core/departments";
+  import { FCE_HOURS_HELP, formatHours, formatRating } from "$lib/core/fce";
   import type { AllInstructor } from "$lib/core/instructors/allInstructors";
   import { instructorPath } from "$lib/core/routes";
   import { ALL_SEMESTERS } from "$lib/state/term-scope";
@@ -20,8 +21,8 @@
   import TeachingHistory from "./TeachingHistory.svelte";
   import TeachingSections from "./TeachingSections.svelte";
 
-  // `/instructors/<slug>`: the Figma's instructor card (aggregate data and evaluations by section), then
-  // Courseweave's teaching table or teaching history and evaluation history.
+  // `/instructors/<slug>`: the instructor's card (their course evaluations, laid out as on a course's page, and
+  // evaluations by section), then Courseweave's teaching table or teaching history and evaluation history.
   const scope = useInstructorsScope();
   const inst = $derived(scope.selected);
   const fce = $derived(scope.fce);
@@ -29,6 +30,29 @@
     if (!scope.everySemester) return scope.windowed;
     const chosen = new Set(scope.courses);
     return (fce.value?.rows ?? []).filter((row) => chosen.size === 0 || chosen.has(row.courseId));
+  });
+
+  // The three averages, in the course page's boxes.
+  const figures = $derived([
+    { label: "Hours a week", value: formatHours(scope.stats?.hours), unit: "", help: FCE_HOURS_HELP },
+    {
+      label: "Teaching rating",
+      value: formatRating(scope.stats?.teachingRate),
+      unit: "of 5",
+      help: "Overall teaching rating, 1 to 5",
+    },
+    {
+      label: "Course rating",
+      value: formatRating(scope.stats?.courseRate),
+      unit: "of 5",
+      help: "Overall course rating, 1 to 5",
+    },
+  ]);
+  const covered = $derived.by(() => {
+    const stats = scope.stats;
+    if (!stats || stats.terms.length === 0) return "No responses in the chosen semesters";
+    const courses = scope.courses.length;
+    return `${fceSample(stats.responses, stats.terms.length)}${courses > 0 ? `, ${courses} ${courses === 1 ? "course" : "courses"}` : ""}`;
   });
 
   function setTerm(next: string): void {
@@ -67,10 +91,10 @@
   </Card>
 {:else}
   <div class="flex flex-col gap-10">
-    <Card as="article" padding="lg" aria-labelledby="instructor-name">
+    <Card as="article" padding="none" class="p-5 sm:p-6" aria-labelledby="instructor-name">
       <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div class="min-w-0">
-          <h1 id="instructor-name" class="text-heading-4 text-ink">{inst.name}</h1>
+          <h1 id="instructor-name" class="text-heading-3 text-strong sm:text-[32px] sm:leading-10">{inst.name}</h1>
           {#if inst.depts.length > 0}
             <p class="mt-1 text-body-1 text-muted">{inst.depts.map((code) => departmentName(code)).join(", ")}</p>
           {/if}
@@ -87,45 +111,58 @@
         {/if}
       </div>
 
-      {#if fce.status === "error"}
-        <p class="mt-6 text-body-2 text-danger" role="alert">
-          Course evaluations didn't load. Check your connection and reload the page.
-        </p>
-      {:else if fce.value === null}
-        <p class="mt-6 rounded-card bg-surface-2 px-4 py-3 text-body-2 text-muted">
-          No course evaluations match {inst.name}. New instructors, and anyone whose name is spelled differently in
-          FCEs, have none.
-        </p>
-      {:else}
-        <section aria-labelledby="aggregate-heading" class="mt-6 rounded-card bg-surface-2 p-4">
-          <h2 id="aggregate-heading" class="mb-3 text-body-1 text-strong">
-            Aggregate Data <span class="text-body-2 text-muted"
-              >(data from {scope.stats?.terms.length ?? 0}
-              {scope.stats?.terms.length === 1 ? "semester" : "semesters"}{scope.courses.length > 0
-                ? `, ${scope.courses.length} ${scope.courses.length === 1 ? "course" : "courses"}`
-                : ""})</span
-            >
-          </h2>
-          <FceStats stats={scope.stats} loading={fce.value === undefined} variant="plain" />
-        </section>
-        <div class="mt-4 mb-2 flex flex-wrap items-center justify-between gap-2">
-          <h2 class="text-heading-6 text-strong">Evaluations by section</h2>
-          <Switch label="Every semester" bind:checked={scope.everySemester} disabled={fce.value === undefined} />
-        </div>
-        {#if fce.value === undefined}
-          <Skeleton class="h-40 w-full rounded-card" />
+      <section aria-labelledby="instructor-fces" class="mt-6">
+        <h2 id="instructor-fces" class="text-heading-4 text-strong">Course evaluations</h2>
+        {#if fce.status === "error"}
+          <p class="mt-2 text-body-2 text-danger" role="alert">
+            Course evaluations didn't load. Check your connection and reload the page.
+          </p>
+        {:else if fce.value === null}
+          <p class="mt-2 text-body-2 text-ink">
+            No course evaluations match {inst.name}. New instructors, and anyone whose name is spelled differently in
+            FCEs, have none.
+          </p>
         {:else}
-          <FceTable
-            showCourse
-            showInstructor={false}
-            rows={tableRows}
-            caption="Course evaluations for {inst.name}"
-            empty={scope.everySemester
-              ? "No evaluations for these courses"
-              : "No evaluations in the chosen semesters and seasons. Turn on Every semester to see them all."}
-          />
+          <p class="mt-0.5 mb-3 text-label-md text-muted">
+            {#if fce.value === undefined}Loading course evaluations{:else}{covered}{/if}
+          </p>
+          <dl class="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            {#each figures as figure (figure.label)}
+              <div class="rounded-card border border-pressed bg-surface px-4 py-3" title={figure.help}>
+                <dt class="text-label-md text-muted">{figure.label}</dt>
+                <dd class="mt-0.5">
+                  {#if fce.value === undefined}
+                    <Skeleton class="my-1.5 h-6 w-16" />
+                  {:else}
+                    <span class="tabular text-heading-3 text-strong">{figure.value}</span>
+                    {#if figure.unit && figure.value !== formatRating(null)}
+                      <span class="ml-1 text-label-md text-muted">{figure.unit}</span>
+                    {/if}
+                  {/if}
+                </dd>
+              </div>
+            {/each}
+          </dl>
+
+          <div class="mt-6 mb-2 flex flex-wrap items-center justify-between gap-3">
+            <h3 class="text-heading-6 text-strong">Evaluations by section</h3>
+            <Switch label="Every semester" bind:checked={scope.everySemester} disabled={fce.value === undefined} />
+          </div>
+          {#if fce.value === undefined}
+            <Skeleton class="h-40 w-full rounded-card" />
+          {:else}
+            <FceTable
+              showCourse
+              showInstructor={false}
+              rows={tableRows}
+              caption="Course evaluations for {inst.name}"
+              empty={scope.everySemester
+                ? "No evaluations for these courses"
+                : "No evaluations in the chosen semesters and seasons. Turn on Every semester to see them all."}
+            />
+          {/if}
         {/if}
-      {/if}
+      </section>
     </Card>
 
     {#if scope.allMode}
