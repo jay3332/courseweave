@@ -1,7 +1,7 @@
 <script lang="ts">
   // A requirement for one specific course: done, planned, or an "Add" (and drag) when it's still needed. An option the
   // requirement doesn't need (under "other options not needed") has no Add but still drags onto a semester.
-  import { Info } from "@lucide/svelte";
+  import { CalendarOff, Info } from "@lucide/svelte";
   import { displayState, fmt, STATE_LABEL } from "$lib/core/degree/audit/format";
   import { FCE_HOURS_HELP, formatHours } from "$lib/core/fce";
   import type { RequirementResult } from "$lib/core/plan-types";
@@ -29,8 +29,8 @@
   const when = $derived(a === undefined ? null : a.status === "credit" ? "Credit" : (a.term ?? null));
 </script>
 
-<!-- One line at any width: the number, the title (truncated), where it counted, its FCE hours and its units. Add waits
-     over the line's end (AddButton). -->
+<!-- One line at any width: the number, the title (truncated), whether it's offered, where it counted, its FCE hours
+     and its units. Add waits over the line's end (AddButton). -->
 <li
   id="req-{r.nodeId}"
   class="group/leaf relative flex min-h-10 items-center gap-2 border-t border-line py-1 first:border-t-0 md:min-h-9 {drag.draggable
@@ -53,12 +53,18 @@
     {title ?? ""}{#if counted}<span class="text-muted"> (as {codeOf(counted)})</span>{/if}
   </span>
   <span class="tabular flex shrink-0 items-center gap-2 text-label-md text-muted">
+    <!-- Says why the number is gray, which otherwise only the row's tooltip told. -->
+    {#if notOffered}
+      <span title="Not offered in {ctx.termName}" class="grid size-5 shrink-0 place-items-center">
+        <CalendarOff aria-hidden="true" class="size-3.5" />
+        <span class="sr-only">Not offered in {ctx.termName}</span>
+      </span>
+    {/if}
     {#if a}
       <span title={assignedStatus(a)}>{when ?? assignedStatus(a)}<span class="sr-only">, {assignedStatus(a)}</span></span>
     {/if}
     {#if hours !== null}<span title={FCE_HOURS_HELP}>{formatHours(hours)}h</span>{/if}
     {#if units !== null}<span>{fmt(units)}u</span>{/if}
-    {#if notOffered}<span class="sr-only">Not offered in {ctx.termName}</span>{/if}
     {#if r.notes.length > 0}
       <span title={r.notes.join("\n")} class="grid size-5 shrink-0 place-items-center">
         <Info aria-hidden="true" class="size-3.5" />

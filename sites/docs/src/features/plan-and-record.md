@@ -66,7 +66,8 @@ short of either; until the page scrolls it up there (under the import banner), i
 top (`roomBelow`), so its end is on screen too. Below that they're the
 rail's last group (its sheet on phones, "Programs and requirements"), without cards (`AuditPanel`'s `flat`).
 Requirement rows are one line at any width: the status icon, the number, the title (truncated, whole in its tooltip),
-then the semester a course counted in ("F27") and its units. Add appears over the row's end when the row is hovered or
+then a calendar-off icon when the semester shown doesn't offer the course (its number is gray too; the icon's tooltip
+says why), the semester a course counted in ("F27") and its units. Add appears over the row's end when the row is hovered or
 focused; on touch, where nothing hovers, it's a + in the row (`AddButton.svelte`). Drag and drop
 (HTML drag events, `DRAG_TYPE` and `DRAG_NEW_COURSE`) moves courses between and within semesters and adds courses
 from the requirements, the options a requirement doesn't need included; it's on with a fine pointer from 768px. The course menus and "Add" do the same from the
