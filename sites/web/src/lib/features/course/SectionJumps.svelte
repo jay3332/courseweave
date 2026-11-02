@@ -38,6 +38,12 @@
     if (!target.hasAttribute("tabindex")) target.setAttribute("tabindex", "-1");
     target.focus({ preventScroll: true });
   }
+
+  /** Listens for the links' clicks on the nav (Enter on a link clicks it too). */
+  function delegate(node: HTMLElement): () => void {
+    node.addEventListener("click", onclick);
+    return () => node.removeEventListener("click", onclick);
+  }
 </script>
 
 <!--
@@ -45,11 +51,10 @@
   phones they're one row that scrolls sideways, cut off at the screen's edge, rather than three rows of pills before
   the content; wider, they wrap.
 -->
-<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_noninteractive_element_interactions -->
 <nav
+  {@attach delegate}
   aria-label="On this page"
   class="flex items-center gap-2 max-sm:-mx-4 max-sm:overflow-x-auto max-sm:px-4 max-sm:[scrollbar-width:none] sm:flex-wrap {className}"
-  {onclick}
 >
   <span class="shrink-0 text-label-md text-muted">Jump to</span>
   <ul class="contents">
