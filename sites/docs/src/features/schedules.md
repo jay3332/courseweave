@@ -40,11 +40,13 @@ follow, oldest first. A semester without a schedule shows "Schedule 1", created 
 nothing. `?schedule=<id>` shows a particular one (the profile links to it).
 
 - **Toolbar**: one row under the tabs with Generate, Finals, Export and the calendar display button ("Display" with a
-  settings icon, an icon alone on phones as Export is; `DisplayMenu.svelte`), whose popover chooses what blocks show besides the code: section, course name, time and room,
-  and how the course list picks sections, dropdowns or compact letters). On screens 80rem and wider the
+  settings icon; `DisplayMenu.svelte`, whose popover chooses what blocks show besides the code: section, course name, time and room,
+  and how the course list picks sections, dropdowns or compact letters). The buttons are named while the toolbar has
+  room for every name (44rem, a container query on the toolbar); narrower, Export and Display become icons, and below
+  34rem Generate and Finals too, so the row stays one line. On screens 80rem and wider the
   session switch (Full semester, Mini 1, Mini 2) sits at the row's start when a placed course runs in a mini;
   narrower screens show it above the calendar. While the rail is a sheet, the row starts with the button that opens
-  it ("Courses (6)", or "Add courses" for an empty schedule), the other buttons are icons, and a line under the row
+  it ("Courses (6)", or "Add courses" for an empty schedule, kept on one line), and a line under the row
   keeps the total units (in the warning color over 54 factorable), hours a week and conflicts in view
   (`WorkloadTotals.svelte`, `compact`).
 - **Rail**: the semester; the courses, headed by their count and totals (`WorkloadTotals.svelte`: units, expected

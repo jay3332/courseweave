@@ -389,21 +389,22 @@
     {#if term && view}
       <h1 class="sr-only">Schedules: {active?.name ?? "Schedule 1"}, {term.meta.name}</h1>
       <ScheduleTabs {term} {activeId} onshare={() => (shareOpen = true)} ontarget={target} />
-      <PageToolbar class="mt-1" actionsLayout="inline" chips={wideToolbar.current && showSessions ? sessions : undefined}>
+      <PageToolbar class="mt-1 @container/toolbar" actionsLayout="inline" chips={wideToolbar.current && showSessions ? sessions : undefined}>
         {#snippet actions()}
-          <!-- Phones show these as icon buttons; the names stay for screen readers. -->
+          <!-- Named while the toolbar has room for every name. Narrower, Export and Display become icons first, then
+               Generate and Finals too, so the row stays one line beside Courses; the names stay for screen readers. -->
           <Button
             icon={WandSparkles}
-            class="h-10 max-sm:w-10 max-sm:px-0 lg:h-9"
+            class="h-10 @max-[34rem]/toolbar:w-10 @max-[34rem]/toolbar:px-0 lg:h-9"
             title="Generate schedules"
             disabled={view.entries.length === 0}
-            onclick={() => (generatorOpen = true)}><span class="max-sm:sr-only">Generate</span></Button
+            onclick={() => (generatorOpen = true)}><span class="@max-[34rem]/toolbar:sr-only">Generate</span></Button
           >
           <Button
             icon={CalendarClock}
-            class="h-10 max-sm:w-10 max-sm:px-0 lg:h-9"
+            class="h-10 @max-[34rem]/toolbar:w-10 @max-[34rem]/toolbar:px-0 lg:h-9"
             title="Final exams"
-            onclick={() => setFinals(true)}><span class="max-sm:sr-only">Finals</span></Button
+            onclick={() => setFinals(true)}><span class="@max-[34rem]/toolbar:sr-only">Finals</span></Button
           >
           {#if active}
             <ExportMenu

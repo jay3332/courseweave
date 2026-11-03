@@ -90,9 +90,9 @@
 
 <Menu items={menuItems} label="Export {schedule.name}">
   {#snippet trigger(props)}
-    <Button {...props} icon={Share} class="h-10 max-sm:w-10 max-sm:px-0 lg:h-9" title="Export">
-      <span class="max-sm:sr-only">Export</span>
-      <ChevronDown aria-hidden="true" class="max-sm:hidden" />
+    <Button {...props} icon={Share} class="h-10 @max-[44rem]/toolbar:w-10 @max-[44rem]/toolbar:px-0 lg:h-9" title="Export">
+      <span class="@max-[44rem]/toolbar:sr-only">Export</span>
+      <ChevronDown aria-hidden="true" class="@max-[44rem]/toolbar:hidden" />
     </Button>
   {/snippet}
 </Menu>

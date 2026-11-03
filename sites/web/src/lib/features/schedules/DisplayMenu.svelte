@@ -29,10 +29,10 @@
 
 <Popover bind:open label="Calendar display" placement="bottom-end" class="w-76 p-2">
   {#snippet trigger(props)}
-    <!-- Named like Generate, Finals and Export beside it (an icon on phones, as Export is), and as tall: 40px on
-         phones, 36px on desktops. -->
-    <Button {...props} icon={Settings2} class="h-10 max-sm:w-10 max-sm:px-0 lg:h-9" title="Calendar display">
-      <span class="max-sm:sr-only">Display</span>
+    <!-- Named like Generate, Finals and Export beside it (an icon with Export when the toolbar is narrow), and as tall:
+         40px on phones, 36px on desktops. -->
+    <Button {...props} icon={Settings2} class="h-10 @max-[44rem]/toolbar:w-10 @max-[44rem]/toolbar:px-0 lg:h-9" title="Calendar display">
+      <span class="@max-[44rem]/toolbar:sr-only">Display</span>
     </Button>
   {/snippet}
   {#snippet children()}

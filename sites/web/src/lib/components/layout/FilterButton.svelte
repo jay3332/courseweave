@@ -13,7 +13,7 @@
     aria-haspopup="dialog"
     aria-label={rail.count > 0 && rail.buttonLabel === undefined ? `${rail.label}, ${rail.count} active` : undefined}
     onclick={() => rail.open()}
-    class="inline-flex h-10 items-center gap-1.5 rounded-full text-label-md transition-colors {rail.count > 0
+    class="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full text-label-md whitespace-nowrap transition-colors {rail.count > 0
       ? 'bg-strong px-3 text-surface'
       : '-ml-3 px-3 text-strong hover:bg-hover'} {className}"
   >
